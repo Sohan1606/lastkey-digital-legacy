@@ -1,0 +1,172 @@
+const OpenAI = require('openai');
+
+let openai;
+
+try {
+  openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+} catch (error) {
+  console.log('⚠️ OpenAI not configured - AI features disabled');
+  openai = null;
+}
+
+exports.generateLegacyMessage = async (req, res) => {
+  try {
+    if (!openai) {
+      return res.status(503).json({
+        success: false,
+        error: 'AI service is currently disabled. Please configure OPENAI_API_KEY.'
+      });
+    }
+
+    const { emotion, recipient, tone, context } = req.body;
+
+    const prompt = `Generate a heartfelt digital legacy message from someone who has passed away. 
+
+Emotion: ${emotion}
+Recipient: ${recipient}
+Tone: ${tone}
+Context: ${context || 'no additional context'}
+
+The message should:
+- Be emotional and meaningful
+- 150-250 words
+- Feel personal and genuine
+- End with a farewell
+
+Write only the message, no explanations.`;
+
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: 400,
+      temperature: 0.8,
+    });
+
+    const message = completion.choices[0].message.content.trim();
+
+    res.json({
+      success: true,
+      data: {
+        message,
+        emotion,
+        recipient,
+        tone,
+      },
+    });
+  } catch (error) {
+    console.error('AI Error:', error);
+    res.status(500).json({ error: 'Failed to generate message' });
+  }
+};
+
+exports.getAISuggestions = async (req, res) => {
+  try {
+    const { user } = req;
+    const userId = user._id;
+
+    // Fetch actual stats
+    const Asset = require('../models/Asset');
+    const Beneficiary = require('../models/Beneficiary');
+    const Capsule = require('../models/Capsule');
+
+    const [assetCount, beneficiaryCount, capsuleCount] = await Promise.all([
+      Asset.countDocuments({ userId }),
+      Beneficiary.countDocuments({ userId }),
+      Capsule.countDocuments({ userId })
+    ]);
+
+    const stats = {
+      assets: assetCount,
+      beneficiaries: beneficiaryCount,
+      capsules: capsuleCount
+    };
+
+    // Enhanced AI analysis based on user stats
+    const suggestions = [];
+    const lastLoginDays = Math.floor((new Date() - new Date(user.lastActive || user.createdAt)) / (1000 * 60 * 60 * 24));
+
+    // Critical: No beneficiaries
+    if (!stats.beneficiaries || stats.beneficiaries === 0) {
+      suggestions.push({
+        id: 'beneficiaries-critical',
+        title: 'Add Emergency Beneficiaries Now',
+        description: 'No one will receive your legacy if something happens. Add at least 2 trusted contacts.',
+        category: 'setup',
+        tone: 'urgent',
+        priority: 'critical',
+        action: 'beneficiaries',
+        icon: 'users'
+      });
+    } 
+
+    // High: Low vault assets
+    if (stats.assets && stats.assets < 3) {
+      suggestions.push({
+        id: 'vault-low',
+        title: 'Strengthen Your Digital Vault',
+        description: `${3 - stats.assets} more assets needed for basic security (photos, documents, passwords).`,
+        category: 'security',
+        tone: 'encouraging',
+        priority: 'high',
+        action: 'vault',
+        icon: 'lock'
+      });
+    }
+
+    // Medium: No capsules/messages
+    if (!stats.capsules || stats.capsules === 0) {
+      suggestions.push({
+        id: 'capsules-none',
+        title: 'Create Your First Time Capsule',
+        description: 'Schedule emotional messages for family. AI can help write them.',
+        category: 'content',
+        tone: 'inspirational',
+        priority: 'medium',
+        action: 'capsules',
+        icon: 'clock'
+      });
+    }
+
+    // Premium upsell (smart)
+    if (!user.isPremium && stats.beneficiaries && stats.beneficiaries > 2) {
+      suggestions.push({
+        id: 'premium-upsell',
+        title: 'Unlock Premium Features',
+        description: 'Unlimited beneficiaries, AI message generation, advanced analytics. $4.99/month',
+        category: 'upgrade',
+        tone: 'opportunity',
+        priority: 'medium',
+        action: 'upgrade',
+        icon: 'sparkles'
+      });
+    }
+
+    // Low activity nudge
+    if (lastLoginDays > 14) {
+      suggestions.push({
+        id: 'activity-low',
+        title: 'Ping Your Dead Man Switch',
+        description: 'Reset inactivity timer to keep legacy secure. Last login ${lastLoginDays} days ago.',
+        category: 'maintenance',
+        tone: 'reminder',
+        priority: 'low',
+        action: 'ping',
+        icon: 'zap'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: suggestions.slice(0, 4).map(s => ({
+        ...s,
+        priorityScore: s.priority === 'critical' ? 3 : s.priority === 'high' ? 2 : s.priority === 'medium' ? 1 : 0
+      }))
+    });
+  } catch (error) {
+    console.error('AI Suggestions Error:', error);
+    res.status(500).json({ error: 'Failed to generate smart suggestions' });
+  }
+};
+
