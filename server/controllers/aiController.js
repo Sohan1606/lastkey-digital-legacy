@@ -181,6 +181,10 @@ const generateVoiceMessage = async (req, res) => {
 
     const { text, voice = 'alloy', emotion = 'warm' } = req.body;
 
+    // Validate voice ID - OpenAI TTS only supports specific voices
+    const validVoices = ['alloy', 'ash', 'coral', 'echo', 'fable', 'onyx', 'nova', 'shimmer'];
+    const selectedVoice = validVoices.includes(voice) ? voice : 'alloy';
+
     if (!text) {
       return res.status(400).json({ error: 'Text is required' });
     }
@@ -197,7 +201,7 @@ const generateVoiceMessage = async (req, res) => {
 
     const mp3 = await openai.audio.speech.create({
       model: 'tts-1',
-      voice: voice,
+      voice: selectedVoice,
       input: enhancedText,
     });
 
