@@ -289,17 +289,21 @@ const startServer = async () => {
 startServer();
 
 // Graceful shutdown handlers
-const gracefulShutdown = (signal) => {
+const gracefulShutdown = async (signal) => {
   console.log(`\n📡 Received ${signal}. Starting graceful shutdown...`);
   
-  server.close(() => {
+  server.close(async () => {
     console.log('✅ HTTP server closed');
     
     // Close MongoDB connection
-    mongoose.connection.close(() => {
+    try {
+      await mongoose.connection.close();
       console.log('✅ MongoDB connection closed');
       process.exit(0);
-    });
+    } catch (error) {
+      console.error('❌ Error closing MongoDB:', error);
+      process.exit(1);
+    }
   });
 
   // Force close after 10 seconds
