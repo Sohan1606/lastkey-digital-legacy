@@ -2,6 +2,22 @@
 
 :root {
   --font-sans: system-ui, -apple-system, sans-serif;
+  
+  /* Light theme variables */
+  --toast-bg: #ffffff;
+  --toast-color: #374151;
+  --toast-border: #e5e7eb;
+  
+  /* Custom animations */
+  --animation-duration: 0.3s;
+  --animation-timing: ease;
+}
+
+.dark {
+  /* Dark theme variables */
+  --toast-bg: #1f2937;
+  --toast-color: #f3f4f6;
+  --toast-border: #374151;
 }
 
 body {
@@ -9,25 +25,218 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Base styles for components that might not be fully handled by Tailwind utility classes alone */
 h1, h2, h3, h4, h5, h6 {
-  @apply font-bold text-slate-900;
+  font-weight: 700;
+  color: rgb(17, 24, 39);
+}
+
+.dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6 {
+  color: rgb(255, 255, 255);
+}
+
+/* Premium animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -1000px 0; }
+  100% { background-position: 1000px 0; }
 }
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background-color: rgb(243, 244, 246);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #888;
-  border-radius: 10px;
+  background-color: rgb(203, 213, 225);
+  border-radius: 0.5rem;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background-color: rgb(31, 41, 55);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background-color: rgb(75, 85, 99);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background-color: rgb(107, 114, 128);
+}
+
+/* Premium focus styles */
+.focus-ring {
+  outline: none;
+  focus-ring: 2px solid rgb(147, 51, 234);
+  focus-ring-offset: 2px;
+}
+
+.dark .focus-ring {
+  focus-ring-offset-color: rgb(17, 24, 39);
+}
+
+/* Glass morphism effect */
+.glass {
+  background-color: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.dark .glass {
+  background-color: rgba(17, 24, 39, 0.8);
+  border: 1px solid rgba(55, 65, 81, 0.5);
+}
+
+/* Gradient text utilities */
+.gradient-text {
+  background: linear-gradient(to right, rgb(147, 51, 234), rgb(79, 70, 229));
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+/* Premium button styles - converted to regular CSS */
+.btn-premium {
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  transition: all 0.2s;
+  transform: scale(1);
+}
+
+.btn-premium:hover {
+  transform: scale(1.05);
+}
+
+.btn-premium:active {
+  transform: scale(0.95);
+}
+
+.btn-premium-primary {
+  background: linear-gradient(to right, rgb(147, 51, 234), rgb(79, 70, 229));
+  color: white;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.btn-premium-primary:hover {
+  background: linear-gradient(to right, rgb(126, 34, 206), rgb(67, 56, 202));
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+/* Card styles */
+.card-premium {
+  background-color: white;
+  border-radius: 1rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgb(229, 231, 235);
+  transition: all 0.2s;
+}
+
+.dark .card-premium {
+  background-color: rgb(31, 41, 55);
+  border-color: rgb(75, 85, 99);
+}
+
+.card-premium:hover {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  transform: scale(1.05);
+}
+
+/* Loading shimmer */
+.shimmer {
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(255,255,255,0.3) 50%, 
+    transparent 100%);
+  background-size: 1000px 100%;
+  animation: shimmer 2s infinite;
+}
+
+.dark .shimmer {
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(255,255,255,0.1) 50%, 
+    transparent 100%);
+  background-size: 1000px 100%;
+  animation: shimmer 2s infinite;
+}
+
+/* Premium transitions */
+.transition-premium {
+  transition: all 0.3s ease-in-out;
+}
+
+/* Responsive typography */
+.text-responsive {
+  font-size: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .text-responsive {
+    font-size: 1.875rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .text-responsive {
+    font-size: 2.25rem;
+  }
+}
+
+/* Custom animations for components */
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out;
+}
+
+.animate-slide-in {
+  animation: slideIn 0.5s ease-out;
+}
+
+/* Premium hover effects */
+.hover-lift {
+  transition: transform 0.2s;
+}
+
+.hover-lift:hover {
+  transform: translateY(-0.25rem);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+/* Custom focus visible styles */
+.focus-visible-premium {
+  outline: none;
+}
+
+.focus-visible-premium:focus-visible {
+  focus-ring: 2px solid rgb(147, 51, 234);
+  focus-ring-offset: 2px;
+}
+
+/* Dark mode transitions */
+.dark-mode-transition {
+  transition: color 0.3s ease-in-out, background-color 0.3s ease-in-out;
 }
 
 ::-webkit-scrollbar-thumb:hover {

@@ -5,6 +5,12 @@ const rateLimit = require('express-rate-limit');
 const mongoose = require('mongoose');
 require('dotenv').config();
 
+// Import models
+const User = require('./models/User');
+const Asset = require('./models/Asset');
+const Beneficiary = require('./models/Beneficiary');
+const Capsule = require('./models/Capsule');
+
 const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGO_URI;
 
@@ -90,12 +96,25 @@ app.use('/api/beneficiaries', beneficiaryRouter);
 const capsuleRouter = require('./routes/capsules');
 app.use('/api/capsules', capsuleRouter);
 
-// Dead Man Switch CRON - every minute
+// Emergency access routes
+const emergencyRouter = require('./routes/emergency');
+app.use('/api/emergency', emergencyRouter);
+
+// Timeline routes
+const timelineRouter = require('./routes/timeline');
+app.use('/api/timeline', timelineRouter);
+
+// Voice messages routes
+const voiceMessagesRouter = require('./routes/voice-messages');
+app.use('/api/voice-messages', voiceMessagesRouter);
+
+// Memoir routes
+const memoirRouter = require('./routes/memoir');
+app.use('/api/memoir', memoirRouter);
+
+// Guardian Protocol CRON - every minute
 const cron = require('node-cron');
 const { sendEmail } = require('./utils/email');
-const User = require('./models/User');
-const Beneficiary = require('./models/Beneficiary');
-const Capsule = require('./models/Capsule');
 
 // Time Capsule CRON - every 5 minutes
 cron.schedule('*/5 * * * *', async () => {
@@ -131,10 +150,10 @@ cron.schedule('*/5 * * * *', async () => {
 cron.schedule('* * * * *', async () => {
   try {
     if (mongoose.connection.readyState !== 1) {
-      console.log('⏭️ Skipping Dead Man Switch - DB not ready');
+      console.log('⏭️ Skipping Guardian Protocol - DB not ready');
       return;
     }
-    console.log('Running Dead Man Switch check...');
+    console.log('Running Guardian Protocol check...');
     
     const now = new Date();
     const users = await User.find({ triggerStatus: { $ne: 'triggered' } });
@@ -147,7 +166,7 @@ cron.schedule('* * * * *', async () => {
         
         if (inactiveMinutes > user.inactivityDuration * 2) {
           user.triggerStatus = 'triggered';
-          console.log(`🚨 TRIGGERED for ${user.email}: Legacy protocols activated!`);
+          console.log(`🚨 GUARDIAN PROTOCOL TRIGGERED for ${user.email}: Legacy protocols activated!`);
         } else {
           user.triggerStatus = 'warning';
           console.log(`⚠️  WARNING for ${user.email}: ${Math.floor(inactiveMinutes)}/${user.inactivityDuration} minutes inactive`);
@@ -160,21 +179,21 @@ cron.schedule('* * * * *', async () => {
           userId: user._id.toString(),
           status: user.triggerStatus,
           remainingMinutes: user.inactivityDuration - Math.floor(inactiveMinutes),
-          message: user.triggerStatus === 'warning' ? `⚠️ Warning: ${user.inactivityDuration - Math.floor(inactiveMinutes)}min remaining` : `🚨 DEAD MAN SWITCH TRIGGERED!`,
+          message: user.triggerStatus === 'warning' ? `⚠️ Warning: ${user.inactivityDuration - Math.floor(inactiveMinutes)}min remaining` : `🚨 GUARDIAN PROTOCOL TRIGGERED!`,
           inactiveMinutes: Math.floor(inactiveMinutes),
           inactivityDuration: user.inactivityDuration
         });
 
         // Send emails ONLY on new trigger (no duplicates)
         if (user.triggerStatus === 'triggered' && !wasTriggered) {
-          console.log(`📧 Sending trigger emails for ${user.email}...`);
+          console.log(`📧 Sending Guardian Protocol emails for ${user.email}...`);
 
           const beneficiaries = await Beneficiary.find({ userId: user._id });
           
           for (const beneficiary of beneficiaries) {
             const result = await sendEmail({
               to: beneficiary.email,
-              subject: '🚨 LastKey Alert: Digital Legacy Triggered',
+              subject: '🚨 LastKey Alert: Guardian Protocol Activated',
               html: `
                 <h2>Important Notice</h2>
                 <p><strong>${user.name}</strong> has been inactive for an extended period.</p>
@@ -187,16 +206,30 @@ cron.schedule('* * * * *', async () => {
             });
             
             if (result.success) {
-              console.log(`✅ Trigger email sent to ${beneficiary.email}`);
+              console.log(`✅ Guardian Protocol email sent to ${beneficiary.email}`);
             } else {
               console.error(`❌ Failed email to ${beneficiary.email}:`, result.error);
             }
+          }
+          
+          // Send WhatsApp alerts if enabled
+          if (user.alertChannels && user.alertChannels.includes('whatsapp') && user.phone) {
+            console.log(`📱 Sending WhatsApp alert to ${user.phone}...`);
+            // TODO: Implement actual WhatsApp API integration
+            // This would require Twilio integration
+          }
+          
+          // Send Telegram alerts if enabled
+          if (user.alertChannels && user.alertChannels.includes('telegram')) {
+            console.log(`📱 Sending Telegram alert...`);
+            // TODO: Implement actual Telegram Bot integration
+            // This would require Telegram Bot API setup
           }
         }
       }
     }
   } catch (error) {
-    console.error('CRON error:', error);
+    console.error('Guardian Protocol CRON error:', error);
   }
 }, {
   scheduled: true,
@@ -208,19 +241,84 @@ app.get('/api/test', (req, res) => {
   res.json({ message: 'Server test OK' });
 });
 
-// Wait for MongoDB connection with retry
-const connectDB = async () => {
+const startServer = async () => {
   try {
-    await mongoose.connect(MONGO_URI);
-    console.log('✅ MongoDB connected successfully');
+    // Load environment variables
+    require('dotenv').config();
+    
+    // Connect to MongoDB
+    await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/lastkey');
+    console.log('✅ Database connected successfully');
+    
+    // Create indexes for performance
+    await User.createIndexes();
+    await Asset.createIndexes();
+    await Beneficiary.createIndexes();
+    await Capsule.createIndexes();
+    console.log('✅ Database indexes created');
+    
+    // Start server with error handling
+    const PORT = process.env.PORT || 5000;
+    
+    server.listen(PORT, () => {
+      console.log(`✅ Server running on port ${PORT}`);
+      console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`🔗 Socket.IO initialized`);
+    }).on('error', (err) => {
+      if (err.code === 'EADDRINUSE') {
+        console.error(`❌ Port ${PORT} is already in use. Please kill the process or use a different port.`);
+        console.error(`💡 Run: npx kill-port ${PORT} or change PORT in .env`);
+        process.exit(1);
+      } else {
+        console.error('❌ Server error:', err);
+        process.exit(1);
+      }
+    });
+    
   } catch (error) {
-    console.error('❌ MongoDB connection error:', error.message);
-    console.log('🔄 Retrying in 5 seconds...');
-    setTimeout(connectDB, 5000);
+    console.error('❌ Server startup failed:', error);
+    process.exit(1);
   }
 };
 
-connectDB();
+// Start the server
+startServer();
+
+// Graceful shutdown handlers
+const gracefulShutdown = (signal) => {
+  console.log(`\n📡 Received ${signal}. Starting graceful shutdown...`);
+  
+  server.close(() => {
+    console.log('✅ HTTP server closed');
+    
+    // Close MongoDB connection
+    mongoose.connection.close(() => {
+      console.log('✅ MongoDB connection closed');
+      process.exit(0);
+    });
+  });
+
+  // Force close after 10 seconds
+  setTimeout(() => {
+    console.error('❌ Forced shutdown after timeout');
+    process.exit(1);
+  }, 10000);
+};
+
+// Handle process signals
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+// Handle unhandled rejections
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+  gracefulShutdown('unhandledRejection');
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('❌ Uncaught Exception:', error);
+  gracefulShutdown('uncaughtException');
+});
 
 // Error handling
 app.use((err, req, res, next) => {
@@ -228,6 +326,5 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: 'Server error' });
 });
 
-server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT} with Socket.IO`);
-});
+// Start server - listen already called in startServer()
+

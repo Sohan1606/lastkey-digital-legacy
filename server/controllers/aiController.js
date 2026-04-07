@@ -11,7 +11,7 @@ try {
   openai = null;
 }
 
-exports.generateLegacyMessage = async (req, res) => {
+const generateLegacyMessage = async (req, res) => {
   try {
     if (!openai) {
       return res.status(503).json({
@@ -61,7 +61,7 @@ Write only the message, no explanations.`;
   }
 };
 
-exports.getAISuggestions = async (req, res) => {
+const getAISuggestions = async (req, res) => {
   try {
     const { user } = req;
     const userId = user._id;
@@ -168,5 +168,167 @@ exports.getAISuggestions = async (req, res) => {
     console.error('AI Suggestions Error:', error);
     res.status(500).json({ error: 'Failed to generate smart suggestions' });
   }
+};
+
+// Generate voice message using OpenAI TTS
+const generateVoiceMessage = async (req, res) => {
+  try {
+    if (!openai) {
+      return res.status(500).json({ error: 'OpenAI not configured' });
+    }
+
+    const { text, voice = 'alloy', emotion = 'warm' } = req.body;
+
+    if (!text) {
+      return res.status(400).json({ error: 'Text is required' });
+    }
+
+    // Add emotion context to the text
+    let enhancedText = text;
+    if (emotion === 'warm') {
+      enhancedText = `Speak with warmth and affection: ${text}`;
+    } else if (emotion === 'professional') {
+      enhancedText = `Speak professionally and clearly: ${text}`;
+    } else if (emotion === 'playful') {
+      enhancedText = `Speak with a playful, cheerful tone: ${text}`;
+    }
+
+    const mp3 = await openai.audio.speech.create({
+      model: 'tts-1',
+      voice: voice,
+      input: enhancedText,
+    });
+
+    const buffer = Buffer.from(await mp3.arrayBuffer());
+
+    res.set({
+      'Content-Type': 'audio/mpeg',
+      'Content-Length': buffer.length,
+    });
+
+    res.send(buffer);
+  } catch (error) {
+    console.error('Voice Generation Error:', error);
+    res.status(500).json({ error: 'Failed to generate voice message' });
+  }
+};
+
+// Generate memoir chapter
+const generateMemoir = async (req, res) => {
+  try {
+    if (!openai) {
+      return res.status(500).json({ error: 'OpenAI not configured' });
+    }
+
+    const { stage, prompts, existingChapters } = req.body;
+
+    if (!stage || !prompts) {
+      return res.status(400).json({ error: 'Stage and prompts are required' });
+    }
+
+    const systemPrompt = `You are helping someone write their memoir. Based on their responses, create a compelling, well-written chapter that captures their life experiences. Write in first person, warm and reflective tone. Keep it between 500-800 words.`;
+
+    const userPrompt = `Life Stage: ${stage}\n\nUser Responses:\n${prompts.join('\n')}\n\nPrevious Chapters: ${existingChapters?.length || 0}\n\nWrite a memoir chapter for this life stage.`;
+
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt }
+      ],
+      max_tokens: 1000,
+      temperature: 0.7,
+    });
+
+    const chapterText = completion.choices[0].message.content;
+
+    res.json({
+      success: true,
+      data: {
+        chapter: chapterText,
+        wordCount: chapterText.split(' ').length,
+        stage: stage,
+        generatedAt: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    console.error('Memoir Generation Error:', error);
+    res.status(500).json({ error: 'Failed to generate memoir chapter' });
+  }
+};
+
+// Get legacy score data for gamification
+const getLegacyScoreData = async (req, res) => {
+  try {
+    const { user } = req;
+    const userId = user._id;
+
+    // Fetch user stats for scoring
+    const Asset = require('../models/Asset');
+    const Beneficiary = require('../models/Beneficiary');
+    const Capsule = require('../models/Capsule');
+
+    const [assetCount, beneficiaryCount, capsuleCount] = await Promise.all([
+      Asset.countDocuments({ userId }),
+      Beneficiary.countDocuments({ userId }),
+      Capsule.countDocuments({ userId })
+    ]);
+
+    // Calculate legacy score
+    let score = 0;
+    let level = 1;
+    let nextLevelScore = 100;
+
+    // Base points
+    score += assetCount * 10; // 10 points per asset
+    score += beneficiaryCount * 25; // 25 points per beneficiary
+    score += capsuleCount * 50; // 50 points per capsule
+
+    // Bonus points
+    if (beneficiaryCount >= 1) score += 50; // First beneficiary bonus
+    if (assetCount >= 5) score += 100; // Asset collection bonus
+    if (capsuleCount >= 3) score += 150; // Time capsule bonus
+
+    // Calculate level
+    while (score >= nextLevelScore) {
+      level++;
+      nextLevelScore = level * 100;
+    }
+
+    const progressToNextLevel = ((score - ((level - 1) * 100)) / 100) * 100;
+
+    res.json({
+      success: true,
+      data: {
+        score,
+        level,
+        progressToNextLevel,
+        nextLevelScore,
+        stats: {
+          assets: assetCount,
+          beneficiaries: beneficiaryCount,
+          capsules: capsuleCount
+        },
+        achievements: [
+          { id: 'first_asset', name: 'First Asset', unlocked: assetCount >= 1 },
+          { id: 'guardian', name: 'Guardian', unlocked: beneficiaryCount >= 1 },
+          { id: 'time_traveler', name: 'Time Traveler', unlocked: capsuleCount >= 1 },
+          { id: 'collector', name: 'Collector', unlocked: assetCount >= 5 },
+          { id: 'legacy_builder', name: 'Legacy Builder', unlocked: score >= 500 }
+        ]
+      }
+    });
+  } catch (error) {
+    console.error('Legacy Score Error:', error);
+    res.status(500).json({ error: 'Failed to calculate legacy score' });
+  }
+};
+
+module.exports = {
+  generateLegacyMessage,
+  getAISuggestions,
+  getLegacyScoreData,
+  generateVoiceMessage,
+  generateMemoir
 };
 

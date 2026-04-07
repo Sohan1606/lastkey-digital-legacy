@@ -36,9 +36,14 @@ const Login = () => {
           loading={login.isPending}
           error={error}
         />
-        <div className="text-center">
+        <div className="text-center space-y-4">
           <p className="text-md text-gray-600">
             Don't have an account? <Link to="/register" className="font-bold text-purple-600 hover:text-purple-700 transition-colors">Sign up</Link>
+          </p>
+          <p className="text-sm">
+            <Link to="/forgot-password" className="text-indigo-600 hover:text-indigo-700 transition-colors font-medium">
+              Forgot your password?
+            </Link>
           </p>
         </div>
       </div>

@@ -1,6 +1,10 @@
-import { motion } from 'framer-motion'
-import { ArrowRight, Shield, Clock, MessageSquare, Lock, Users, Zap } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion';
+import { Link, useNavigate } from 'react-router-dom';
+import { 
+  Heart, Shield, Clock, Sparkles, Zap, Award, 
+  Mic, Calendar, BookOpen, Trophy, Users,
+  ArrowRight, CheckCircle, Star, MessageSquare, Lock
+} from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext'
 import Navbar from '../components/Navbar'
 
@@ -70,10 +74,10 @@ const Landing = () => {
             Trusted by 50,000+ users worldwide
           </motion.div>
           <h1 className="text-6xl md:text-8xl font-black bg-gradient-to-r from-slate-900 via-indigo-800 to-purple-900 dark:from-white dark:via-indigo-200 dark:to-purple-100 bg-clip-text text-transparent mb-8 leading-tight tracking-tight">
-            Your Digital Legacy, <br className="hidden md:block" /> Securely Preserved.
+            Your love, outliving <br className="hidden md:block" />you.
           </h1>
           <p className="text-xl md:text-2xl text-slate-600 dark:text-slate-400 max-w-3xl mx-auto mb-12 leading-relaxed font-medium">
-            The ultimate vault for your digital life. Ensure your memories, assets, and final wishes are safely delivered to your loved ones when the time comes.
+            LastKey is not a vault. It's a time machine of the heart. A place where your voice, your wisdom, and your love are preserved — to be discovered by the people you cherish most, at exactly the moment they need it.
           </p>
           <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
             <motion.button 
@@ -136,10 +140,10 @@ const Landing = () => {
               viewport={{ once: true }}
               className="text-4xl md:text-5xl font-black mb-6 text-slate-900 dark:text-white"
             >
-              Everything You Need to Secure Your Legacy
+              Everything You Need to Preserve Your Love
             </motion.h2>
             <p className="text-lg text-slate-600 dark:text-slate-400">
-              Powerful tools designed to give you peace of mind and your loved ones a clear path forward.
+              Powerful tools designed to give you peace of mind and your loved ones a connection that transcends time.
             </p>
           </div>
           
@@ -147,20 +151,20 @@ const Landing = () => {
             {[
               {
                 icon: Shield,
-                title: "Military Grade Security",
-                desc: "AES-256 encryption + biometric vault protection. Your data is for your eyes only.",
+                title: "Guardian Protocol™",
+                desc: "Advanced inactivity monitoring ensures your legacy is delivered exactly when needed, with multiple alert channels.",
                 color: "indigo"
               },
               {
                 icon: Clock,
-                title: "Time-Triggered Access",
-                desc: "Schedule release of your digital assets and messages precisely when they are needed.",
+                title: "Time Letters",
+                desc: "Schedule heartfelt messages to be delivered at perfect moments—birthdays, weddings, or when they need your voice most.",
                 color: "emerald"
               },
               {
                 icon: MessageSquare,
-                title: "AI-Powered Messaging",
-                desc: "Craft heartfelt messages with AI assistance. Say exactly what you mean.",
+                title: "AI Voice Messages",
+                desc: "Transform your written words into warm, realistic voice messages that your loved ones can treasure forever.",
                 color: "rose"
               }
             ].map((feature, idx) => (
@@ -197,9 +201,9 @@ const Landing = () => {
           className="max-w-5xl mx-auto bg-gradient-to-br from-indigo-600 to-purple-700 rounded-[3rem] p-12 md:p-20 text-center text-white shadow-3xl relative overflow-hidden"
         >
           <div className="relative z-10">
-            <h2 className="text-4xl md:text-6xl font-black mb-8">Ready to secure your future?</h2>
+            <h2 className="text-4xl md:text-6xl font-black mb-8">Ready to make your love eternal?</h2>
             <p className="text-xl text-indigo-100 mb-12 max-w-2xl mx-auto">
-              Join thousands of people who have already secured their digital legacy with LastKey.
+              Join thousands who have chosen LastKey to ensure their voice and wisdom live on forever.
             </p>
             <motion.button 
               onClick={handleGetStarted}
@@ -207,7 +211,7 @@ const Landing = () => {
               whileTap={{ scale: 0.95 }}
               className="bg-white text-indigo-600 px-12 py-5 rounded-2xl font-bold text-xl shadow-xl hover:shadow-2xl transition-all"
             >
-              Get Started for Free
+              Begin Your Legacy
             </motion.button>
           </div>
           <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl" />

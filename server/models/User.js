@@ -11,7 +11,6 @@ const userSchema = new mongoose.Schema({
   email: {
     type: String,
     required: [true, 'Email is required'],
-    unique: true,
     lowercase: true,
     match: [/^\S+@\S+\.\S+$/, 'Please enter valid email']
   },
@@ -37,6 +36,63 @@ const userSchema = new mongoose.Schema({
   isPremium: {
     type: Boolean,
     default: false
+  },
+  // Email verification
+  isEmailVerified: {
+    type: Boolean,
+    default: false
+  },
+  emailVerificationToken: {
+    type: String
+  },
+  emailVerificationExpiry: {
+    type: Date
+  },
+  // Password reset
+  resetPasswordToken: {
+    type: String
+  },
+  resetPasswordExpiry: {
+    type: Date
+  },
+  // Subscription billing
+  subscriptionTier: {
+    type: String,
+    enum: ['free', 'guardian', 'legacy_pro'],
+    default: 'free'
+  },
+  stripeCustomerId: {
+    type: String
+  },
+  stripeSubscriptionId: {
+    type: String
+  },
+  subscriptionStatus: {
+    type: String,
+    enum: ['active', 'canceled', 'past_due'],
+    default: 'active'
+  },
+  // Phone for WhatsApp alerts
+  phone: {
+    type: String
+  },
+  alertChannels: {
+    type: [String],
+    enum: ['email', 'whatsapp', 'telegram'],
+    default: ['email']
+  },
+  // Gamification
+  streak: {
+    type: Number,
+    default: 0
+  },
+  badges: [{
+    type: String
+  }],
+  // Onboarding
+  onboardingComplete: {
+    type: Boolean,
+    default: false
   }
 }, { timestamps: true });
 
@@ -52,3 +108,10 @@ userSchema.methods.comparePassword = async function(candidatePassword) {
 };
 
 module.exports = mongoose.model('User', userSchema);
+
+// Indexes for performance
+userSchema.index({ email: 1 }, { unique: true });
+userSchema.index({ triggerStatus: 1, lastActive: 1 }); // For CRON query
+userSchema.index({ emailVerificationToken: 1 }); // For email verification
+userSchema.index({ resetPasswordToken: 1 }); // For password reset
+userSchema.index({ stripeCustomerId: 1 }); // For Stripe webhooks

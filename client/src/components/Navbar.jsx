@@ -1,8 +1,11 @@
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Menu, X } from 'lucide-react';
 import { useState } from 'react';
+import ThemeToggle from './ThemeToggle';
+import GlobalSearch from './GlobalSearch';
 
 const Navbar = () => {
   const { user, logout } = useAuth();
@@ -16,11 +19,15 @@ const Navbar = () => {
   };
 
   const navItems = user ? [
-    { name: 'Dashboard', path: '/dashboard' },
-    { name: 'Vault', path: '/vault' },
-    { name: 'Beneficiaries', path: '/beneficiaries' },
-    { name: 'Capsules', path: '/capsules' },
-    { name: 'AI', path: '/ai' },
+    { name: 'Dashboard', path: '/dashboard', icon: '🏠' },
+    { name: 'Vault', path: '/vault', icon: '🔒' },
+    { name: 'Beneficiaries', path: '/beneficiaries', icon: '👥' },
+    { name: 'Capsules', path: '/capsules', icon: '⏰' },
+    { name: 'AI', path: '/ai', icon: '🤖' },
+    { name: 'Voice', path: '/voice-messages', icon: '🎤' },
+    { name: 'Timeline', path: '/life-timeline', icon: '📅' },
+    { name: 'Memoir', path: '/memoir-ai', icon: '📖' },
+    { name: 'Gamification', path: '/gamification', icon: '🏆' },
   ] : [];
 
   return (
@@ -37,14 +44,17 @@ const Navbar = () => {
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-6">
+          <div className="hidden md:flex items-center space-x-4">
+            <GlobalSearch />
+            <ThemeToggle />
             {user && navItems.map((item) => (
               <Link 
                 key={item.name} 
                 to={item.path} 
-                className="text-gray-700 hover:text-purple-600 px-3 py-2 rounded-md font-medium transition-colors text-lg"
+                className="text-gray-700 hover:text-purple-600 px-3 py-2 rounded-md font-medium transition-all hover:bg-purple-50 flex items-center gap-2 text-sm"
               >
-                {item.name}
+                <span className="text-lg">{item.icon}</span>
+                <span>{item.name}</span>
               </Link>
             ))}
             {user ? (

@@ -4,8 +4,33 @@ import { useAuth } from '../contexts/AuthContext';
 import { Pencil, Trash2, Eye, EyeOff, Plus, Shield, Lock, ExternalLink, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
+import CryptoJS from 'crypto-js';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+
+// Encryption functions
+const getEncryptionKey = (userId) => {
+  const salt = import.meta.env.VITE_ENCRYPTION_SALT || 'default-salt-for-development';
+  return `${userId}-${salt}`;
+};
+
+const encryptPassword = (password, userId) => {
+  if (!password) return '';
+  const key = getEncryptionKey(userId);
+  return CryptoJS.AES.encrypt(password, key).toString();
+};
+
+const decryptPassword = (encryptedPassword, userId) => {
+  if (!encryptedPassword) return '';
+  try {
+    const key = getEncryptionKey(userId);
+    const bytes = CryptoJS.AES.decrypt(encryptedPassword, key);
+    return bytes.toString(CryptoJS.enc.Utf8);
+  } catch (error) {
+    console.error('Decryption error:', error);
+    return '•••••••••••'; // Show masked if decryption fails
+  }
+};
 
 const Vault = () => {
   const [showForm, setShowForm] = useState(false);
@@ -70,6 +95,12 @@ const Vault = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     const submitData = { ...formData };
+    
+    // Encrypt password before sending to server
+    if (submitData.password && user?.id) {
+      submitData.password = encryptPassword(submitData.password, user.id);
+    }
+    
     if (editingId) {
       updateMutation.mutate({ id: editingId, assetData: submitData });
     } else {
@@ -88,7 +119,7 @@ const Vault = () => {
       platform: asset.platform,
       username: asset.username,
       url: asset.url || '',
-      password: asset.password,
+      password: decryptPassword(asset.password, user.id),
       notes: asset.notes || '',
       instruction: asset.instruction
     });
@@ -328,7 +359,7 @@ const Vault = () => {
                   <span className="text-xs font-black uppercase tracking-widest text-slate-400 mb-1">Secure Key</span>
                   <div className="flex items-center gap-3">
                     <span className="font-mono text-lg text-slate-900 dark:text-white flex-1 truncate">
-                      {showPasswords[asset._id] ? asset.password : '••••••••••••'}
+                      {showPasswords[asset._id] ? decryptPassword(asset.password, user.id) : '•••••••••••'}
                     </span>
                     <button
                       onClick={() => togglePassword(asset._id)}
