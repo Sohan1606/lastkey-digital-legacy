@@ -16,6 +16,30 @@ const GuardianProtocolPanel = ({ onPing, dmsStatus, isPremium }) => {
     refetchInterval: 30000, // Refetch every 30 seconds
   });
 
+  // Generate insights from scoreData
+  const insights = scoreData ? [
+    scoreData.stats?.beneficiaries === 0 && {
+      message: 'No loved ones added - no one will receive your legacy',
+      color: 'red', type: 'action'
+    },
+    scoreData.stats?.beneficiaries > 0 && {
+      message: `${scoreData.stats.beneficiaries} loved one(s) protected`,
+      color: 'emerald', type: 'status'
+    },
+    scoreData.stats?.capsules === 0 && {
+      message: 'Create your first Time Letter - say what matters most',
+      color: 'yellow', type: 'action'
+    },
+    scoreData.stats?.capsules > 0 && {
+      message: `${scoreData.stats.capsules} time letter(s) ready to deliver`,
+      color: 'blue', type: 'status'
+    },
+    scoreData.stats?.assets === 0 && {
+      message: 'Vault is empty - secure your digital accounts',
+      color: 'red', type: 'action'
+    },
+  ].filter(Boolean) : [];
+
   const getStatusColor = (status) => {
     switch (status) {
       case 'active': return 'from-emerald-400 to-green-500 ring-emerald-200';
@@ -171,7 +195,7 @@ const GuardianProtocolPanel = ({ onPing, dmsStatus, isPremium }) => {
 
           {/* Insights */}
           <div className="space-y-3">
-            {scoreData.insights?.map((insight, index) => (
+            {insights.map((insight, index) => (
               <motion.div
                 key={index}
                 initial={{ opacity: 0, x: -20 }}

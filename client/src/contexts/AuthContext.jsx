@@ -13,11 +13,15 @@ export const useAuth = () => {
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
 export const AuthProvider = ({ children }) => {
-  const [token, setToken] = useState(localStorage.getItem('token') || null);
+  const [token, setToken] = useState(() => {
+    const t = localStorage.getItem('token');
+    // Set axios header synchronously during initialization
+    if (t) axios.defaults.headers.common['Authorization'] = `Bearer ${t}`;
+    return t || null;
+  });
   const [user, setUser] = useState(null);
   const queryClient = useQueryClient();
 
-  // Fetch user data if token exists
   const { isPending: fetchingUser } = useQuery({
     queryKey: ['user'],
     queryFn: async () => {
@@ -30,13 +34,16 @@ export const AuthProvider = ({ children }) => {
       } catch (err) {
         setToken(null);
         setUser(null);
-        throw err;
+        localStorage.removeItem('token');
+        delete axios.defaults.headers.common['Authorization'];
+        return null;
       }
     },
     enabled: !!token,
     retry: false,
   });
 
+  // Keep axios header in sync when token changes
   useEffect(() => {
     if (token) {
       localStorage.setItem('token', token);

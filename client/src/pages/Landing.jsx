@@ -6,7 +6,6 @@ import {
   ArrowRight, CheckCircle, Star, MessageSquare, Lock
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext'
-import Navbar from '../components/Navbar'
 
 const Landing = () => {
   const navigate = useNavigate();
@@ -22,8 +21,6 @@ const Landing = () => {
 
   return (
     <div className="min-h-screen bg-white dark:bg-slate-950 overflow-hidden">
-      <Navbar />
-
       {/* Animated Background Shapes */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <motion.div 

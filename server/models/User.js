@@ -107,11 +107,11 @@ userSchema.methods.comparePassword = async function(candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
-module.exports = mongoose.model('User', userSchema);
-
 // Indexes for performance
 userSchema.index({ email: 1 }, { unique: true });
 userSchema.index({ triggerStatus: 1, lastActive: 1 }); // For CRON query
 userSchema.index({ emailVerificationToken: 1 }); // For email verification
 userSchema.index({ resetPasswordToken: 1 }); // For password reset
 userSchema.index({ stripeCustomerId: 1 }); // For Stripe webhooks
+
+module.exports = mongoose.model('User', userSchema);

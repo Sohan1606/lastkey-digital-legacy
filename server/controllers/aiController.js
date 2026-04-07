@@ -1,4 +1,6 @@
 const OpenAI = require('openai');
+const fs = require('fs');
+const path = require('path');
 
 let openai;
 
@@ -148,7 +150,7 @@ const getAISuggestions = async (req, res) => {
       suggestions.push({
         id: 'activity-low',
         title: 'Ping Your Dead Man Switch',
-        description: 'Reset inactivity timer to keep legacy secure. Last login ${lastLoginDays} days ago.',
+        description: `Reset inactivity timer to keep legacy secure. Last login ${lastLoginDays} days ago.`,
         category: 'maintenance',
         tone: 'reminder',
         priority: 'low',
@@ -201,12 +203,27 @@ const generateVoiceMessage = async (req, res) => {
 
     const buffer = Buffer.from(await mp3.arrayBuffer());
 
-    res.set({
-      'Content-Type': 'audio/mpeg',
-      'Content-Length': buffer.length,
-    });
+    // Save to uploads directory
+    const uploadsDir = path.join(__dirname, '../uploads/voices');
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
 
-    res.send(buffer);
+    const filename = `voice_${req.user._id}_${Date.now()}.mp3`;
+    const filePath = path.join(uploadsDir, filename);
+    fs.writeFileSync(filePath, buffer);
+
+    const audioUrl = `/uploads/voices/${filename}`;
+
+    res.json({
+      success: true,
+      data: {
+        audioUrl,
+        voice,
+        emotion,
+        duration: Math.ceil(text.length / 15) // estimate
+      }
+    });
   } catch (error) {
     console.error('Voice Generation Error:', error);
     res.status(500).json({ error: 'Failed to generate voice message' });

@@ -10,7 +10,7 @@ const beneficiarySchema = new mongoose.Schema({
     type: String,
     required: [true, 'Email is required'],
     lowercase: true,
-    match: [/^\\w+([\\.-]?\\w+)@\\w+([\\.-]?\\w+)(\\.\\w{2,3})+$/, 'Please enter valid email']
+    match: [/^\S+@\S+\.\S+$/, 'Please enter a valid email']
   },
   relationship: {
     type: String,

@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useQuery } from '@tanstack/react-query';
+import { formatDistanceToNow } from 'date-fns';
 import { 
   Heart, 
   Shield, 
@@ -15,71 +17,36 @@ import {
   X
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
-import { formatDistanceToNow } from 'date-fns';
+import { useAuth } from '../contexts/AuthContext';
+import axios from 'axios';
+
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
 const ActivityFeed = () => {
-  const [activities, setActivities] = useState([]);
+  const { user, token } = useAuth();
   const { theme } = useTheme();
 
-  // Mock activities - in real app, this would come from API
-  useEffect(() => {
-    const mockActivities = [
-      {
-        id: 1,
-        type: 'achievement',
-        title: 'Guardian Protocol Activated',
-        description: 'Your Guardian Protocol is now active and monitoring',
-        icon: Shield,
-        color: 'green',
-        timestamp: new Date(Date.now() - 1000 * 60 * 5), // 5 minutes ago
-        action: 'View Status'
-      },
-      {
-        id: 2,
-        type: 'creation',
-        title: 'New Voice Message Created',
-        description: 'Created a voice message for Sarah',
-        icon: Mic,
-        color: 'purple',
-        timestamp: new Date(Date.now() - 1000 * 60 * 30), // 30 minutes ago
-        action: 'Listen Now'
-      },
-      {
-        id: 3,
-        type: 'milestone',
-        title: '7-Day Streak Achieved!',
-        description: 'You\'ve maintained a 7-day login streak',
-        icon: Trophy,
-        color: 'yellow',
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
-        action: 'View Achievements'
-      },
-      {
-        id: 4,
-        type: 'reminder',
-        title: 'Time Capsule Released',
-        description: 'Your "Future Self" capsule is now available',
-        icon: Clock,
-        color: 'blue',
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 day ago
-        action: 'Open Capsule'
-      },
-      {
-        id: 5,
-        type: 'social',
-        title: 'New Beneficiary Added',
-        description: 'Added John Doe as a beneficiary',
-        icon: Users,
-        color: 'indigo',
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 48), // 2 days ago
-        action: 'View Beneficiaries'
-      }
-    ];
-    setActivities(mockActivities);
-  }, []);
+  const { data: activityData, isLoading } = useQuery({
+    queryKey: ['recentActivity'],
+    queryFn: async () => {
+      const { data } = await axios.get(`${API_BASE}/user/activity`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      return data.data;
+    },
+    enabled: !!user && !!token,
+  });
+
+  // Fall back to empty array if API not ready yet
+  const activities = activityData || [];
 
   const getActivityIcon = (activity) => {
-    const Icon = activity.icon;
+    const iconMap = {
+      vault: Shield,
+      beneficiary: Users,
+      capsule: Clock,
+    };
+    const Icon = iconMap[activity.type] || Heart;
     const colorClasses = {
       green: 'from-green-500 to-emerald-500',
       purple: 'from-purple-500 to-pink-500',

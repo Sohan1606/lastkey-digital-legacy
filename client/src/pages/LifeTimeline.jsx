@@ -183,7 +183,7 @@ const LifeTimeline = () => {
   const sortedEvents = timelineEvents?.sort((a, b) => new Date(a.date) - new Date(b.date)) || [];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-indigo-100 pt-20 p-6 md:p-8">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <motion.div

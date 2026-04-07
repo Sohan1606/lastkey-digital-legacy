@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
+import toast from 'react-hot-toast';
 import { initSocket } from '../socket';
 import GuardianProtocolPanel from '../components/GuardianProtocolPanel';
 import ActivityFeed from '../components/ActivityFeed';
@@ -66,10 +67,10 @@ const Dashboard = () => {
         message: '✅ Active & Secure'
       }));
       
-      // Show success feedback
-      // You could add a toast notification here
+      toast.success('Guardian Protocol reset! You\'re confirmed active.');
     } catch (error) {
       console.error('Ping error:', error);
+      toast.error('Failed to reset timer. Please try again.');
     }
   };
 

@@ -70,7 +70,15 @@ const MemoirAI = () => {
   // Generate memoir chapter mutation
   const generateChapterMutation = useMutation({
     mutationFn: async (stage) => {
-      const { data } = await axios.post(`${API_BASE}/ai/generate-memoir`, { stage }, {
+      const { data } = await axios.post(`${API_BASE}/ai/generate-memoir`, {
+        stage,
+        prompts: [
+          `Tell me about your ${stage} experiences`,
+          `What are your most important memories from this time?`,
+          `What lessons did you learn?` 
+        ],
+        existingChapters: memoirData || []
+      }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       return data.data;
@@ -153,7 +161,7 @@ const MemoirAI = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-indigo-100 pt-20 p-6 md:p-8">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <motion.div

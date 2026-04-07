@@ -25,6 +25,13 @@ const VoiceMessages = () => {
   const [audioUrl, setAudioUrl] = useState('');
   const [isPlaying, setIsPlaying] = useState(false);
 
+  const getAudioSrc = (url) => {
+    if (!url) return '';
+    if (url.startsWith('http')) return url;
+    const base = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api').replace('/api', '');
+    return `${base}${url}`;
+  };
+
   // Fetch existing voice messages
   const { data: voiceMessages, isLoading } = useQuery({
     queryKey: ['voiceMessages'],
@@ -147,14 +154,12 @@ const VoiceMessages = () => {
   };
 
   // Simulate recording timer
-  useState(() => {
+  useEffect(() => {
     let interval;
     if (isRecording) {
       interval = setInterval(() => {
         setRecordingTime(prev => prev + 1);
       }, 1000);
-    } else {
-      clearInterval(interval);
     }
     return () => clearInterval(interval);
   }, [isRecording]);
@@ -177,7 +182,7 @@ const VoiceMessages = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-indigo-50 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-indigo-100 pt-20 p-6 md:p-8">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <motion.div
@@ -312,7 +317,7 @@ const VoiceMessages = () => {
                     Voice Preview
                   </h3>
                   <audio id="voiceAudio" className="w-full mb-4" controls>
-                    <source src={audioUrl} type="audio/mpeg" />
+                    <source src={getAudioSrc(audioUrl)} type="audio/mpeg" />
                     Your browser does not support the audio element.
                   </audio>
                   <div className="flex gap-3">
@@ -423,7 +428,7 @@ const VoiceMessages = () => {
                   </div>
 
                   <audio className="w-full mb-3" controls>
-                    <source src={message.audioUrl} type="audio/mpeg" />
+                    <source src={getAudioSrc(message.audioUrl)} type="audio/mpeg" />
                     Your browser does not support the audio element.
                   </audio>
 

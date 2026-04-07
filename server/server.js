@@ -3,6 +3,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const mongoose = require('mongoose');
+const path = require('path');
 require('dotenv').config();
 
 // Import models
@@ -27,6 +28,9 @@ app.use(helmet({
 }));
 app.use(cors());
 app.use(express.json());
+
+// Add this line after app.use(express.json())
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Rate limiting
 const limiter = rateLimit({

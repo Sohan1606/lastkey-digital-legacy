@@ -120,7 +120,7 @@ router.get('/download/:assetId', async (req, res) => {
     }
     
     // Create downloadable content
-    const content = `${asset.platform} Credentials\n${'='.repeat(30)}\n`;
+    let content = `${asset.platform} Credentials\n${'='.repeat(30)}\n`;
     content += `Username: ${asset.username}\n`;
     content += `Password: ${asset.password}\n`;
     if (asset.instruction) {

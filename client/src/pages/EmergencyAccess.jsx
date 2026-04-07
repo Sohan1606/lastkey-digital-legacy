@@ -36,7 +36,7 @@ const EmergencyAccess = () => {
 
       if (response.data.success) {
         setLegacyData(response.data.data);
-        setBeneficiary(response.data.beneficiary);
+        setBeneficiary(response.data.data.beneficiary); // Fix: it's inside .data
         setIsAuthenticated(true);
         toast.success('Access granted. Loading legacy information...');
       }
@@ -88,7 +88,7 @@ const EmergencyAccess = () => {
 
   if (isAuthenticated && legacyData) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50 to-purple-50 p-6">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50 to-purple-50 pt-20 p-6">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
           <motion.div
