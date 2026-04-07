@@ -204,7 +204,7 @@ const generateVoiceMessage = async (req, res) => {
     const buffer = Buffer.from(await mp3.arrayBuffer());
 
     // Save to uploads directory
-    const uploadsDir = path.join(__dirname, '../uploads/voices');
+    const uploadsDir = path.join(process.cwd(), 'uploads', 'voices');
     if (!fs.existsSync(uploadsDir)) {
       fs.mkdirSync(uploadsDir, { recursive: true });
     }
