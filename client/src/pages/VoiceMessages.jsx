@@ -245,7 +245,7 @@ const VoiceMessages = () => {
                     className="w-full px-4 py-2 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                   >
                     {voices.map(voice => (
-                      <option key={voice.id} value={voice.id}>
+                      <option key={`voice-${voice.id}`} value={voice.id}>
                         {voice.name} - {voice.description}
                       </option>
                     ))}
@@ -262,7 +262,7 @@ const VoiceMessages = () => {
                     className="w-full px-4 py-2 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                   >
                     {emotions.map(emotion => (
-                      <option key={emotion.id} value={emotion.id}>
+                      <option key={`emotion-${emotion.id}`} value={emotion.id}>
                         {emotion.name} - {emotion.description}
                       </option>
                     ))}
