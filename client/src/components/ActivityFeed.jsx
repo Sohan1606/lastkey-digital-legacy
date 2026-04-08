@@ -25,6 +25,7 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api
 const ActivityFeed = () => {
   const { user, token } = useAuth();
   const { theme } = useTheme();
+  const [localActivities, setLocalActivities] = useState([]);
 
   const { data: activityData, isLoading } = useQuery({
     queryKey: ['recentActivity'],
@@ -37,8 +38,8 @@ const ActivityFeed = () => {
     enabled: !!user && !!token,
   });
 
-  // Fall back to empty array if API not ready yet
-  const activities = activityData || [];
+  // Fall back to API data, or use local state if available
+  const activities = activityData || localActivities;
 
   const getActivityIcon = (activity) => {
     const iconMap = {
@@ -63,7 +64,7 @@ const ActivityFeed = () => {
   };
 
   const removeActivity = (id) => {
-    setActivities(prev => prev.filter(activity => activity.id !== id));
+    setLocalActivities(prev => prev.filter(activity => activity.id !== id));
   };
 
   return (
@@ -86,7 +87,7 @@ const ActivityFeed = () => {
       <div style={{ maxHeight: 380, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
         <AnimatePresence>
           {activities.map((activity, i) => (
-            <motion.div key={activity.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -100 }} transition={{ delay: i * 0.08 }}
+            <motion.div key={activity._id || i} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -100 }} transition={{ delay: i * 0.08 }}
               style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: 12, borderRadius: 12, cursor: 'pointer', transition: 'all 0.22s' }}
               onMouseEnter={e => { e.currentTarget.style.background = 'var(--glass-3)'; }}
               onMouseLeave={e => { e.currentTarget.style.background = 'var(--glass-1)'; }}
@@ -96,7 +97,7 @@ const ActivityFeed = () => {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                   <h4 style={{ fontSize: 13, fontWeight: 600, color: '#f0f4ff' }}>{activity.title}</h4>
-                  <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={() => removeActivity(activity.id)}
+                  <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={() => removeActivity(activity._id)}
                     style={{ padding: 2, borderRadius: 6, cursor: 'pointer' }}
                     onMouseEnter={e => { e.currentTarget.style.background = 'var(--glass-3)'; }}
                     onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
@@ -105,16 +106,16 @@ const ActivityFeed = () => {
                   </motion.button>
                 </div>
                 
-                <p style={{ fontSize: 12, color: 'var(--text-2)', marginBottom: 6, lineHeight: 1.4 }}>{activity.description}</p>
+                <p style={{ fontSize: 12, color: 'var(--text-2)', marginBottom: 6, lineHeight: 1.4 }}>{activity.title}</p>
                 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{formatDistanceToNow(activity.timestamp, { addSuffix: true })}</span>
+                  <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true })}</span>
                   <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
                     style={{ background: 'var(--glass-1)', border: '1px solid var(--glass-border)', borderRadius: 8, padding: '4px 8px', fontSize: 11, fontWeight: 600, color: 'var(--ion)', cursor: 'pointer' }}
                     onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--ion)'; e.currentTarget.style.background = 'rgba(79,158,255,0.08)'; }}
                     onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--glass-border)'; e.currentTarget.style.background = 'var(--glass-1)'; }}
                   >
-                    {activity.action}
+                    {activity.type}
                   </motion.button>
                 </div>
               </div>

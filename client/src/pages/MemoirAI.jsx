@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { BookOpen, Sparkles, Heart, Clock, ChevronRight, User, Download, Save, Plus } from 'lucide-react';
+import { BookOpen, Sparkles, Heart, Clock, ChevronRight, User, Download, Save, Plus, Trash2 } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
@@ -14,48 +13,16 @@ const MemoirAI = () => {
   
   const [selectedStage, setSelectedStage] = useState('childhood');
   const [currentChapter, setCurrentChapter] = useState('');
-  const [savedChapters, setSavedChapters] = useState([]);
   const [isGenerating, setIsGenerating] = useState(false);
 
   const stages = [
-    {
-      id: 'childhood',
-      name: 'Childhood',
-      description: 'Early memories, family moments, and formative experiences',
-      icon: '🧸',
-      color: 'blue'
-    },
-    {
-      id: 'teenage',
-      name: 'Teenage Years', 
-      description: 'Adolescence, friendships, first loves, and self-discovery',
-      icon: '🎭',
-      color: 'purple'
-    },
-    {
-      id: 'early_adulthood',
-      name: 'Early Adulthood',
-      description: 'Career beginnings, independence, major life decisions',
-      icon: '🎓',
-      color: 'green'
-    },
-    {
-      id: 'midlife',
-      name: 'Midlife Reflections',
-      description: 'Wisdom gained, family life, career achievements',
-      icon: '🏆',
-      color: 'orange'
-    },
-    {
-      id: 'wisdom',
-      name: 'Life Wisdom',
-      description: 'Core values, lessons learned, legacy messages',
-      icon: '🦉',
-      color: 'indigo'
-    }
+    { id: 'childhood', name: 'Childhood', description: 'Early memories and formative experiences', icon: '🧸', color: '#4f9eff' },
+    { id: 'teenage', name: 'Teenage Years', description: 'Adolescence and self-discovery', icon: '🎭', color: '#7c5cfc' },
+    { id: 'early_adulthood', name: 'Early Adulthood', description: 'Career beginnings and independence', icon: '🎓', color: '#00e5a0' },
+    { id: 'midlife', name: 'Midlife Reflections', description: 'Wisdom gained and achievements', icon: '🏆', color: '#ffb830' },
+    { id: 'wisdom', name: 'Life Wisdom', description: 'Core values and legacy messages', icon: '🦉', color: '#ff4d6d' }
   ];
 
-  // Fetch saved memoir chapters
   const { data: memoirData, isLoading } = useQuery({
     queryKey: ['memoirChapters'],
     queryFn: async () => {
@@ -67,7 +34,21 @@ const MemoirAI = () => {
     enabled: !!user && !!token
   });
 
-  // Generate memoir chapter mutation
+  const deleteChapterMutation = useMutation({
+    mutationFn: async (id) => {
+      await axios.delete(`${API_BASE}/memoir/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+    },
+    onSuccess: () => {
+      toast.success('Chapter deleted');
+      queryClient.invalidateQueries(['memoirChapters']);
+    },
+    onError: () => {
+      toast.error('Failed to delete chapter');
+    }
+  });
+
   const generateChapterMutation = useMutation({
     mutationFn: async (stage) => {
       const { data } = await axios.post(`${API_BASE}/ai/generate-memoir`, {
@@ -75,7 +56,7 @@ const MemoirAI = () => {
         prompts: [
           `Tell me about your ${stage} experiences`,
           `What are your most important memories from this time?`,
-          `What lessons did you learn?` 
+          `What lessons did you learn?`
         ],
         existingChapters: memoirData || []
       }, {
@@ -86,16 +67,14 @@ const MemoirAI = () => {
     onSuccess: (data) => {
       setCurrentChapter(data.chapter);
       setIsGenerating(false);
-      toast.success('Memoir chapter generated successfully!');
+      toast.success('Chapter generated!');
     },
-    onError: (error) => {
-      console.error('Memoir generation error:', error);
-      toast.error(error.response?.data?.error || 'Failed to generate memoir chapter');
+    onError: () => {
+      toast.error('Failed to generate chapter');
       setIsGenerating(false);
     }
   });
 
-  // Save chapter mutation
   const saveChapterMutation = useMutation({
     mutationFn: async (chapterData) => {
       const { data } = await axios.post(`${API_BASE}/memoir`, chapterData, {
@@ -106,18 +85,17 @@ const MemoirAI = () => {
     onSuccess: () => {
       setCurrentChapter('');
       setSelectedStage('childhood');
-      toast.success('Memoir chapter saved successfully!');
+      toast.success('Chapter saved!');
       queryClient.invalidateQueries(['memoirChapters']);
     },
     onError: (error) => {
-      console.error('Save memoir error:', error);
-      toast.error('Failed to save memoir chapter');
+      toast.error(error.response?.data?.error || 'Failed to save chapter');
     }
   });
 
   const handleGenerateChapter = () => {
     if (!selectedStage) {
-      toast.error('Please select a life stage to generate');
+      toast.error('Please select a life stage');
       return;
     }
     setIsGenerating(true);
@@ -126,10 +104,9 @@ const MemoirAI = () => {
 
   const handleSaveChapter = () => {
     if (!currentChapter.trim()) {
-      toast.error('Please generate a chapter before saving');
+      toast.error('Generate a chapter first');
       return;
     }
-
     saveChapterMutation.mutate({
       stage: selectedStage,
       chapter: currentChapter,
@@ -138,8 +115,12 @@ const MemoirAI = () => {
   };
 
   const handleDownloadMemoir = async () => {
+    if (!memoirData || memoirData.length === 0) {
+      toast.error('No chapters to download');
+      return;
+    }
     try {
-      const memoirContent = savedChapters.map(chapter => 
+      const memoirContent = memoirData.map(chapter => 
         `=== ${chapter.title} ===\n\n${chapter.chapter}\n\n`
       ).join('\n');
 
@@ -152,241 +133,153 @@ const MemoirAI = () => {
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-      
-      toast.success('Memoir downloaded successfully!');
-    } catch (error) {
-      console.error('Download error:', error);
+      toast.success('Memoir downloaded!');
+    } catch {
       toast.error('Failed to download memoir');
     }
   };
+
+  const selectedStageData = stages.find(s => s.id === selectedStage) || stages[0];
 
   return (
     <div className="page spatial-bg">
       <div className="stars" />
       <div className="container">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-8"
-        >
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <div className="w-16 h-16 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full flex items-center justify-center">
-              <BookOpen className="w-8 h-8 text-white" />
+        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 8 }}>
+            <div style={{ width: 48, height: 48, borderRadius: 14, background: 'linear-gradient(135deg, rgba(79,92,252,0.3), rgba(124,92,252,0.3))', border: '1px solid rgba(124,92,252,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <BookOpen style={{ width: 22, height: 22, color: 'var(--plasma)' }} />
             </div>
-            <h1 className="text-4xl font-black bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-              Memoir AI
-            </h1>
+            <div>
+              <h1 className="display" style={{ fontSize: 28 }}>Memoir AI</h1>
+              <p style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 2 }}>Craft your life story into beautiful chapters</p>
+            </div>
           </div>
-          <p className="text-lg text-gray-600 max-w-3xl mx-auto leading-relaxed">
-            Let AI guide you through creating your life story. Answer thoughtful questions and watch as your memories transform into beautiful memoir chapters.
-          </p>
         </motion.div>
 
-        <div className="grid lg:grid-cols-2 gap-8">
-          {/* Stage Selection */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/50 p-8"
-          >
-            <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-              <Heart className="w-6 h-6 text-indigo-600" />
-              Life Stages
-            </h2>
-            
-            <div className="space-y-4">
-              {stages.map((stage, index) => (
-                <motion.button
-                  key={stage.id}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 24, marginTop: 28 }}>
+          <motion.div initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.05 }}
+            style={{ background: 'var(--glass-1)', backdropFilter: 'blur(20px)', border: '1px solid var(--glass-border)', borderRadius: 20, padding: 24 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+              <Heart style={{ width: 18, height: 18, color: 'var(--plasma)' }} />
+              <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-1)' }}>Life Stages</h2>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {stages.map((stage) => (
+                <motion.button key={stage.id} whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
                   onClick={() => setSelectedStage(stage.id)}
-                  className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
-                    selectedStage === stage.id 
-                      ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-transparent' 
-                      : 'bg-white border-gray-200 hover:border-indigo-300 hover:bg-indigo-50'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl mb-1">{stage.icon}</span>
-                    <div>
-                      <div className="font-semibold text-gray-900">{stage.name}</div>
-                      <div className="text-sm text-gray-500">{stage.description}</div>
-                    </div>
+                  style={{ padding: '14px 16px', borderRadius: 12, border: selectedStage === stage.id ? `1px solid ${stage.color}` : '1px solid var(--glass-border)', background: selectedStage === stage.id ? `${stage.color}10` : 'transparent', cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span style={{ fontSize: 20 }}>{stage.icon}</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-1)', marginBottom: 2 }}>{stage.name}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-2)' }}>{stage.description}</div>
                   </div>
-                  {selectedStage === stage.id && (
-                    <ChevronRight className="w-5 h-5 ml-auto" />
-                  )}
+                  {selectedStage === stage.id && <ChevronRight style={{ width: 16, height: 16, color: stage.color }} />}
                 </motion.button>
               ))}
             </div>
 
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={handleGenerateChapter}
-              disabled={!selectedStage || isGenerating}
-              className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-4 px-6 rounded-xl font-bold text-lg hover:from-indigo-700 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
+            <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.97 }} onClick={handleGenerateChapter}
+              disabled={isGenerating}
+              style={{ width: '100%', marginTop: 20, padding: '14px 20px', borderRadius: 12, border: 'none', background: `linear-gradient(135deg, ${selectedStageData.color}, var(--plasma))`, color: 'white', fontWeight: 700, fontSize: 14, cursor: isGenerating ? 'not-allowed' : 'pointer', opacity: isGenerating ? 0.6 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
               {isGenerating ? (
-                <>
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Generating Chapter...</span>
-                </>
+                <><div className="spinner spinner-sm" style={{ borderTopColor: 'white' }} /> Generating...</>
               ) : (
-                <>
-                  <Sparkles className="w-5 h-5" />
-                  <span>Generate {stages.find(s => s.id === selectedStage)?.name} Chapter</span>
-                </>
+                <><Sparkles style={{ width: 16, height: 16 }} /> Generate Chapter</>
               )}
             </motion.button>
           </motion.div>
 
-          {/* Chapter Generation */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/50 p-8"
-          >
-            <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-              <BookOpen className="w-6 h-6 text-indigo-600" />
-              {currentChapter ? 'Your Generated Chapter' : 'AI Generation'}
-            </h2>
+          <motion.div initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}
+            style={{ background: 'var(--glass-1)', backdropFilter: 'blur(20px)', border: '1px solid var(--glass-border)', borderRadius: 20, padding: 24 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+              <BookOpen style={{ width: 18, height: 18, color: 'var(--ion)' }} />
+              <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-1)' }}>AI Generation</h2>
+            </div>
 
             {currentChapter ? (
-              <div className="space-y-6">
-                <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-6 border border-indigo-200">
-                  <h3 className="font-semibold text-gray-900 mb-4">
-                    {stages.find(s => s.id === selectedStage)?.name} Chapter
-                  </h3>
-                  
-                  <div className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                    {currentChapter}
-                  </div>
-                  
-                  <div className="flex items-center gap-2 text-sm text-gray-500 mt-4">
-                    <Clock className="w-4 h-4" />
-                    <span>{currentChapter.split(' ').length} words</span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div style={{ padding: 16, background: `${selectedStageData.color}08`, border: `1px solid ${selectedStageData.color}20`, borderRadius: 14 }}>
+                  <h3 style={{ fontSize: 14, fontWeight: 600, color: selectedStageData.color, marginBottom: 12 }}>{selectedStageData.name} Chapter</h3>
+                  <div style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.7, maxHeight: 280, overflowY: 'auto', whiteSpace: 'pre-wrap' }}>{currentChapter}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text-3)', marginTop: 12 }}>
+                    <Clock style={{ width: 12, height: 12 }} />
+                    {currentChapter.split(' ').length} words
                   </div>
                 </div>
-
-                <div className="flex gap-4">
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={handleSaveChapter}
-                    className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-3 px-6 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2"
-                  >
-                    <Save className="w-5 h-5" />
-                    Save Chapter
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} onClick={handleSaveChapter}
+                    style={{ flex: 1, padding: '12px 16px', borderRadius: 10, border: 'none', background: 'var(--pulse)', color: '#001a12', fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                    <Save style={{ width: 14, height: 14 }} /> Save
                   </motion.button>
-                  
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => {
-                      setCurrentChapter('');
-                      setSelectedStage('childhood');
-                    }}
-                    className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 px-6 rounded-xl font-semibold transition-colors"
-                  >
-                    Generate Another
+                  <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} onClick={() => { setCurrentChapter(''); setSelectedStage('childhood'); }}
+                    style={{ flex: 1, padding: '12px 16px', borderRadius: 10, border: '1px solid var(--glass-border)', background: 'var(--glass-1)', color: 'var(--text-2)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                    Regenerate
                   </motion.button>
                 </div>
               </div>
             ) : (
-              <div className="text-center py-12">
-                <User className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-gray-700 mb-4">
-                  Select a life stage to begin your memoir journey
-                </h3>
-                <p className="text-gray-500 max-w-md mx-auto">
-                  Each chapter will be crafted with care, focusing on the unique memories and wisdom from that period of your life.
-                </p>
+              <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+                <User style={{ width: 48, height: 48, color: 'var(--text-3)', margin: '0 auto 16px' }} />
+                <h3 style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-1)', marginBottom: 8 }}>Select a life stage</h3>
+                <p style={{ fontSize: 13, color: 'var(--text-2)', maxWidth: 280, margin: '0 auto' }}>Choose a chapter above to begin crafting your memoir</p>
               </div>
             )}
           </motion.div>
-
-          {/* Saved Chapters */}
-          {savedChapters && savedChapters.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="lg:col-span-2 bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/50 p-8"
-            >
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                  <BookOpen className="w-6 h-6 text-indigo-600" />
-                  Your Memoir ({savedChapters.length} chapters)
-                </h2>
-                
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={handleDownloadMemoir}
-                  className="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 py-2 px-4 rounded-lg font-medium transition-colors flex items-center gap-2"
-                >
-                  <Download className="w-4 h-4" />
-                  Download Complete Memoir
-                </motion.button>
-              </div>
-
-              <div className="space-y-4">
-                {savedChapters.map((chapter, index) => (
-                  <motion.div
-                    key={chapter._id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                    className="bg-gradient-to-r from-gray-50 to-indigo-50 rounded-xl p-4 border border-indigo-200"
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <h3 className="font-bold text-gray-900">{chapter.title}</h3>
-                      <span className="text-sm text-gray-500 bg-white px-2 py-1 rounded">
-                        {chapter.stage}
-                      </span>
-                    </div>
-
-                    <div className="text-gray-700 leading-relaxed line-clamp-3">
-                      {chapter.chapter.substring(0, 200)}...
-                    </div>
-                    
-                    <div className="text-sm text-gray-500 mt-2">
-                      <Clock className="w-4 h-4 inline mr-1" />
-                      {new Date(chapter.createdAt).toLocaleDateString()}
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </motion.div>
-          )}
-
-          {/* Empty State */}
-          {!isLoading && (!savedChapters || savedChapters.length === 0) && !currentChapter && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="text-center py-20 bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 max-w-2xl mx-auto"
-            >
-              <BookOpen className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-gray-700 mb-2">Your Memoir Awaits</h3>
-              <p className="text-gray-500 mb-6 max-w-md mx-auto">
-                Every life has a story worth telling. Let AI help you craft your memoir into beautiful chapters that will be treasured for generations.
-              </p>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setSelectedStage('childhood')}
-                className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-8 py-4 rounded-2xl font-bold text-lg shadow-xl hover:shadow-2xl transition-all"
-              >
-                <Plus className="w-5 h-5" />
-                Begin Your Memoir
-              </motion.button>
-            </motion.div>
-          )}
         </div>
+
+        {memoirData && memoirData.length > 0 && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} style={{ marginTop: 32 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <BookOpen style={{ width: 18, height: 18, color: 'var(--text-2)' }} />
+                <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-1)' }}>Your Memoir ({memoirData.length} chapters)</h2>
+              </div>
+              <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={handleDownloadMemoir}
+                style={{ padding: '8px 16px', borderRadius: 10, border: '1px solid rgba(79,158,255,0.2)', background: 'rgba(79,158,255,0.08)', color: 'var(--ion)', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Download style={{ width: 14, height: 14 }} /> Download All
+              </motion.button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {memoirData.map((chapter, index) => {
+                const stageInfo = stages.find(s => s.id === chapter.stage) || stages[0];
+                return (
+                  <motion.div key={chapter._id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.05 }}
+                    style={{ background: 'var(--glass-1)', backdropFilter: 'blur(20px)', border: '1px solid var(--glass-border)', borderRadius: 16, padding: 18 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+                      <div>
+                        <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-1)', marginBottom: 4 }}>{chapter.title}</h3>
+                        <span style={{ fontSize: 11, color: stageInfo.color, background: `${stageInfo.color}15`, border: `1px solid ${stageInfo.color}25`, padding: '2px 8px', borderRadius: 6 }}>{stageInfo.icon} {stageInfo.name}</span>
+                      </div>
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{new Date(chapter.createdAt).toLocaleDateString()}</span>
+                        <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={() => { if (window.confirm('Delete this chapter?')) deleteChapterMutation.mutate(chapter._id); }}
+                          style={{ padding: 6, borderRadius: 8, border: '1px solid rgba(255,77,109,0.2)', background: 'rgba(255,77,109,0.08)', color: 'var(--danger)', cursor: 'pointer' }}>
+                          <Trash2 style={{ width: 13, height: 13 }} />
+                        </motion.button>
+                      </div>
+                    </div>
+                    <p style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.6 }}>{chapter.chapter.substring(0, 200)}...</p>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+
+        {!isLoading && (!memoirData || memoirData.length === 0) && !currentChapter && (
+          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} style={{ textAlign: 'center', padding: '60px 20px', marginTop: 40, background: 'var(--glass-1)', backdropFilter: 'blur(20px)', border: '1px solid var(--glass-border)', borderRadius: 24 }}>
+            <BookOpen style={{ width: 48, height: 48, color: 'var(--text-3)', margin: '0 auto 16px' }} />
+            <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-1)', marginBottom: 8 }}>Your Memoir Awaits</h3>
+            <p style={{ fontSize: 14, color: 'var(--text-2)', marginBottom: 24, maxWidth: 360, margin: '0 auto 24px' }}>Every life has a story worth telling. Let AI help you craft your memoir.</p>
+            <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => setSelectedStage('childhood')}
+              style={{ padding: '14px 28px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg, #4f9eff, #7c5cfc)', color: 'white', fontWeight: 700, fontSize: 14, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              <Plus style={{ width: 16, height: 16 }} /> Begin Your Journey
+            </motion.button>
+          </motion.div>
+        )}
       </div>
     </div>
   );

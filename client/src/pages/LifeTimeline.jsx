@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Calendar, Plus, Heart, Star, MapPin, Camera, Edit, Trash2, Clock, Award } from 'lucide-react';
+import { Calendar, Plus, Heart, Star, MapPin, Camera, Edit, Trash2, Clock, Award, X } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
@@ -23,7 +22,6 @@ const LifeTimeline = () => {
     photos: []
   });
 
-  // Fetch timeline events
   const { data: timelineEvents, isLoading } = useQuery({
     queryKey: ['timelineEvents'],
     queryFn: async () => {
@@ -35,7 +33,6 @@ const LifeTimeline = () => {
     enabled: !!user && !!token
   });
 
-  // Add event mutation
   const addEventMutation = useMutation({
     mutationFn: async (eventData) => {
       const { data } = await axios.post(`${API_BASE}/timeline`, eventData, {
@@ -45,24 +42,15 @@ const LifeTimeline = () => {
     },
     onSuccess: () => {
       setShowAddEvent(false);
-      setFormData({
-        title: '',
-        date: '',
-        description: '',
-        category: 'milestone',
-        location: '',
-        photos: []
-      });
-      toast.success('Timeline event added successfully!');
+      setFormData({ title: '', date: '', description: '', category: 'milestone', location: '', photos: [] });
+      toast.success('Life event added!');
       queryClient.invalidateQueries(['timelineEvents']);
     },
-    onError: (error) => {
-      console.error('Add timeline event error:', error);
-      toast.error('Failed to add timeline event');
+    onError: () => {
+      toast.error('Failed to add event');
     }
   });
 
-  // Update event mutation
   const updateEventMutation = useMutation({
     mutationFn: async ({ id, eventData }) => {
       const { data } = await axios.put(`${API_BASE}/timeline/${id}`, eventData, {
@@ -72,24 +60,16 @@ const LifeTimeline = () => {
     },
     onSuccess: () => {
       setEditingEvent(null);
-      setFormData({
-        title: '',
-        date: '',
-        description: '',
-        category: 'milestone',
-        location: '',
-        photos: []
-      });
-      toast.success('Timeline event updated successfully!');
+      setShowAddEvent(false);
+      setFormData({ title: '', date: '', description: '', category: 'milestone', location: '', photos: [] });
+      toast.success('Event updated!');
       queryClient.invalidateQueries(['timelineEvents']);
     },
     onError: (error) => {
-      console.error('Update timeline event error:', error);
-      toast.error('Failed to update timeline event');
+      toast.error(error.response?.data?.error || 'Failed to update event');
     }
   });
 
-  // Delete event mutation
   const deleteEventMutation = useMutation({
     mutationFn: async (id) => {
       await axios.delete(`${API_BASE}/timeline/${id}`, {
@@ -97,27 +77,25 @@ const LifeTimeline = () => {
       });
     },
     onSuccess: () => {
-      toast.success('Timeline event deleted successfully!');
+      toast.success('Event removed');
       queryClient.invalidateQueries(['timelineEvents']);
     },
     onError: (error) => {
-      console.error('Delete timeline event error:', error);
-      toast.error('Failed to delete timeline event');
+      toast.error('Failed to delete event');
     }
   });
 
   const handleAddEvent = () => {
-    if (!showAddEvent) {
-      setFormData({
-        title: '',
-        date: new Date().toISOString().split('T')[0],
-        description: '',
-        category: 'milestone',
-        location: '',
-        photos: []
-      });
-      setShowAddEvent(true);
-    }
+    setFormData({
+      title: '',
+      date: new Date().toISOString().split('T')[0],
+      description: '',
+      category: 'milestone',
+      location: '',
+      photos: []
+    });
+    setEditingEvent(null);
+    setShowAddEvent(true);
   };
 
   const handleEditEvent = (event) => {
@@ -125,9 +103,9 @@ const LifeTimeline = () => {
     setFormData({
       title: event.title,
       date: event.date,
-      description: event.description,
-      category: event.category,
-      location: event.location,
+      description: event.description || '',
+      category: event.category || 'milestone',
+      location: event.location || '',
       photos: event.photos || []
     });
     setShowAddEvent(true);
@@ -135,49 +113,34 @@ const LifeTimeline = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    
     if (!formData.title.trim() || !formData.date) {
       toast.error('Title and date are required');
       return;
     }
-
-    const eventData = {
-      ...formData,
-      photos: formData.photos
-    };
-
     if (editingEvent) {
-      updateEventMutation.mutate({ id: editingEvent._id, eventData });
+      updateEventMutation.mutate({ id: editingEvent._id, eventData: formData });
     } else {
-      addEventMutation.mutate(eventData);
+      addEventMutation.mutate(formData);
     }
   };
 
   const handleCancel = () => {
     setShowAddEvent(false);
     setEditingEvent(null);
-    setFormData({
-      title: '',
-      date: '',
-      description: '',
-      category: 'milestone',
-      location: '',
-      photos: []
-    });
   };
 
   const handleDeleteEvent = (id) => {
-    if (window.confirm('Are you sure you want to delete this timeline event?')) {
+    if (window.confirm('Delete this life event?')) {
       deleteEventMutation.mutate(id);
     }
   };
 
   const categories = [
-    { id: 'milestone', name: 'Milestone', color: 'blue', icon: Star },
-    { id: 'achievement', name: 'Achievement', color: 'green', icon: Award },
-    { id: 'memory', name: 'Memory', color: 'purple', icon: Heart },
-    { id: 'travel', name: 'Travel', color: 'orange', icon: MapPin },
-    { id: 'family', name: 'Family', color: 'pink', icon: Camera }
+    { id: 'milestone', name: 'Milestone', color: '#4f9eff', icon: Star },
+    { id: 'achievement', name: 'Achievement', color: '#00e5a0', icon: Award },
+    { id: 'memory', name: 'Memory', color: '#7c5cfc', icon: Heart },
+    { id: 'travel', name: 'Travel', color: '#ffb830', icon: MapPin },
+    { id: 'family', name: 'Family', color: '#ff4d6d', icon: Camera }
   ];
 
   const sortedEvents = timelineEvents?.sort((a, b) => new Date(a.date) - new Date(b.date)) || [];
@@ -186,161 +149,82 @@ const LifeTimeline = () => {
     <div className="page spatial-bg">
       <div className="stars" />
       <div className="container">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-8"
-        >
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center">
-              <Calendar className="w-6 h-6 text-white" />
+        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 8 }}>
+            <div style={{ width: 48, height: 48, borderRadius: 14, background: 'linear-gradient(135deg, #4f9eff30, #7c5cfc30)', border: '1px solid rgba(79,158,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Calendar style={{ width: 22, height: 22, color: 'var(--ion)' }} />
             </div>
-            <h1 className="text-4xl font-black bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              Life Timeline
-            </h1>
+            <div>
+              <h1 className="display" style={{ fontSize: 28 }}>Life Timeline</h1>
+              <p style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 2 }}>Document your journey, celebrate milestones</p>
+            </div>
           </div>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Document your life's journey, celebrate milestones, and create a beautiful timeline that tells your story.
-          </p>
         </motion.div>
 
-        {/* Add Event Button */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-8"
+        <motion.button
+          initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+          whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+          onClick={handleAddEvent}
+          style={{ marginTop: 24, width: '100%', padding: '16px 24px', borderRadius: 14, border: '1px dashed rgba(79,158,255,0.3)', background: 'rgba(79,158,255,0.04)', color: 'var(--ion)', cursor: 'pointer', fontWeight: 600, fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'all 0.22s' }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(79,158,255,0.08)'; e.currentTarget.style.borderColor = 'rgba(79,158,255,0.5)'; }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(79,158,255,0.04)'; e.currentTarget.style.borderColor = 'rgba(79,158,255,0.3)'; }}
         >
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={handleAddEvent}
-            className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-2xl font-bold text-lg shadow-xl hover:shadow-2xl transition-all flex items-center gap-2"
-          >
-            <Plus className="w-6 h-6" />
-            Add Life Event
-          </motion.button>
-        </motion.div>
+          <Plus style={{ width: 18, height: 18 }} />
+          Add Life Event
+        </motion.button>
 
-        {/* Add/Edit Event Modal */}
         {showAddEvent && (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-6 z-50"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+            style={{ position: 'fixed', inset: 0, background: 'rgba(3,5,8,0.85)', backdropFilter: 'blur(8px)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
             onClick={handleCancel}
           >
             <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-8"
+              initial={{ scale: 0.92, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+              onClick={e => e.stopPropagation()}
+              style={{ background: 'var(--deep)', border: '1px solid var(--glass-border)', borderRadius: 24, padding: 32, width: '100%', maxWidth: 520, maxHeight: '90vh', overflowY: 'auto' }}
             >
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-1)' }}>
                   {editingEvent ? 'Edit Life Event' : 'Add Life Event'}
                 </h2>
-                <button
-                  onClick={handleCancel}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  ×
+                <button onClick={handleCancel} style={{ background: 'none', border: 'none', color: 'var(--text-2)', cursor: 'pointer', padding: 4 }}>
+                  <X style={{ width: 20, height: 20 }} />
                 </button>
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Title */}
+              <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Event Title
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    placeholder="Give your event a meaningful title..."
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    required
-                  />
+                  <label>Event Title</label>
+                  <input type="text" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} placeholder="Milestone or memory title..." required />
                 </div>
-
-                {/* Date */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Date
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.date}
-                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    required
-                  />
+                  <label>Date</label>
+                  <input type="date" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} required />
                 </div>
-
-                {/* Category */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Category
-                  </label>
-                  <select
-                    value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    {categories.map(category => (
-                      <option key={category.id} value={category.id}>
-                        {category.name}
-                      </option>
-                    ))}
+                  <label>Category</label>
+                  <select value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })}>
+                    {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
                   </select>
                 </div>
-
-                {/* Location */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Location (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.location}
-                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                    placeholder="Where did this happen?"
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
+                  <label>Location (Optional)</label>
+                  <input type="text" value={formData.location} onChange={e => setFormData({ ...formData, location: e.target.value })} placeholder="Where did this happen?" />
                 </div>
-
-                {/* Description */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Description
-                  </label>
-                  <textarea
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="Share the story behind this moment..."
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 h-32 resize-none"
-                  />
+                  <label>Description</label>
+                  <textarea value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} placeholder="Share the story..." style={{ height: 100, resize: 'none' }} />
                 </div>
-
-                {/* Action Buttons */}
-                <div className="flex gap-4 pt-4">
-                  <motion.button
-                    type="submit"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-6 rounded-xl font-bold hover:from-blue-700 hover:to-purple-700 transition-all"
-                  >
-                    {editingEvent ? 'Update Event' : 'Add Event'}
+                <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
+                  <motion.button type="submit" whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
+                    disabled={addEventMutation.isPending || updateEventMutation.isPending}
+                    style={{ flex: 1, padding: '14px 24px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg, #4f9eff, #7c5cfc)', color: 'white', fontWeight: 700, fontSize: 14, cursor: addEventMutation.isPending || updateEventMutation.isPending ? 'not-allowed' : 'pointer', opacity: addEventMutation.isPending || updateEventMutation.isPending ? 0.6 : 1 }}>
+                    {addEventMutation.isPending || updateEventMutation.isPending ? 'Saving...' : editingEvent ? 'Update Event' : 'Add Event'}
                   </motion.button>
-                  <motion.button
-                    type="button"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={handleCancel}
-                    className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 px-6 rounded-xl font-bold transition-colors"
-                  >
+                  <motion.button type="button" whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }} onClick={handleCancel}
+                    style={{ flex: 1, padding: '14px 24px', borderRadius: 12, border: '1px solid var(--glass-border)', background: 'var(--glass-1)', color: 'var(--text-2)', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>
                     Cancel
                   </motion.button>
                 </div>
@@ -349,149 +233,69 @@ const LifeTimeline = () => {
           </motion.div>
         )}
 
-        {/* Timeline */}
-        <div className="relative">
-          {/* Timeline Line */}
-          <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gradient-to-b from-blue-200 to-purple-200"></div>
-          
-          {/* Timeline Events */}
-          <div className="space-y-8">
-            {sortedEvents?.map((event, index) => {
-              const category = categories.find(c => c.id === event.category);
-              const isLeft = index % 2 === 0;
-              
-              return (
-                <motion.div
-                  key={event._id}
-                  initial={{ opacity: 0, x: isLeft ? -50 : 50 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  className={`relative flex items-center ${isLeft ? 'flex-row-reverse' : ''}`}
-                >
-                  {/* Timeline Dot */}
-                  <div className={`absolute ${isLeft ? 'right-8' : 'left-8'} w-4 h-4 bg-white border-4 border-gray-300 rounded-full z-10`}></div>
-                  
-                  {/* Event Card */}
-                  <motion.div
-                    whileHover={{ scale: 1.02, y: -4 }}
-                    className={`relative bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 p-6 max-w-md cursor-pointer ${
-                      isLeft ? 'mr-8' : 'ml-8'
-                    }`}
-                    onClick={() => handleEditEvent(event)}
-                  >
-                    {/* Category Badge */}
-                    <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold text-white mb-4 bg-gradient-to-r ${
-                      category.color === 'blue' ? 'from-blue-500 to-blue-600' :
-                      category.color === 'green' ? 'from-green-500 to-green-600' :
-                      category.color === 'purple' ? 'from-purple-500 to-purple-600' :
-                      category.color === 'orange' ? 'from-orange-500 to-orange-600' :
-                      'from-pink-500 to-pink-600'
-                    }`}>
-                      <category.icon className="w-4 h-4" />
-                      {category.name}
+        {!isLoading && sortedEvents.length > 0 && (
+          <div style={{ position: 'relative', marginTop: 40 }}>
+            <div style={{ position: 'absolute', left: 23, top: 0, bottom: 0, width: 2, background: 'linear-gradient(to bottom, rgba(79,158,255,0.4), rgba(124,92,252,0.2), transparent)', borderRadius: 1 }} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+              {sortedEvents.map((event, index) => {
+                const cat = categories.find(c => c.id === event.category) || categories[0];
+                const CatIcon = cat.icon;
+                return (
+                  <motion.div key={event._id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.06 }}
+                    style={{ display: 'flex', gap: 20, alignItems: 'flex-start' }}>
+                    <div style={{ width: 48, height: 48, borderRadius: 14, background: `${cat.color}15`, border: `1px solid ${cat.color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative', zIndex: 1 }}>
+                      <CatIcon style={{ width: 20, height: 20, color: cat.color }} />
                     </div>
-
-                    {/* Event Title */}
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">
-                      {event.title}
-                    </h3>
-
-                    {/* Date */}
-                    <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
-                      <Clock className="w-4 h-4" />
-                      {new Date(event.date).toLocaleDateString('en-US', { 
-                        year: 'numeric', 
-                        month: 'long', 
-                        day: 'numeric' 
-                      })}
-                    </div>
-
-                    {/* Location */}
-                    {event.location && (
-                      <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
-                        <MapPin className="w-4 h-4" />
-                        {event.location}
+                    <div style={{ flex: 1, background: 'var(--glass-1)', backdropFilter: 'blur(20px)', border: '1px solid var(--glass-border)', borderRadius: 16, padding: '18px 20px', cursor: 'pointer', transition: 'all 0.22s' }}
+                      onClick={() => handleEditEvent(event)}
+                      onMouseEnter={e => { e.currentTarget.style.background = `${cat.color}08`; e.currentTarget.style.borderColor = `${cat.color}30`; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'var(--glass-1)'; e.currentTarget.style.borderColor = 'var(--glass-border)'; }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                        <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-1)' }}>{event.title}</h3>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: cat.color, background: `${cat.color}15`, border: `1px solid ${cat.color}25`, borderRadius: 8, padding: '2px 8px' }}>{cat.name}</span>
                       </div>
-                    )}
-
-                    {/* Description */}
-                    {event.description && (
-                      <p className="text-gray-700 leading-relaxed mb-4">
-                        {event.description}
-                      </p>
-                    )}
-
-                    {/* Photos */}
-                    {event.photos && event.photos.length > 0 && (
-                      <div className="flex gap-2 mb-4">
-                        {event.photos.slice(0, 3).map((photo, photoIndex) => (
-                          <div key={photoIndex} className="w-20 h-20 rounded-lg overflow-hidden bg-gray-100">
-                            <img 
-                              src={photo} 
-                              alt={`Event photo ${photoIndex + 1}`}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        ))}
-                        {event.photos.length > 3 && (
-                          <div className="w-20 h-20 rounded-lg bg-gray-200 flex items-center justify-center text-gray-500 text-sm">
-                            +{event.photos.length - 3}
-                          </div>
-                        )}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-2)', marginBottom: event.location ? 6 : 0 }}>
+                        <Clock style={{ width: 13, height: 13 }} />
+                        {new Date(event.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
                       </div>
-                    )}
-
-                    {/* Actions */}
-                    <div className="flex gap-2">
-                      <motion.button
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.9 }}
-                        onClick={() => handleEditEvent(event)}
-                        className="bg-blue-100 hover:bg-blue-200 text-blue-700 p-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1"
-                      >
-                        <Edit className="w-4 h-4" />
-                        Edit
-                      </motion.button>
-                      <motion.button
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.9 }}
-                        onClick={() => handleDeleteEvent(event._id)}
-                        className="bg-red-100 hover:bg-red-200 text-red-700 p-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                        Delete
-                      </motion.button>
+                      {event.location && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-2)', marginBottom: 8 }}>
+                          <MapPin style={{ width: 13, height: 13 }} />
+                          {event.location}
+                        </div>
+                      )}
+                      {event.description && (
+                        <p style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.6, marginBottom: 12 }}>{event.description}</p>
+                      )}
+                      <div style={{ display: 'flex', gap: 10 }}>
+                        <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={(e) => { e.stopPropagation(); handleEditEvent(event); }}
+                          style={{ padding: '7px 14px', borderRadius: 9, border: '1px solid rgba(79,158,255,0.2)', background: 'rgba(79,158,255,0.08)', color: 'var(--ion)', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+                          <Edit style={{ width: 13, height: 13 }} /> Edit
+                        </motion.button>
+                        <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={(e) => { e.stopPropagation(); handleDeleteEvent(event._id); }}
+                          style={{ padding: '7px 14px', borderRadius: 9, border: '1px solid rgba(255,77,109,0.2)', background: 'rgba(255,77,109,0.08)', color: 'var(--danger)', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+                          <Trash2 style={{ width: 13, height: 13 }} /> Delete
+                        </motion.button>
+                      </div>
                     </div>
                   </motion.div>
-                </motion.div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
+        )}
 
-          {/* Empty State */}
-          {!isLoading && (!timelineEvents || timelineEvents.length === 0) && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="text-center py-20 bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 max-w-2xl mx-auto"
-            >
-              <Calendar className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-gray-700 mb-2">Your Life Timeline is Empty</h3>
-              <p className="text-gray-500 mb-6 max-w-md mx-auto">
-                Start documenting your life's journey. Add milestones, achievements, and precious memories that tell your unique story.
-              </p>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={handleAddEvent}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-2xl font-bold text-lg shadow-xl hover:shadow-2xl transition-all"
-              >
-                <Plus className="w-5 h-5" />
-                Add Your First Event
-              </motion.button>
-            </motion.div>
-          )}
-        </div>
+        {!isLoading && sortedEvents.length === 0 && (
+          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} style={{ textAlign: 'center', padding: '60px 20px', marginTop: 40, background: 'var(--glass-1)', backdropFilter: 'blur(20px)', border: '1px solid var(--glass-border)', borderRadius: 24 }}>
+            <Calendar style={{ width: 48, height: 48, color: 'var(--text-3)', margin: '0 auto 16px' }} />
+            <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-1)', marginBottom: 8 }}>Your Timeline Awaits</h3>
+            <p style={{ fontSize: 14, color: 'var(--text-2)', marginBottom: 24, maxWidth: 360, margin: '0 auto 24px' }}>Document milestones, achievements, and precious memories that tell your unique story.</p>
+            <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={handleAddEvent}
+              style={{ padding: '14px 28px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg, #4f9eff, #7c5cfc)', color: 'white', fontWeight: 700, fontSize: 14, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              <Plus style={{ width: 16, height: 16 }} /> Start Your Journey
+            </motion.button>
+          </motion.div>
+        )}
       </div>
     </div>
   );

@@ -8,6 +8,37 @@ router.use(protect);
 
 router.post('/ping', ping);
 router.put('/settings', updateSettings);
+router.get('/stats', async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const Asset = require('../models/Asset');
+    const Beneficiary = require('../models/Beneficiary');
+    const Capsule = require('../models/Capsule');
+
+    const [assetCount, beneficiaryCount, capsuleCount] = await Promise.all([
+      Asset.countDocuments({ userId }),
+      Beneficiary.countDocuments({ userId }),
+      Capsule.countDocuments({ userId })
+    ]);
+
+    res.json({
+      status: 'success',
+      data: {
+        stats: {
+          assets: assetCount,
+          beneficiaries: beneficiaryCount,
+          capsules: capsuleCount
+        },
+        triggerStatus: req.user.triggerStatus,
+        inactivityDuration: req.user.inactivityDuration,
+        lastActive: req.user.lastActive,
+        isPremium: req.user.isPremium
+      }
+    });
+  } catch (error) {
+    res.status(400).json({ status: 'fail', message: error.message });
+  }
+});
 
 router.post('/onboarding-complete', async (req, res) => {
   try {

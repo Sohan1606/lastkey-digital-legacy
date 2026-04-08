@@ -49,7 +49,7 @@ const Dashboard = () => {
   });
 
   // Fetch AI suggestions
-  const { data: suggestions = [], isLoading: suggestionsLoading } = useQuery({
+  const { data: suggestionsData, isLoading: suggestionsLoading } = useQuery({
     queryKey: ['ai-suggestions'],
     queryFn: async () => {
       const res = await axios.get(`${API_BASE}/ai/suggestions`, {
@@ -59,6 +59,9 @@ const Dashboard = () => {
     },
     enabled: !!token,
   });
+
+  // Extract suggestions array from data
+  const suggestions = suggestionsData?.data || [];
 
   // Initialize socket and listen for DMS updates
   useEffect(() => {
@@ -82,10 +85,10 @@ const Dashboard = () => {
   // Handle ping to reset DMS timer
   const handlePing = async () => {
     try {
-      const res = await axios.post(`${API_BASE}/dms/ping`, {}, {
+      const res = await axios.post(`${API_BASE}/user/ping`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setDmsStatus(res.data);
+      setDmsStatus({ status: res.data.user?.triggerStatus || 'active', remainingMinutes: res.data.user?.inactivityDuration || 30 });
       toast.success('✋ I\'m Here — Timer Reset', {
         icon: '👋',
         style: {

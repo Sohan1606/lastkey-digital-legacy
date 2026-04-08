@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Clock, Lock, Unlock, Trash2, Send, ArrowLeft, Calendar, MessageSquare, Plus } from 'lucide-react';
+import { Clock, Lock, Unlock, Trash2, Send, ArrowLeft, Calendar, MessageSquare, Plus, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import { format } from 'date-fns';
@@ -15,6 +15,11 @@ const Capsules = () => {
   const { token } = useAuth();
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
+  const [minDate, setMinDate] = useState('');
+  
+  useEffect(() => {
+    setMinDate(new Date(Date.now() + 24*60*60*1000).toISOString().slice(0,16));
+  }, []);
   
   const [formData, setFormData] = useState({
     title: '',
@@ -41,13 +46,11 @@ const Capsules = () => {
       queryClient.invalidateQueries(['capsules']);
       setFormData({ title: '', message: '', unlockAt: '' });
       setShowForm(false);
-      // Trigger confetti celebration
-      confetti({
-        particleCount: 100,
-        spread: 70,
-        origin: { y: 0.6 }
-      });
-      toast.success('🎉 Time capsule sealed successfully!');
+      confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+      toast.success('Time capsule sealed!');
+    },
+    onError: () => {
+      toast.error('Failed to create capsule');
     }
   });
 
@@ -55,7 +58,13 @@ const Capsules = () => {
     mutationFn: (id) => axios.delete(`${API_BASE}/capsules/${id}`, {
       headers: { Authorization: `Bearer ${token}` }
     }),
-    onSuccess: () => queryClient.invalidateQueries(['capsules'])
+    onSuccess: () => {
+      toast.success('Capsule deleted');
+      queryClient.invalidateQueries(['capsules']);
+    },
+    onError: () => {
+      toast.error('Failed to delete capsule');
+    }
   });
 
   const handleSubmit = (e) => {
@@ -64,10 +73,11 @@ const Capsules = () => {
   };
 
   if (isLoading) return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50">
-      <div className="flex flex-col items-center gap-4">
-        <div className="w-12 h-12 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
-        <p className="text-slate-600 font-medium">Retrieving your time capsules...</p>
+    <div className="page spatial-bg" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div className="stars" />
+      <div style={{ textAlign: 'center' }}>
+        <div className="spinner" />
+        <p style={{ color: 'var(--text-2)', marginTop: 16, fontSize: 14 }}>Retrieving your time capsules...</p>
       </div>
     </div>
   );
@@ -76,94 +86,62 @@ const Capsules = () => {
     <div className="page spatial-bg">
       <div className="stars" />
       <div className="container">
-        <header style={{ marginBottom: 32 }}>
-          <Link to="/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: 'var(--text-2)', marginBottom: 20, textDecoration: 'none', fontWeight: 600, fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-            <ArrowLeft size={14} />
-            Back to Dashboard
-          </Link>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, md: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' } }}>
-            <div>
-              <h1 className="display" style={{ fontSize: 32, fontWeight: 800, color: '#f0f4ff', marginBottom: 8 }}>Time Capsules</h1>
-              <p style={{ fontSize: 16, color: 'var(--text-2)', lineHeight: 1.5 }}>Send messages and assets to the future.</p>
+        <Link to="/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: 'var(--text-2)', marginBottom: 20, textDecoration: 'none', fontWeight: 600, fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+          <ArrowLeft size={14} /> Back to Dashboard
+        </Link>
+
+        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 32 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+              <div style={{ width: 48, height: 48, borderRadius: 14, background: 'linear-gradient(135deg, rgba(0,229,160,0.2), rgba(79,158,255,0.2))', border: '1px solid rgba(0,229,160,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Clock style={{ width: 22, height: 22, color: 'var(--pulse)' }} />
+              </div>
+              <div>
+                <h1 className="display" style={{ fontSize: 28 }}>Time Capsules</h1>
+                <p style={{ fontSize: 13, color: 'var(--text-2)' }}>Send messages and assets to the future</p>
+              </div>
             </div>
             {!showForm && (
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.97 }}
-                onClick={() => setShowForm(true)}
-                className="btn btn-success btn-lg"
-              >
-                <Plus size={20} />
-                Create Capsule
+              <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} onClick={() => setShowForm(true)}
+                style={{ padding: '12px 20px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg, #00b87a, #00e5a0)', color: '#001a12', fontWeight: 700, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Plus style={{ width: 16, height: 16 }} /> Create Capsule
               </motion.button>
             )}
           </div>
-        </header>
+        </motion.div>
 
         <AnimatePresence>
           {showForm && (
-            <motion.div
-              initial={{ opacity: 0, height: 0, y: -20 }}
-              animate={{ opacity: 1, height: 'auto', y: 0 }}
-              exit={{ opacity: 0, height: 0, y: -20 }}
-              className="mb-12 overflow-hidden"
-            >
-              <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-slate-800">
-                <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-8">Seal a New Capsule</h2>
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="space-y-2">
-                    <label className="text-xs font-black uppercase tracking-widest text-slate-400 ml-1">Capsule Title</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. For my daughter's 18th birthday"
-                      value={formData.title}
-                      onChange={(e) => setFormData({...formData, title: e.target.value})}
-                      className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl focus:ring-2 focus:ring-emerald-500 transition-all outline-none"
-                      required
-                    />
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} style={{ marginBottom: 32, overflow: 'hidden' }}>
+              <div style={{ background: 'var(--glass-1)', backdropFilter: 'blur(20px)', border: '1px solid var(--glass-border)', borderRadius: 24, padding: 28 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                  <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-1)' }}>Seal a New Capsule</h2>
+                  <button onClick={() => setShowForm(false)} style={{ padding: 8, borderRadius: 10, background: 'none', border: 'none', cursor: 'pointer' }}>
+                    <X style={{ width: 18, height: 18, color: 'var(--text-3)' }} />
+                  </button>
+                </div>
+                <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+                  <div>
+                    <label>Capsule Title</label>
+                    <input type="text" placeholder="e.g. For my daughter's 18th birthday" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} required />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-black uppercase tracking-widest text-slate-400 ml-1">Your Future Message</label>
-                    <textarea
-                      placeholder="What would you like to say?"
-                      rows="5"
-                      value={formData.message}
-                      onChange={(e) => setFormData({...formData, message: e.target.value})}
-                      className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl focus:ring-2 focus:ring-emerald-500 transition-all outline-none resize-none"
-                      required
-                    />
+                  <div>
+                    <label>Your Future Message</label>
+                    <textarea placeholder="What would you like to say?" rows="5" value={formData.message} onChange={e => setFormData({...formData, message: e.target.value})} style={{ resize: 'none' }} required />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-black uppercase tracking-widest text-slate-400 ml-1">Unlock Date & Time</label>
-                    <div className="relative">
-                      <input 
-                        type="datetime-local"
-                        value={formData.unlockAt}
-                        onChange={(e) => setFormData({...formData, unlockAt: e.target.value})}
-                        className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl focus:ring-2 focus:ring-emerald-500 transition-all outline-none appearance-none"
-                        min={new Date(Date.now() + 24*60*60*1000).toISOString().slice(0,16)}
-                        required
-                      />
-                      <Calendar className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={20} />
-                    </div>
+                  <div>
+                    <label>Unlock Date & Time</label>
+                    <input type="datetime-local" value={formData.unlockAt} onChange={e => setFormData({...formData, unlockAt: e.target.value})} min={minDate} required />
                   </div>
-                  <div className="flex gap-4 pt-4">
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      type="submit"
-                      disabled={createMutation.isPending}
-                      className="flex-1 bg-slate-900 dark:bg-white text-white dark:text-slate-900 py-5 rounded-2xl font-bold text-xl shadow-xl hover:shadow-emerald-500/20 transition-all disabled:opacity-50"
-                    >
+                  <div style={{ display: 'flex', gap: 12 }}>
+                    <motion.button type="submit" whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }} disabled={createMutation.isPending}
+                      style={{ flex: 1, padding: '14px 24px', borderRadius: 12, border: 'none', background: createMutation.isPending ? 'var(--glass-2)' : 'linear-gradient(135deg, #00b87a, #00e5a0)', color: '#001a12', fontWeight: 700, fontSize: 14, cursor: createMutation.isPending ? 'not-allowed' : 'pointer', opacity: createMutation.isPending ? 0.6 : 1 }}>
                       {createMutation.isPending ? 'Sealing...' : 'Seal Capsule Now'}
                     </motion.button>
-                    <button
-                      type="button"
-                      onClick={() => setShowForm(false)}
-                      className="px-8 py-5 rounded-2xl font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
-                    >
+                    <motion.button type="button" whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }} onClick={() => setShowForm(false)}
+                      style={{ padding: '14px 24px', borderRadius: 12, border: '1px solid var(--glass-border)', background: 'var(--glass-1)', color: 'var(--text-2)', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>
                       Cancel
-                    </button>
+                    </motion.button>
                   </div>
                 </form>
               </div>
@@ -171,89 +149,53 @@ const Capsules = () => {
           )}
         </AnimatePresence>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {(!capsules || capsules.length === 0) ? (
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="md:col-span-2 lg:col-span-3 text-center py-32 bg-white dark:bg-slate-900 rounded-[3rem] border border-dashed border-slate-200 dark:border-slate-800"
-            >
-              <div className="w-24 h-24 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-8 text-slate-400">
-                <Clock size={48} />
-              </div>
-              <h3 className="text-3xl font-black text-slate-900 dark:text-white mb-4">No Time Capsules Yet</h3>
-              <p className="text-slate-500 dark:text-slate-400 max-w-md mx-auto mb-10 text-lg">
-                Your future self and loved ones are waiting. Schedule your first time-locked message today.
-              </p>
-              <button
-                onClick={() => setShowForm(true)}
-                className="bg-emerald-600 text-white px-12 py-5 rounded-2xl font-bold text-xl shadow-2xl shadow-emerald-500/20 hover:bg-emerald-700 transition-all"
-              >
-                Seal First Capsule
-              </button>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 20 }}>
+          {!capsules || capsules.length === 0 ? (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '80px 20px', background: 'var(--glass-1)', backdropFilter: 'blur(20px)', border: '1px solid var(--glass-border)', borderRadius: 32 }}>
+              <Clock style={{ width: 64, height: 64, color: 'var(--text-3)', margin: '0 auto 20px' }} />
+              <h3 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-1)', marginBottom: 10 }}>No Time Capsules Yet</h3>
+              <p style={{ fontSize: 14, color: 'var(--text-2)', marginBottom: 28, maxWidth: 400, margin: '0 auto 28px' }}>Your future self and loved ones are waiting. Schedule your first time-locked message.</p>
+              <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => setShowForm(true)}
+                style={{ padding: '14px 32px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg, #00b87a, #00e5a0)', color: '#001a12', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
+                <Plus style={{ width: 16, height: 16, display: 'inline', marginRight: 8 }} /> Seal First Capsule
+              </motion.button>
             </motion.div>
           ) : (
             <AnimatePresence mode="popLayout">
               {capsules.map((capsule, idx) => (
-                <motion.div 
-                  key={capsule._id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ delay: idx * 0.05 }}
-                  className={`group p-8 rounded-[2.5rem] shadow-xl hover:shadow-2xl border transition-all relative overflow-hidden ${
-                    capsule.isReleased 
-                      ? 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-800' 
-                      : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800'
-                  }`}
-                >
-                  <div className="flex justify-between items-start mb-6">
-                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110 ${
-                      capsule.isReleased 
-                        ? 'bg-emerald-100 dark:bg-emerald-800 text-emerald-600 dark:text-emerald-300' 
-                        : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
-                    }`}>
-                      {capsule.isReleased ? <Unlock size={28} /> : <Lock size={28} />}
+                <motion.div key={capsule._id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ delay: idx * 0.05 }}
+                  style={{ background: 'var(--glass-1)', backdropFilter: 'blur(20px)', border: capsule.isReleased ? '1px solid rgba(0,229,160,0.3)' : '1px solid var(--glass-border)', borderRadius: 20, padding: 24, transition: 'all 0.22s', position: 'relative', overflow: 'hidden' }}
+                  onMouseEnter={e => { if (!capsule.isReleased) { e.currentTarget.style.borderColor = 'rgba(0,229,160,0.4)'; } }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = capsule.isReleased ? 'rgba(0,229,160,0.3)' : 'var(--glass-border)'; }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
+                    <div style={{ width: 44, height: 44, borderRadius: 12, background: capsule.isReleased ? 'rgba(0,229,160,0.15)' : 'var(--glass-2)', border: capsule.isReleased ? '1px solid rgba(0,229,160,0.25)' : '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {capsule.isReleased ? <Unlock style={{ width: 20, height: 20, color: 'var(--pulse)' }} /> : <Lock style={{ width: 20, height: 20, color: 'var(--text-2)' }} />}
                     </div>
-                    <button
-                      onClick={() => {
-                        if (window.confirm('Delete this time capsule? This cannot be undone.')) {
-                          deleteMutation.mutate(capsule._id);
-                        }
-                      }}
-                      className="p-3 bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-red-600 rounded-xl transition-all opacity-0 group-hover:opacity-100"
-                    >
-                      <Trash2 size={18} className="pointer-events-none" />
-                    </button>
+                    <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={() => { if (window.confirm('Delete this time capsule?')) deleteMutation.mutate(capsule._id); }}
+                      style={{ padding: 8, borderRadius: 10, border: '1px solid rgba(255,77,109,0.2)', background: 'rgba(255,77,109,0.08)', cursor: 'pointer' }}>
+                      <Trash2 style={{ width: 14, height: 14, color: 'var(--danger)' }} />
+                    </motion.button>
                   </div>
 
-                  <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-4 group-hover:text-emerald-600 transition-colors">
-                    {capsule.title}
-                  </h3>
+                  <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-1)', marginBottom: 12 }}>{capsule.title}</h3>
 
-                  <div className="space-y-4 mb-8">
-                    <div className="flex items-center gap-3 text-slate-600 dark:text-slate-400">
-                      <Calendar size={18} />
-                      <span className="font-medium">
-                        {capsule.isReleased ? 'Released on ' : 'Unlocks on '}
-                        {format(new Date(capsule.isReleased ? capsule.releasedAt : capsule.unlockAt), 'MMM dd, yyyy')}
-                      </span>
+                  <div style={{ marginBottom: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-2)', marginBottom: 6 }}>
+                      <Calendar style={{ width: 14, height: 14 }} />
+                      {capsule.isReleased ? 'Released on ' : 'Unlocks on '}
+                      {format(new Date(capsule.isReleased ? capsule.releasedAt : capsule.unlockAt), 'MMM dd, yyyy')}
                     </div>
-                    <div className="flex items-start gap-3 text-slate-600 dark:text-slate-400">
-                      <MessageSquare size={18} className="mt-1" />
-                      <p className="text-sm line-clamp-2 italic font-medium">
-                        "{capsule.message}"
-                      </p>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, fontSize: 13, color: 'var(--text-2)' }}>
+                      <MessageSquare style={{ width: 14, height: 14, marginTop: 2, flexShrink: 0 }} />
+                      <span style={{ fontStyle: 'italic', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>"{capsule.message}"</span>
                     </div>
                   </div>
 
-                  <div className="pt-6 border-t border-slate-50 dark:border-slate-800 flex items-center justify-between">
-                    <div className={`flex items-center gap-2 text-xs font-black uppercase tracking-widest ${
-                      capsule.isReleased ? 'text-emerald-600' : 'text-slate-400'
-                    }`}>
+                  <div style={{ paddingTop: 14, borderTop: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: capsule.isReleased ? 'var(--pulse)' : 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                       {capsule.isReleased ? 'Message Delivered' : 'Temporal Lock Active'}
-                    </div>
-                    {capsule.isReleased && <Send size={18} className="text-emerald-400" />}
+                    </span>
+                    {capsule.isReleased && <Send style={{ width: 16, height: 16, color: 'var(--pulse)' }} />}
                   </div>
                 </motion.div>
               ))}

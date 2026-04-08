@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import { motion } from 'framer-motion';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Shield, Lock, Eye, EyeOff, Mail, Phone, User, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Shield, Lock, Eye, EyeOff, Mail, User, CheckCircle, Download, X } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
@@ -11,7 +10,7 @@ const EmergencyAccess = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [accessCode, setAccessCode] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+  const [showPassword, setShowPassword] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [legacyData, setLegacyData] = useState(null);
   const [beneficiary, setBeneficiary] = useState(null);
@@ -30,18 +29,15 @@ const EmergencyAccess = () => {
     setIsLoading(true);
     
     try {
-      const response = await axios.post(`${API_BASE}/emergency/access`, {
-        code: accessCode
-      });
+      const response = await axios.post(`${API_BASE}/emergency/access`, { code: accessCode });
 
       if (response.data.success) {
         setLegacyData(response.data.data);
-        setBeneficiary(response.data.data.beneficiary); // Fix: it's inside .data
+        setBeneficiary(response.data.data.beneficiary);
         setIsAuthenticated(true);
-        toast.success('Access granted. Loading legacy information...');
+        toast.success('Access granted!');
       }
     } catch (error) {
-      console.error('Access error:', error);
       toast.error(error.response?.data?.message || 'Invalid access code');
     } finally {
       setIsLoading(false);
@@ -50,10 +46,7 @@ const EmergencyAccess = () => {
 
   const handleDownloadAsset = async (asset) => {
     try {
-      const response = await axios.get(`${API_BASE}/emergency/download/${asset._id}`, {
-        responseType: 'blob'
-      });
-      
+      const response = await axios.get(`${API_BASE}/emergency/download/${asset._id}`, { responseType: 'blob' });
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
@@ -62,241 +55,150 @@ const EmergencyAccess = () => {
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-      
       toast.success(`Downloaded ${asset.platform} credentials`);
-    } catch (error) {
-      console.error('Download error:', error);
+    } catch {
       toast.error('Failed to download credentials');
     }
   };
 
   const handleSendMessage = async () => {
     if (!beneficiary?.email) return;
-    
     try {
       await axios.post(`${API_BASE}/emergency/notify`, {
         beneficiaryId: beneficiary._id,
-        message: 'Emergency access confirmed. Legacy information has been reviewed.'
+        message: 'Emergency access confirmed.'
       });
-      
-      toast.success('Notification sent to estate administrator');
-    } catch (error) {
-      console.error('Notify error:', error);
+      toast.success('Notification sent');
+    } catch {
       toast.error('Failed to send notification');
     }
   };
 
   if (isAuthenticated && legacyData) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50 to-purple-50 pt-20 p-6">
-        <div className="max-w-4xl mx-auto">
-          {/* Header */}
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center mb-8"
-          >
-            <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <CheckCircle className="w-8 h-8 text-emerald-600" />
+      <div className="page spatial-bg">
+        <div className="stars" />
+        <div className="container" style={{ maxWidth: 1000 }}>
+          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} style={{ textAlign: 'center', marginBottom: 32 }}>
+            <div style={{ width: 56, height: 56, borderRadius: 16, background: 'rgba(0,229,160,0.15)', border: '1px solid rgba(0,229,160,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+              <CheckCircle style={{ width: 28, height: 28, color: 'var(--pulse)' }} />
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Emergency Access Granted</h1>
-            <p className="text-gray-600">
-              You have been granted access to <span className="font-semibold">{legacyData.user.name}</span>'s digital legacy.
-            </p>
+            <h1 className="display" style={{ fontSize: 26, marginBottom: 8 }}>Emergency Access Granted</h1>
+            <p style={{ fontSize: 14, color: 'var(--text-2)' }}>You have access to <span style={{ color: 'var(--text-1)', fontWeight: 600 }}>{legacyData.user.name}</span>'s digital legacy.</p>
           </motion.div>
 
-          {/* Legacy Information */}
-          <div className="grid md:grid-cols-2 gap-6 mb-8">
-            {/* User Information */}
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.1 }}
-              className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50"
-            >
-              <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <User className="w-5 h-5 text-indigo-600" />
-                Account Owner
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20, marginBottom: 24 }}>
+            <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}
+              style={{ background: 'var(--glass-1)', backdropFilter: 'blur(20px)', border: '1px solid var(--glass-border)', borderRadius: 20, padding: 24 }}>
+              <h2 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-1)', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <User style={{ width: 18, height: 18, color: 'var(--ion)' }} /> Account Owner
               </h2>
-              <div className="space-y-3">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <div>
-                  <span className="text-sm text-gray-500">Name</span>
-                  <p className="font-semibold text-gray-900">{legacyData.user.name}</p>
+                  <span style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Name</span>
+                  <p style={{ fontSize: 14, color: 'var(--text-1)', marginTop: 4 }}>{legacyData.user.name}</p>
                 </div>
                 <div>
-                  <span className="text-sm text-gray-500">Email</span>
-                  <p className="font-semibold text-gray-900">{legacyData.user.email}</p>
+                  <span style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Email</span>
+                  <p style={{ fontSize: 14, color: 'var(--text-1)', marginTop: 4 }}>{legacyData.user.email}</p>
                 </div>
                 <div>
-                  <span className="text-sm text-gray-500">Guardian Protocol Status</span>
-                  <p className={`font-semibold ${
-                    legacyData.user.triggerStatus === 'triggered' ? 'text-red-600' : 'text-emerald-600'
-                  }`}>
-                    {legacyData.user.triggerStatus === 'triggered' ? '🚨 Activated' : '✅ Active'}
+                  <span style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Guardian Protocol</span>
+                  <p style={{ fontSize: 14, color: legacyData.user.triggerStatus === 'triggered' ? 'var(--danger)' : 'var(--pulse)', marginTop: 4, fontWeight: 600 }}>
+                    {legacyData.user.triggerStatus === 'triggered' ? '⚠️ Activated' : '✓ Active'}
                   </p>
                 </div>
               </div>
             </motion.div>
 
-            {/* Beneficiary Information */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.2 }}
-              className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50"
-            >
-              <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <Shield className="w-5 h-5 text-indigo-600" />
-                Your Access
+            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}
+              style={{ background: 'var(--glass-1)', backdropFilter: 'blur(20px)', border: '1px solid var(--glass-border)', borderRadius: 20, padding: 24 }}>
+              <h2 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-1)', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Shield style={{ width: 18, height: 18, color: 'var(--plasma)' }} /> Your Access
               </h2>
-              <div className="space-y-3">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <div>
-                  <span className="text-sm text-gray-500">Your Name</span>
-                  <p className="font-semibold text-gray-900">{beneficiary.name}</p>
+                  <span style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Your Name</span>
+                  <p style={{ fontSize: 14, color: 'var(--text-1)', marginTop: 4 }}>{beneficiary.name}</p>
                 </div>
                 <div>
-                  <span className="text-sm text-gray-500">Relationship</span>
-                  <p className="font-semibold text-gray-900">{beneficiary.relationship}</p>
+                  <span style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Relationship</span>
+                  <p style={{ fontSize: 14, color: 'var(--text-1)', marginTop: 4, textTransform: 'capitalize' }}>{beneficiary.relationship}</p>
                 </div>
                 <div>
-                  <span className="text-sm text-gray-500">Access Granted</span>
-                  <p className="font-semibold text-gray-900">
-                    {new Date(beneficiary.accessGrantedAt).toLocaleString()}
-                  </p>
+                  <span style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Access Granted</span>
+                  <p style={{ fontSize: 14, color: 'var(--text-1)', marginTop: 4 }}>{new Date(beneficiary.accessGrantedAt).toLocaleString()}</p>
                 </div>
               </div>
             </motion.div>
           </div>
 
-          {/* Digital Assets */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50"
-          >
-            <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-              <Lock className="w-5 h-5 text-indigo-600" />
-              Digital Assets ({legacyData.assets.length})
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+            style={{ background: 'var(--glass-1)', backdropFilter: 'blur(20px)', border: '1px solid var(--glass-border)', borderRadius: 20, padding: 24, marginBottom: 24 }}>
+            <h2 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-1)', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Lock style={{ width: 18, height: 18, color: 'var(--amber)' }} /> Digital Assets ({legacyData.assets.length})
             </h2>
             
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 14 }}>
               {legacyData.assets.map((asset, index) => (
-                <motion.div
-                  key={asset._id}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 0.4 + index * 0.1 }}
-                  className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4 border border-gray-200"
-                >
-                  <h3 className="font-bold text-gray-900 mb-2">{asset.platform}</h3>
-                  <p className="text-sm text-gray-600 mb-3">{asset.username}</p>
-                  
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-gray-500">Password:</span>
-                      <div className="flex items-center gap-2 flex-1">
-                        <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded flex-1 truncate">
+                <motion.div key={asset._id} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.4 + index * 0.1 }}
+                  style={{ background: 'var(--glass-2)', border: '1px solid var(--glass-border)', borderRadius: 16, padding: 18 }}>
+                  <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-1)', marginBottom: 6 }}>{asset.platform}</h3>
+                  <p style={{ fontSize: 12, color: 'var(--text-2)', marginBottom: 12 }}>{asset.username}</p>
+                  <div style={{ marginBottom: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                      <span style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 600 }}>Password:</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1 }}>
+                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-1)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {showPassword[asset._id] ? asset.password : '••••••••••'}
                         </span>
-                        <button
-                          onClick={() => setShowPassword(prev => ({ ...prev, [asset._id]: !prev[asset._id] }))}
-                          className="text-indigo-600 hover:text-indigo-700"
-                        >
-                          {showPassword[asset._id] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        <button onClick={() => setShowPassword(prev => ({ ...prev, [asset._id]: !prev[asset._id] }))} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+                          {showPassword[asset._id] ? <EyeOff style={{ width: 14, height: 14, color: 'var(--text-2)' }} /> : <Eye style={{ width: 14, height: 14, color: 'var(--text-2)' }} />}
                         </button>
                       </div>
                     </div>
-                    
                     {asset.instruction && (
-                      <div className="text-sm text-gray-600">
-                        <span className="font-medium">Instruction:</span> {asset.instruction}
-                      </div>
+                      <p style={{ fontSize: 11, color: 'var(--text-2)' }}><span style={{ fontWeight: 600 }}>Instruction:</span> {asset.instruction}</p>
                     )}
                   </div>
-                  
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => handleDownloadAsset(asset)}
-                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-3 rounded-lg text-sm font-medium transition-colors mt-3"
-                  >
-                    Download Credentials
+                  <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => handleDownloadAsset(asset)}
+                    style={{ width: '100%', padding: '10px 16px', borderRadius: 10, border: 'none', background: 'var(--ion)', color: 'white', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                    <Download style={{ width: 13, height: 13 }} /> Download Credentials
                   </motion.button>
                 </motion.div>
               ))}
             </div>
           </motion.div>
 
-          {/* Time Letters */}
           {legacyData.capsules && legacyData.capsules.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
-              className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50 mt-6"
-            >
-              <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                <Mail className="w-5 h-5 text-indigo-600" />
-                Time Letters ({legacyData.capsules.length})
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
+              style={{ background: 'var(--glass-1)', backdropFilter: 'blur(20px)', border: '1px solid var(--glass-border)', borderRadius: 20, padding: 24, marginBottom: 24 }}>
+              <h2 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-1)', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Mail style={{ width: 18, height: 18, color: 'var(--plasma)' }} /> Time Letters ({legacyData.capsules.length})
               </h2>
-              
-              <div className="space-y-4">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {legacyData.capsules.map((capsule, index) => (
-                  <motion.div
-                    key={capsule._id}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.6 + index * 0.1 }}
-                    className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-4 border border-indigo-200"
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <h3 className="font-bold text-gray-900">{capsule.title}</h3>
-                      <span className="text-sm text-gray-500 bg-white px-2 py-1 rounded">
-                        {capsule.recipient}
-                      </span>
+                  <motion.div key={capsule._id} initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.6 + index * 0.1 }}
+                    style={{ background: 'var(--glass-2)', border: '1px solid var(--glass-border)', borderRadius: 14, padding: 16 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                      <h3 style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-1)' }}>{capsule.title}</h3>
+                      {capsule.recipient && <span style={{ fontSize: 11, color: 'var(--text-2)', background: 'var(--glass-1)', padding: '2px 8px', borderRadius: 6 }}>{capsule.recipient}</span>}
                     </div>
-                    
-                    <div className="text-gray-700 leading-relaxed mb-3">
-                      {capsule.content}
-                    </div>
-                    
-                    <div className="flex items-center gap-4 text-sm text-gray-500">
-                      <span>Delivered: {new Date(capsule.releaseDate).toLocaleDateString()}</span>
-                      {capsule.emotion && (
-                        <span className="bg-indigo-100 text-indigo-700 px-2 py-1 rounded">
-                          {capsule.emotion}
-                        </span>
-                      )}
-                    </div>
+                    <p style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.6, marginBottom: 8 }}>{capsule.content}</p>
+                    <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Delivered: {new Date(capsule.releaseDate).toLocaleDateString()}</span>
                   </motion.div>
                 ))}
               </div>
             </motion.div>
           )}
 
-          {/* Actions */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.7 }}
-            className="flex gap-4 mt-8"
-          >
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={handleSendMessage}
-              className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-3 px-6 rounded-xl font-semibold transition-colors"
-            >
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }} style={{ display: 'flex', gap: 12 }}>
+            <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={handleSendMessage}
+              style={{ flex: 1, padding: '14px 24px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg, #4f9eff, #00e5a0)', color: '#001a12', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
               Confirm Access Received
             </motion.button>
-            
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => navigate('/')}
-              className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 px-6 rounded-xl font-semibold transition-colors"
-            >
+            <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => navigate('/')}
+              style={{ flex: 1, padding: '14px 24px', borderRadius: 12, border: '1px solid var(--glass-border)', background: 'var(--glass-1)', color: 'var(--text-2)', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>
               Exit Portal
             </motion.button>
           </motion.div>
@@ -308,81 +210,38 @@ const EmergencyAccess = () => {
   return (
     <div className="page spatial-bg" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
       <div className="stars" />
-      <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.5 }}
-        className="w-full max-w-md"
-      >
-        <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/50 p-8">
-          {/* Logo/Icon */}
-          <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Shield className="w-8 h-8 text-white" />
+      <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.4 }} style={{ width: '100%', maxWidth: 440 }}>
+        <div style={{ background: 'var(--glass-1)', backdropFilter: 'blur(20px)', border: '1px solid var(--glass-border)', borderRadius: 28, padding: 36 }}>
+          <div style={{ textAlign: 'center', marginBottom: 28 }}>
+            <div style={{ width: 56, height: 56, borderRadius: 16, background: 'linear-gradient(135deg, rgba(79,158,255,0.3), rgba(124,92,252,0.3))', border: '1px solid rgba(124,92,252,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+              <Shield style={{ width: 28, height: 28, color: 'var(--plasma)' }} />
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Emergency Legacy Access</h1>
-            <p className="text-gray-600 text-sm">
-              Enter the access code provided to access the digital legacy
-            </p>
+            <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-1)', marginBottom: 8 }}>Emergency Legacy Access</h1>
+            <p style={{ fontSize: 13, color: 'var(--text-2)' }}>Enter the access code provided to access the digital legacy</p>
           </div>
 
-          {/* Access Form */}
-          <form onSubmit={handleAccessRequest} className="space-y-6">
+          <form onSubmit={handleAccessRequest} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
             <div>
-              <label htmlFor="accessCode" className="block text-sm font-medium text-gray-700 mb-2">
-                Emergency Access Code
-              </label>
-              <div className="relative">
-                <input
-                  id="accessCode"
-                  type="text"
-                  value={accessCode}
-                  onChange={(e) => setAccessCode(e.target.value.toUpperCase())}
-                  placeholder="Enter the 8-character access code"
-                  className="w-full px-4 py-3 text-lg font-mono tracking-widest border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 uppercase"
-                  required
-                  maxLength={8}
-                />
-                {code && (
-                  <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                    <AlertTriangle className="w-5 h-5 text-amber-500" />
-                  </div>
-                )}
-              </div>
-              {code && (
-                <p className="text-sm text-amber-600 mt-2">
-                  Access code detected in URL. Please verify and submit.
-                </p>
-              )}
+              <label>Emergency Access Code</label>
+              <input type="text" value={accessCode} onChange={(e) => setAccessCode(e.target.value.toUpperCase())} placeholder="Enter the 8-character access code" required maxLength={8} style={{ fontFamily: 'var(--font-mono)', fontSize: 16, letterSpacing: '0.15em', textAlign: 'center' }} />
+              {code && <p style={{ fontSize: 12, color: 'var(--amber)', marginTop: 8 }}>Access code detected in URL</p>}
             </div>
 
-            <motion.button
-              type="submit"
-              disabled={isLoading || !accessCode}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-4 px-6 rounded-xl font-bold text-lg hover:from-indigo-700 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
+            <motion.button type="submit" disabled={isLoading || !accessCode} whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
+              style={{ padding: '14px 24px', borderRadius: 14, border: 'none', background: isLoading || !accessCode ? 'var(--glass-2)' : 'linear-gradient(135deg, #4f9eff, #7c5cfc)', color: 'white', fontWeight: 700, fontSize: 15, cursor: isLoading || !accessCode ? 'not-allowed' : 'pointer', opacity: isLoading || !accessCode ? 0.6 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginTop: 8 }}>
               {isLoading ? (
-                <>
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Verifying Access...</span>
-                </>
+                <><div className="spinner spinner-sm" style={{ borderTopColor: 'white' }} /> Verifying Access...</>
               ) : (
-                <>
-                  <Shield className="w-5 h-5" />
-                  <span>Access Digital Legacy</span>
-                </>
+                <><Shield style={{ width: 18, height: 18 }} /> Access Digital Legacy</>
               )}
             </motion.button>
           </form>
 
-          {/* Help Section */}
-          <div className="mt-8 pt-6 border-t border-gray-200">
-            <h3 className="text-sm font-semibold text-gray-900 mb-3">Need Help?</h3>
-            <div className="space-y-2 text-sm text-gray-600">
+          <div style={{ marginTop: 28, paddingTop: 24, borderTop: '1px solid var(--glass-border)' }}>
+            <h3 style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-1)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Need Help?</h3>
+            <div style={{ fontSize: 12, color: 'var(--text-2)', display: 'flex', flexDirection: 'column', gap: 6 }}>
               <p>• Contact the estate administrator for access code</p>
-              <p>• Access codes are case-sensitive and 8 characters long</p>
+              <p>• Access codes are case-sensitive and 8 characters</p>
               <p>• This portal is for emergency use only</p>
             </div>
           </div>
@@ -390,6 +249,6 @@ const EmergencyAccess = () => {
       </motion.div>
     </div>
   );
-}
+};
 
 export default EmergencyAccess;

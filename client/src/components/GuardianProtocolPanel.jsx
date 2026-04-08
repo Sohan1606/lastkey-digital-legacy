@@ -162,7 +162,7 @@ const GuardianProtocolPanel = ({ onPing, dmsStatus, isPremium }) => {
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <h3 style={{ fontSize: 16, fontWeight: 700, color: '#f0f4ff' }}>Legacy Health Score</h3>
-            <div style={{ padding: '4px 10px', borderRadius: 10, fontSize: 12, fontWeight: 700, ...getScoreColor(scoreData.score) }}>
+            <div style={{ padding: '4px 10px', borderRadius: 10, fontSize: 12, fontWeight: 700, background: getScoreColor(scoreData.score).background, color: getScoreColor(scoreData.score).color }}>
               {scoreData.score}/100
             </div>
           </div>

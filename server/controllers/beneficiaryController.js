@@ -11,7 +11,7 @@ exports.getAllBeneficiaries = async (req, res) => {
     });
   } catch (error) {
     res.status(400).json({
-      status: 'error',
+      status: 'fail',
       message: error.message
     });
   }
@@ -27,7 +27,7 @@ exports.createBeneficiary = async (req, res) => {
     });
   } catch (error) {
     res.status(400).json({
-      status: 'error',
+      status: 'fail',
       message: error.message
     });
   }
@@ -43,7 +43,7 @@ exports.updateBeneficiary = async (req, res) => {
     
     if (!beneficiary || beneficiary.userId.toString() !== req.user._id.toString()) {
       return res.status(404).json({
-        status: 'error',
+        status: 'fail',
         message: 'Beneficiary not found'
       });
     }
@@ -54,7 +54,7 @@ exports.updateBeneficiary = async (req, res) => {
     });
   } catch (error) {
     res.status(400).json({
-      status: 'error',
+      status: 'fail',
       message: error.message
     });
   }
@@ -67,7 +67,7 @@ exports.deleteBeneficiary = async (req, res) => {
     
     if (!beneficiary || beneficiary.userId.toString() !== req.user._id.toString()) {
       return res.status(404).json({
-        status: 'error',
+        status: 'fail',
         message: 'Beneficiary not found'
       });
     }
@@ -78,7 +78,7 @@ exports.deleteBeneficiary = async (req, res) => {
     });
   } catch (error) {
     res.status(400).json({
-      status: 'error',
+      status: 'fail',
       message: error.message
     });
   }

@@ -49,7 +49,7 @@ Write only the message, no explanations.`;
     const message = completion.choices[0].message.content.trim();
 
     res.json({
-      success: true,
+      status: 'success',
       data: {
         message,
         emotion,
@@ -59,7 +59,7 @@ Write only the message, no explanations.`;
     });
   } catch (error) {
     console.error('AI Error:', error);
-    res.status(500).json({ error: 'Failed to generate message' });
+    res.status(500).json({ status: 'fail', message: 'Failed to generate message' });
   }
 };
 
@@ -160,15 +160,15 @@ const getAISuggestions = async (req, res) => {
     }
 
     res.json({
-      success: true,
-      data: suggestions.slice(0, 4).map(s => ({
+      status: 'success',
+      suggestions: suggestions.slice(0, 4).map(s => ({
         ...s,
         priorityScore: s.priority === 'critical' ? 3 : s.priority === 'high' ? 2 : s.priority === 'medium' ? 1 : 0
       }))
     });
   } catch (error) {
     console.error('AI Suggestions Error:', error);
-    res.status(500).json({ error: 'Failed to generate smart suggestions' });
+    res.status(500).json({ status: 'fail', message: 'Failed to generate smart suggestions' });
   }
 };
 
@@ -176,7 +176,7 @@ const getAISuggestions = async (req, res) => {
 const generateVoiceMessage = async (req, res) => {
   try {
     if (!openai) {
-      return res.status(503).json({ error: 'OpenAI not configured' });
+      return res.status(503).json({ status: 'fail', message: 'OpenAI not configured' });
     }
 
     const { text, voice = 'alloy', emotion = 'warm' } = req.body;
@@ -186,7 +186,7 @@ const generateVoiceMessage = async (req, res) => {
     const selectedVoice = validVoices.includes(voice) ? voice : 'alloy';
 
     if (!text) {
-      return res.status(400).json({ error: 'Text is required' });
+      return res.status(400).json({ status: 'fail', message: 'Text is required' });
     }
 
     // Add emotion context to the text
@@ -220,17 +220,17 @@ const generateVoiceMessage = async (req, res) => {
     const audioUrl = `/uploads/voices/${filename}`;
 
     res.json({
-      success: true,
+      status: 'success',
       data: {
         audioUrl,
         voice,
         emotion,
-        duration: Math.ceil(text.length / 15) // estimate
+        duration: Math.ceil(text.length / 15)
       }
     });
   } catch (error) {
     console.error('Voice Generation Error:', error);
-    res.status(500).json({ error: 'Failed to generate voice message' });
+    res.status(500).json({ status: 'fail', message: 'Failed to generate voice message' });
   }
 };
 
@@ -238,13 +238,13 @@ const generateVoiceMessage = async (req, res) => {
 const generateMemoir = async (req, res) => {
   try {
     if (!openai) {
-      return res.status(503).json({ error: 'OpenAI not configured' });
+      return res.status(503).json({ status: 'fail', message: 'OpenAI not configured' });
     }
 
     const { stage, prompts, existingChapters } = req.body;
 
     if (!stage || !prompts) {
-      return res.status(400).json({ error: 'Stage and prompts are required' });
+      return res.status(400).json({ status: 'fail', message: 'Stage and prompts are required' });
     }
 
     const systemPrompt = `You are helping someone write their memoir. Based on their responses, create a compelling, well-written chapter that captures their life experiences. Write in first person, warm and reflective tone. Keep it between 500-800 words.`;
@@ -264,7 +264,7 @@ const generateMemoir = async (req, res) => {
     const chapterText = completion.choices[0].message.content;
 
     res.json({
-      success: true,
+      status: 'success',
       data: {
         chapter: chapterText,
         wordCount: chapterText.split(' ').length,
@@ -274,7 +274,7 @@ const generateMemoir = async (req, res) => {
     });
   } catch (error) {
     console.error('Memoir Generation Error:', error);
-    res.status(500).json({ error: 'Failed to generate memoir chapter' });
+    res.status(500).json({ status: 'fail', message: 'Failed to generate memoir chapter' });
   }
 };
 
@@ -319,7 +319,7 @@ const getLegacyScoreData = async (req, res) => {
     const progressToNextLevel = ((score - ((level - 1) * 100)) / 100) * 100;
 
     res.json({
-      success: true,
+      status: 'success',
       data: {
         score,
         level,
@@ -341,7 +341,7 @@ const getLegacyScoreData = async (req, res) => {
     });
   } catch (error) {
     console.error('Legacy Score Error:', error);
-    res.status(500).json({ error: 'Failed to calculate legacy score' });
+    res.status(500).json({ status: 'fail', message: 'Failed to calculate legacy score' });
   }
 };
 

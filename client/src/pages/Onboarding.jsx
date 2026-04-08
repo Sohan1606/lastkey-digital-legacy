@@ -1,23 +1,23 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useMutation } from '@tanstack/react-query';
-import { 
-  ChevronRight, 
-  ChevronLeft, 
-  User, 
-  Shield, 
-  Heart, 
-  Clock, 
-  CheckCircle, 
-  Users, 
-  Lock, 
-  Zap,
-  Award,
+import {
+  ChevronRight,
+  ChevronLeft,
+  Heart,
+  User,
+  Shield,
+  Users,
   Mail,
-  Phone,
-  Plus
+  Lock,
+  CheckCircle,
+  Plus,
+  X,
+  Sparkles,
+  Zap,
+  Clock
 } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
@@ -27,25 +27,18 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api
 const Onboarding = () => {
   const { user, token } = useAuth();
   const navigate = useNavigate();
-  
+
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState({
-    // Step 1: Welcome
-    // Step 2: Personal Info
     name: user?.name || '',
     email: user?.email || '',
     phone: user?.phone || '',
-    // Step 3: Guardian Protocol
     inactivityDuration: 60,
     alertChannels: ['email'],
-    // Step 4: Beneficiaries
     beneficiaries: [],
-    // Step 5: First Message
     firstMessageTitle: '',
     firstMessageContent: '',
-    firstMessageRecipient: '',
-    // Step 6: Vault Setup
-    vaultItems: []
+    firstMessageRecipient: ''
   });
 
   const completeOnboardingMutation = useMutation({
@@ -60,112 +53,41 @@ const Onboarding = () => {
       navigate('/dashboard');
     },
     onError: (error) => {
-      console.error('Onboarding error:', error);
       toast.error('Failed to complete onboarding');
     }
   });
 
   const steps = [
-    {
-      id: 0,
-      title: 'Welcome to LastKey',
-      description: 'Your love deserves to live forever. Let us guide you through setting up your digital legacy.',
-      icon: Heart,
-      color: 'pink'
-    },
-    {
-      id: 1,
-      title: 'Personal Information',
-      description: 'Let\'s confirm your details and set up your account preferences.',
-      icon: User,
-      color: 'blue'
-    },
-    {
-      id: 2,
-      title: 'Guardian Protocol',
-      description: 'Configure your inactivity monitoring and alert preferences to protect your legacy.',
-      icon: Shield,
-      color: 'green'
-    },
-    {
-      id: 3,
-      title: 'Loved Ones',
-      description: 'Add the people who will receive your legacy and carry forward your love.',
-      icon: Users,
-      color: 'purple'
-    },
-    {
-      id: 4,
-      title: 'First Message',
-      description: 'Create your first time capsule - a message that will be shared when the time is right.',
-      icon: Mail,
-      color: 'orange'
-    },
-    {
-      id: 5,
-      title: 'Digital Vault',
-      description: 'Secure important accounts, documents, and passwords for your loved ones.',
-      icon: Lock,
-      color: 'indigo'
-    },
-    {
-      id: 6,
-      title: 'Complete Setup',
-      description: 'Review your settings and start building your lasting digital legacy.',
-      icon: CheckCircle,
-      color: 'emerald'
-    }
+    { id: 0, title: 'Welcome', icon: Heart, color: '#ff4d6d' },
+    { id: 1, title: 'Profile', icon: User, color: '#4f9eff' },
+    { id: 2, title: 'Guardian', icon: Shield, color: '#00e5a0' },
+    { id: 3, title: 'Loved Ones', icon: Users, color: '#a78bfa' },
+    { id: 4, title: 'First Message', icon: Mail, color: '#ffb830' },
+    { id: 5, title: 'Complete', icon: CheckCircle, color: '#00e5a0' }
   ];
 
   const handleNext = () => {
-    // Validation for each step
-    if (currentStep === 0) {
-      // Welcome step - no validation needed
-      setCurrentStep(1);
-    } else if (currentStep === 1) {
-      // Personal info validation
-      if (!formData.name.trim() || !formData.email.trim()) {
-        toast.error('Please fill in your name and email');
-        return;
-      }
-      setCurrentStep(2);
-    } else if (currentStep === 2) {
-      // Guardian protocol validation
-      if (!formData.inactivityDuration || formData.inactivityDuration < 30) {
-        toast.error('Please set a valid inactivity duration (minimum 30 minutes)');
-        return;
-      }
-      setCurrentStep(3);
-    } else if (currentStep === 3) {
-      // Beneficiaries validation
-      if (formData.beneficiaries.length === 0) {
-        toast.error('Please add at least one beneficiary');
-        return;
-      }
-      setCurrentStep(4);
-    } else if (currentStep === 4) {
-      // First message validation
-      if (!formData.firstMessageTitle.trim() || !formData.firstMessageContent.trim()) {
-        toast.error('Please add a title and content for your first message');
-        return;
-      }
-      setCurrentStep(5);
-    } else if (currentStep === 5) {
-      // Vault setup validation
-      setCurrentStep(6);
+    if (currentStep === 1 && (!formData.name.trim() || !formData.email.trim())) {
+      toast.error('Please fill in your name and email');
+      return;
+    }
+    if (currentStep === 2 && formData.inactivityDuration < 30) {
+      toast.error('Please set a valid inactivity duration');
+      return;
+    }
+    if (currentStep < steps.length - 1) {
+      setCurrentStep(currentStep + 1);
     }
   };
 
   const handlePrevious = () => {
-    if (currentStep > 0) {
-      setCurrentStep(currentStep - 1);
-    }
+    if (currentStep > 0) setCurrentStep(currentStep - 1);
   };
 
   const handleAddBeneficiary = () => {
     setFormData({
       ...formData,
-      beneficiaries: [...formData.beneficiaries, { name: '', email: '', relationship: '' }]
+      beneficiaries: [...formData.beneficiaries, { name: '', email: '', relationship: 'other' }]
     });
   };
 
@@ -176,453 +98,523 @@ const Onboarding = () => {
     });
   };
 
-  const handleCompleteOnboarding = () => {
-    const onboardingData = {
-      ...formData,
-      onboardingComplete: true,
-      completedAt: new Date()
-    };
-    
-    completeOnboardingMutation.mutate(onboardingData);
+  const handleComplete = () => {
+    completeOnboardingMutation.mutate({
+      inactivityDuration: formData.inactivityDuration,
+      phone: formData.phone,
+      alertChannels: formData.alertChannels
+    });
   };
 
-  const getStepProgress = () => {
-    return ((currentStep + 1) / (steps.length + 1)) * 100;
+  const slideVariants = {
+    enter: (direction) => ({ x: direction > 0 ? 300 : -300, opacity: 0 }),
+    center: { x: 0, opacity: 1 },
+    exit: (direction) => ({ x: direction < 0 ? 300 : -300, opacity: 0 })
   };
 
   return (
     <div className="page spatial-bg">
       <div className="stars" />
-      <div className="container" style={{ paddingTop: 40 }}>
-        {/* Progress Bar */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="text-lg font-semibold text-gray-900">Setting Up Your Legacy</h2>
-            <span className="text-sm text-gray-500">Step {currentStep + 1} of {steps.length}</span>
-          </div>
-          <div className="w-full bg-gray-200 rounded-full h-3">
-            <div 
-              className="h-full bg-gradient-to-r from-purple-600 to-pink-600 rounded-full transition-all duration-500"
-              style={{ width: `${getStepProgress()}%` }}
-            ></div>
-          </div>
-        </div>
-        
-        <div className="flex justify-between text-xs text-gray-500 mt-1">
-          <span>Start: Welcome</span>
-          <span>Complete: Legacy Ready</span>
-        </div>
-      </div>
+      <div className="container" style={{ paddingTop: 40, maxWidth: 800 }}>
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          style={{ textAlign: 'center', marginBottom: 32 }}
+        >
+          <h1 className="display" style={{ fontSize: 28, marginBottom: 8 }}>
+            Setup Your Legacy
+          </h1>
+          <p style={{ fontSize: 14, color: 'var(--text-2)' }}>
+            Step {currentStep + 1} of {steps.length} — {steps[currentStep].title}
+          </p>
+        </motion.div>
 
-      {/* Onboarding Content */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/50"
-      >
-        {/* Step Header */}
-        <div className="flex items-center justify-between mb-8">
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={handlePrevious}
-            className={`p-2 rounded-lg transition-colors ${
-              currentStep === 0 ? 'invisible' : 'text-gray-400 hover:text-gray-600'
-            }`}
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </motion.button>
-          
-          <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${steps[currentStep].color}`}>
-              {React.createElement(steps[currentStep].icon, { className: 'w-6 h-6 text-white' })}
-            </div>
-            <h2 className="text-2xl font-bold text-gray-900">{steps[currentStep].title}</h2>
+        {/* Progress Bar */}
+        <div style={{ marginBottom: 40 }}>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+            {steps.map((step, i) => (
+              <div
+                key={step.id}
+                style={{
+                  flex: 1,
+                  height: 4,
+                  borderRadius: 2,
+                  background: i <= currentStep
+                    ? `linear-gradient(90deg, ${step.color}, ${step.color}aa)`
+                    : 'var(--glass-border)',
+                  transition: 'all 0.3s ease'
+                }}
+              />
+            ))}
           </div>
-          
-          {currentStep < steps.length - 1 && (
+        </div>
+
+        {/* Step Indicator */}
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 24, marginBottom: 32 }}>
+          {steps.map((step, i) => {
+            const Icon = step.icon;
+            return (
+              <motion.div
+                key={step.id}
+                animate={{
+                  scale: i === currentStep ? 1.2 : 1,
+                  opacity: i <= currentStep ? 1 : 0.4
+                }}
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 12,
+                  background: i <= currentStep ? `${step.color}20` : 'var(--glass-1)',
+                  border: `2px solid ${i <= currentStep ? step.color : 'var(--glass-border)'}`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.3s ease'
+                }}
+              >
+                <Icon size={20} color={i <= currentStep ? step.color : 'var(--text-3)'} />
+              </motion.div>
+            );
+          })}
+        </div>
+
+        {/* Card Container */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          style={{
+            background: 'var(--glass-2)',
+            backdropFilter: 'blur(32px)',
+            border: '1px solid var(--glass-border)',
+            borderRadius: 28,
+            padding: 40,
+            position: 'relative',
+            overflow: 'hidden'
+          }}
+        >
+          {/* Glow Effects */}
+          <div style={{ position: 'absolute', top: -50, right: -50, width: 200, height: 200, borderRadius: '50%', background: 'radial-gradient(circle,rgba(79,158,255,0.1),transparent)', filter: 'blur(60px)' }} />
+          <div style={{ position: 'absolute', bottom: -30, left: -30, width: 150, height: 150, borderRadius: '50%', background: 'radial-gradient(circle,rgba(124,92,252,0.08),transparent)', filter: 'blur(50px)' }} />
+
+          {/* Navigation */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32, position: 'relative', zIndex: 1 }}>
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={handleNext}
-              className="bg-gradient-to-r from-purple-600 to-pink-600 text-white p-2 rounded-lg transition-colors flex items-center gap-2"
+              onClick={handlePrevious}
+              disabled={currentStep === 0}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '10px 16px',
+                background: currentStep === 0 ? 'transparent' : 'var(--glass-1)',
+                border: '1px solid var(--glass-border)',
+                borderRadius: 12,
+                color: currentStep === 0 ? 'var(--text-3)' : 'var(--text-1)',
+                cursor: currentStep === 0 ? 'not-allowed' : 'pointer',
+                fontSize: 13,
+                fontWeight: 600
+              }}
             >
-              <span>{currentStep === steps.length - 1 ? 'Complete Setup' : 'Continue'}</span>
-              <ChevronRight className="w-5 h-5" />
+              <ChevronLeft size={16} />
+              Back
             </motion.button>
-          )}
-        </div>
 
-        {/* Step Content */}
-        <div className="mt-8">
-          {currentStep === 0 && (
-            <motion.div
-              initial={{ opacity: 0, x: 50 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.2 }}
-              className="text-center py-12"
-            >
-              <div className="w-20 h-20 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Heart className="w-10 h-10 text-white" />
-              </div>
-              <h3 className="text-3xl font-bold text-gray-900 mb-4">Welcome to LastKey</h3>
-              <p className="text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
-                Your love deserves to live forever. LastKey helps you create a beautiful digital legacy that will be treasured by generations to come.
-              </p>
-              <div className="space-y-4 max-w-md mx-auto">
-                <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-6 border border-purple-200">
-                  <h4 className="font-semibold text-gray-900 mb-2">🌟 Premium Features</h4>
-                  <ul className="space-y-2 text-gray-700">
-                    <li className="flex items-center gap-2">
-                      <Zap className="w-5 h-5 text-purple-600" />
-                      <span>AI Voice Messages</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Clock className="w-5 h-5 text-purple-600" />
-                      <span>Life Timeline</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Award className="w-5 h-5 text-purple-600" />
-                      <span>Emergency Access Portal</span>
-                    </li>
-                  </ul>
-                </div>
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200">
-                  <h4 className="font-semibold text-gray-900 mb-2">🛡️ Security First</h4>
-                  <ul className="space-y-2 text-gray-700">
-                    <li className="flex items-center gap-2">
-                      <Shield className="w-5 h-5 text-blue-600" />
-                      <span>Zero-Knowledge Encryption</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Mail className="w-5 h-5 text-blue-600" />
-                      <span>Guardian Protocol Monitoring</span>
-                    </li>
-                  </ul>
-                </div>
-              </div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: steps[currentStep].color }}>
+              {steps[currentStep].title}
+            </div>
+
+            {currentStep < steps.length - 1 && (
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={handleNext}
-                className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-8 py-4 rounded-2xl font-bold text-lg hover:from-purple-700 hover:to-pink-700 transition-all"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '10px 20px',
+                  background: 'linear-gradient(135deg, #4f9eff, #7c5cfc)',
+                  border: 'none',
+                  borderRadius: 12,
+                  color: 'white',
+                  cursor: 'pointer',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  boxShadow: 'var(--glow-ion)'
+                }}
               >
-                Begin Your Journey
+                Continue
+                <ChevronRight size={16} />
               </motion.button>
-            </motion.div>
-          )}
+            )}
 
-          {currentStep === 1 && (
-            <motion.div
-              initial={{ opacity: 0, x: -50 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.2 }}
-              className="space-y-6"
-            >
-              <div className="grid md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
-                  <input
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                    placeholder="Enter your full name"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
-                  <input
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                    placeholder="your.email@example.com"
-                  />
-                </div>
-              </div>
-            </motion.div>
-          )}
-
-          {currentStep === 2 && (
-            <motion.div
-              initial={{ opacity: 0, x: 50 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.2 }}
-              className="space-y-6"
-            >
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Inactivity Duration (minutes)
-                </label>
-                <select
-                  value={formData.inactivityDuration}
-                  onChange={(e) => setFormData({ ...formData, inactivityDuration: parseInt(e.target.value) })}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                >
-                  <option value={30}>30 minutes</option>
-                  <option value={60}>1 hour</option>
-                  <option value={120}>2 hours</option>
-                  <option value={240}>4 hours</option>
-                  <option value={720}>12 hours</option>
-                  <option value={1440}>2 days</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Alert Channels</label>
-                <div className="space-y-3">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={formData.alertChannels.includes('email')}
-                      onChange={(e) => {
-                        const channels = e.target.checked 
-                          ? [...formData.alertChannels, 'email']
-                          : formData.alertChannels.filter(ch => ch !== 'email');
-                        setFormData({ ...formData, alertChannels: channels });
-                      }}
-                      className="w-4 h-4 text-purple-600 rounded"
-                    />
-                    <span className="text-gray-700">Email Notifications</span>
-                  </label>
-                  
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={formData.alertChannels.includes('whatsapp')}
-                      onChange={(e) => {
-                        const channels = e.target.checked 
-                          ? [...formData.alertChannels, 'whatsapp']
-                          : formData.alertChannels.filter(ch => ch !== 'whatsapp');
-                        setFormData({ ...formData, alertChannels: channels });
-                      }}
-                      className="w-4 h-4 text-purple-600 rounded"
-                    />
-                    <span className="text-gray-700">WhatsApp Alerts</span>
-                  </label>
-                </div>
-              </div>
-            </motion.div>
-          )}
-
-          {currentStep === 3 && (
-            <motion.div
-              initial={{ opacity: 0, x: -50 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.2 }}
-              className="space-y-6"
-            >
-              <div className="mb-4">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Loved Ones</h3>
-                <p className="text-gray-600 mb-4">Add the people who will receive your legacy and carry forward your love.</p>
-                
-                {formData.beneficiaries.map((beneficiary, index) => (
-  <React.Fragment key={index}>
-    <div className="bg-white rounded-xl p-4 border border-gray-200">
-      <div className="flex items-center justify-between mb-3">
-        <input
-          type="text"
-          value={beneficiary.name}
-          onChange={(e) => {
-            const updated = [...formData.beneficiaries];
-            updated[index] = { ...updated[index], name: e.target.value };
-            setFormData({ ...formData, beneficiaries: updated });
-          }}
-          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-          placeholder="Full name"
-        />
-        <motion.button
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-          onClick={() => handleRemoveBeneficiary(index)}
-          className="text-red-500 hover:text-red-700 p-1"
-        >
-          ×
-        </motion.button>
-      </div>
-    </div>
-    
-    <div className="grid grid-cols-2 gap-3">
-      <input
-        type="text"
-        value={beneficiary.email}
-        onChange={(e) => {
-          const updated = [...formData.beneficiaries];
-          updated[index] = { ...updated[index], email: e.target.value };
-          setFormData({ ...formData, beneficiaries: updated });
-        }}
-        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-        placeholder="Email address"
-      />
-      <input
-        type="text"
-        value={beneficiary.relationship}
-        onChange={(e) => {
-          const updated = [...formData.beneficiaries];
-          updated[index] = { ...updated[index], relationship: e.target.value };
-          setFormData({ ...formData, beneficiaries: updated });
-        }}
-        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-        placeholder="Relationship (e.g., Spouse, Child, Friend)"
-      />
-    </div>
-  </React.Fragment>
-))}
-                
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={handleAddBeneficiary}
-                  className="w-full bg-purple-100 hover:bg-purple-200 text-purple-700 py-3 px-4 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2"
-                >
-                  <Plus className="w-5 h-5" />
-                  Add Beneficiary
-                </motion.button>
-              </div>
-            </motion.div>
-          )}
-
-          {currentStep === 4 && (
-            <motion.div
-              initial={{ opacity: 0, x: 50 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.2 }}
-              className="space-y-6"
-            >
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Message Title</label>
-                <input
-                  type="text"
-                  value={formData.firstMessageTitle}
-                  onChange={(e) => setFormData({ ...formData, firstMessageTitle: e.target.value })}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                  placeholder="e.g., My First Message to My Family"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Message Content</label>
-                <textarea
-                  value={formData.firstMessageContent}
-                  onChange={(e) => setFormData({ ...formData, firstMessageContent: e.target.value })}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 h-32 resize-none"
-                  placeholder="Write a heartfelt message to your loved ones..."
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Recipient</label>
-                <input
-                  type="text"
-                  value={formData.firstMessageRecipient}
-                  onChange={(e) => setFormData({ ...formData, firstMessageRecipient: e.target.value })}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                  placeholder="Who is this message for?"
-                />
-              </div>
-            </motion.div>
-          )}
-
-          {currentStep === 5 && (
-            <motion.div
-              initial={{ opacity: 0, x: -50 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.2 }}
-              className="space-y-6"
-            >
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Digital Vault Setup</h3>
-                <p className="text-gray-600 mb-4">Secure important accounts and information for your loved ones.</p>
-                
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Platform Name</label>
-                    <input
-                      type="text"
-                      value={formData.vaultItems[0]?.platform || ''}
-                      onChange={(e) => {
-                        const updated = [...formData.vaultItems];
-                        updated[0] = { ...updated[0], platform: e.target.value };
-                        setFormData({ ...formData, vaultItems: updated });
-                      }}
-                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                      placeholder="e.g., Google, Facebook, Bank"
-                    />
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-3">
-                    <input
-                      type="text"
-                      value={formData.vaultItems[0]?.username || ''}
-                      onChange={(e) => {
-                        const updated = [...formData.vaultItems];
-                        updated[0] = { ...updated[0], username: e.target.value };
-                        setFormData({ ...formData, vaultItems: updated });
-                      }}
-                      className="px-3 py-2 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                      placeholder="Username or email"
-                    />
-                    <input
-                      type="password"
-                      value={formData.vaultItems[0]?.password || ''}
-                      onChange={(e) => {
-                        const updated = [...formData.vaultItems];
-                        updated[0] = { ...updated[0], password: e.target.value };
-                        setFormData({ ...formData, vaultItems: updated });
-                      }}
-                      className="px-3 py-2 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                      placeholder="Password or key"
-                    />
-                  </div>
-                </div>
-                
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => setFormData({
-                    ...formData,
-                    vaultItems: [...formData.vaultItems, { platform: '', username: '', password: '' }]
-                  })}
-                  className="w-full bg-purple-100 hover:bg-purple-200 text-purple-700 py-3 px-4 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2"
-                >
-                  <Plus className="w-5 h-5" />
-                  Add Another Item
-                </motion.button>
-              </div>
-            </motion.div>
-          )}
-
-          {currentStep === 6 && (
-            <motion.div
-              initial={{ opacity: 0, x: -50 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.2 }}
-              className="text-center py-12"
-            >
-              <div className="w-20 h-20 bg-gradient-to-r from-emerald-500 to-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
-                <CheckCircle className="w-10 h-10 text-white" />
-              </div>
-              
-              <h3 className="text-3xl font-bold text-gray-900 mb-4">Ready to Begin!</h3>
-              <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-8">
-                You've completed the setup! Your digital legacy is now ready to be preserved and shared with your loved ones.
-              </p>
-              
+            {currentStep === steps.length - 1 && (
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={handleCompleteOnboarding}
-                className="bg-gradient-to-r from-emerald-600 to-green-700 text-white px-8 py-4 rounded-2xl font-bold text-lg hover:from-emerald-700 hover:to-green-800 transition-all shadow-xl"
+                onClick={handleComplete}
+                disabled={completeOnboardingMutation.isPending}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '10px 20px',
+                  background: 'linear-gradient(135deg, #00e5a0, #4f9eff)',
+                  border: 'none',
+                  borderRadius: 12,
+                  color: 'white',
+                  cursor: 'pointer',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  boxShadow: 'var(--glow-pulse)'
+                }}
               >
-                Complete Setup
+                {completeOnboardingMutation.isPending ? 'Processing...' : 'Complete Setup'}
+                <CheckCircle size={16} />
               </motion.button>
-            </motion.div>
-          )}
-        </div>
-      </motion.div>
+            )}
+          </div>
+
+          {/* Step Content */}
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            <AnimatePresence mode="wait" custom={currentStep}>
+              {/* Step 0: Welcome */}
+              {currentStep === 0 && (
+                <motion.div
+                  key="step-0"
+                  custom={1}
+                  variants={slideVariants}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  transition={{ duration: 0.3 }}
+                  style={{ textAlign: 'center', padding: '20px 0' }}
+                >
+                  <motion.div
+                    animate={{ y: [0, -10, 0] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                    style={{ marginBottom: 24 }}
+                  >
+                    <div style={{ width: 80, height: 80, borderRadius: 20, background: 'linear-gradient(135deg,#ff4d6d,#ff6b8a)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', boxShadow: '0 0 40px rgba(255,77,109,0.4)' }}>
+                      <Heart size={36} color="white" />
+                    </div>
+                  </motion.div>
+                  <h2 style={{ fontSize: 28, fontWeight: 800, color: '#f0f4ff', marginBottom: 12 }}>Welcome to LastKey</h2>
+                  <p style={{ fontSize: 16, color: 'var(--text-2)', maxWidth: 500, margin: '0 auto 32px', lineHeight: 1.6 }}>
+                    Your love deserves to live forever. Let's set up your digital legacy in just a few steps.
+                  </p>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, maxWidth: 500, margin: '0 auto' }}>
+                    {[
+                      { icon: Shield, title: 'Secure', desc: 'AES-256 Encryption', color: '#00e5a0' },
+                      { icon: Clock, title: 'Guardian', desc: 'Auto Protection', color: '#4f9eff' },
+                      { icon: Heart, title: 'Legacy', desc: 'For Your Loved Ones', color: '#ff4d6d' }
+                    ].map((feat, i) => (
+                      <motion.div
+                        key={i}
+                        whileHover={{ y: -4 }}
+                        style={{
+                          padding: 16,
+                          background: 'var(--glass-1)',
+                          border: '1px solid var(--glass-border)',
+                          borderRadius: 16
+                        }}
+                      >
+                        <feat.icon size={24} color={feat.color} style={{ margin: '0 auto 8px' }} />
+                        <div style={{ fontSize: 14, fontWeight: 700, color: '#f0f4ff' }}>{feat.title}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{feat.desc}</div>
+                      </motion.div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Step 1: Profile */}
+              {currentStep === 1 && (
+                <motion.div
+                  key="step-1"
+                  custom={1}
+                  variants={slideVariants}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  transition={{ duration: 0.3 }}
+                  style={{ padding: '20px 0' }}
+                >
+                  <h2 style={{ fontSize: 24, fontWeight: 700, color: '#f0f4ff', marginBottom: 24, textAlign: 'center' }}>Your Profile</h2>
+                  <div style={{ display: 'grid', gap: 20, maxWidth: 500, margin: '0 auto' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-2)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Full Name</label>
+                      <input
+                        type="text"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        placeholder="Enter your full name"
+                        style={{ width: '100%', padding: '14px 16px', background: 'var(--glass-1)', border: '1px solid var(--glass-border)', borderRadius: 12, color: '#f0f4ff', fontSize: 15 }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-2)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Email Address</label>
+                      <input
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        placeholder="your.email@example.com"
+                        style={{ width: '100%', padding: '14px 16px', background: 'var(--glass-1)', border: '1px solid var(--glass-border)', borderRadius: 12, color: '#f0f4ff', fontSize: 15 }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-2)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Phone (Optional)</label>
+                      <input
+                        type="tel"
+                        value={formData.phone}
+                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        placeholder="For WhatsApp alerts"
+                        style={{ width: '100%', padding: '14px 16px', background: 'var(--glass-1)', border: '1px solid var(--glass-border)', borderRadius: 12, color: '#f0f4ff', fontSize: 15 }}
+                      />
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Step 2: Guardian Protocol */}
+              {currentStep === 2 && (
+                <motion.div
+                  key="step-2"
+                  custom={1}
+                  variants={slideVariants}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  transition={{ duration: 0.3 }}
+                  style={{ padding: '20px 0' }}
+                >
+                  <h2 style={{ fontSize: 24, fontWeight: 700, color: '#f0f4ff', marginBottom: 24, textAlign: 'center' }}>Guardian Protocol</h2>
+                  <p style={{ fontSize: 14, color: 'var(--text-2)', textAlign: 'center', marginBottom: 32 }}>
+                    How long should we wait before alerting your loved ones?
+                  </p>
+                  <div style={{ maxWidth: 400, margin: '0 auto' }}>
+                    <div style={{ marginBottom: 24 }}>
+                      <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-2)', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Inactivity Duration</label>
+                      <select
+                        value={formData.inactivityDuration}
+                        onChange={(e) => setFormData({ ...formData, inactivityDuration: parseInt(e.target.value) })}
+                        style={{ width: '100%', padding: '14px 16px', background: 'var(--glass-1)', border: '1px solid var(--glass-border)', borderRadius: 12, color: '#f0f4ff', fontSize: 15 }}
+                      >
+                        <option value={30}>30 minutes</option>
+                        <option value={60}>1 hour</option>
+                        <option value={120}>2 hours</option>
+                        <option value={240}>4 hours</option>
+                        <option value={720}>12 hours</option>
+                        <option value={1440}>24 hours</option>
+                        <option value={10080}>7 days</option>
+                      </select>
+                    </div>
+                    <div style={{ padding: 20, background: 'rgba(0,229,160,0.08)', border: '1px solid rgba(0,229,160,0.2)', borderRadius: 16 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                        <Shield size={20} color="#00e5a0" />
+                        <span style={{ fontSize: 14, fontWeight: 600, color: '#00e5a0' }}>Guardian Protocol Active</span>
+                      </div>
+                      <p style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.5 }}>
+                        After {formData.inactivityDuration >= 60 ? `${formData.inactivityDuration / 60} hour${formData.inactivityDuration >= 120 ? 's' : ''}` : `${formData.inactivityDuration} minutes`} of inactivity, we'll send alerts to your designated beneficiaries.
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Step 3: Beneficiaries */}
+              {currentStep === 3 && (
+                <motion.div
+                  key="step-3"
+                  custom={1}
+                  variants={slideVariants}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  transition={{ duration: 0.3 }}
+                  style={{ padding: '20px 0' }}
+                >
+                  <h2 style={{ fontSize: 24, fontWeight: 700, color: '#f0f4ff', marginBottom: 8, textAlign: 'center' }}>Your Loved Ones</h2>
+                  <p style={{ fontSize: 14, color: 'var(--text-2)', textAlign: 'center', marginBottom: 24 }}>
+                    Add people who will receive your legacy
+                  </p>
+                  <div style={{ maxWidth: 500, margin: '0 auto' }}>
+                    {formData.beneficiaries.map((b, i) => (
+                      <motion.div
+                        key={i}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        style={{ marginBottom: 16, padding: 16, background: 'var(--glass-1)', border: '1px solid var(--glass-border)', borderRadius: 16 }}
+                      >
+                        <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
+                          <input
+                            type="text"
+                            value={b.name}
+                            onChange={(e) => {
+                              const updated = [...formData.beneficiaries];
+                              updated[i] = { ...updated[i], name: e.target.value };
+                              setFormData({ ...formData, beneficiaries: updated });
+                            }}
+                            placeholder="Full name"
+                            style={{ flex: 1, padding: '10px 12px', background: 'var(--glass-1)', border: '1px solid var(--glass-border)', borderRadius: 10, color: '#f0f4ff', fontSize: 13 }}
+                          />
+                          <button onClick={() => handleRemoveBeneficiary(i)} style={{ padding: 10, background: 'rgba(255,77,109,0.1)', border: '1px solid rgba(255,77,109,0.3)', borderRadius: 10, cursor: 'pointer' }}>
+                            <X size={16} color="#ff4d6d" />
+                          </button>
+                        </div>
+                        <input
+                          type="email"
+                          value={b.email}
+                          onChange={(e) => {
+                            const updated = [...formData.beneficiaries];
+                            updated[i] = { ...updated[i], email: e.target.value };
+                            setFormData({ ...formData, beneficiaries: updated });
+                          }}
+                          placeholder="Email address"
+                          style={{ width: '100%', padding: '10px 12px', background: 'var(--glass-1)', border: '1px solid var(--glass-border)', borderRadius: 10, color: '#f0f4ff', fontSize: 13, marginBottom: 12 }}
+                        />
+                        <select
+                          value={b.relationship}
+                          onChange={(e) => {
+                            const updated = [...formData.beneficiaries];
+                            updated[i] = { ...updated[i], relationship: e.target.value };
+                            setFormData({ ...formData, beneficiaries: updated });
+                          }}
+                          style={{ width: '100%', padding: '10px 12px', background: 'var(--glass-1)', border: '1px solid var(--glass-border)', borderRadius: 10, color: '#f0f4ff', fontSize: 13 }}
+                        >
+                          <option value="spouse">Spouse</option>
+                          <option value="child">Child</option>
+                          <option value="parent">Parent</option>
+                          <option value="sibling">Sibling</option>
+                          <option value="friend">Friend</option>
+                          <option value="lawyer">Lawyer</option>
+                          <option value="other">Other</option>
+                        </select>
+                      </motion.div>
+                    ))}
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={handleAddBeneficiary}
+                      style={{
+                        width: '100%',
+                        padding: 14,
+                        background: 'var(--glass-1)',
+                        border: '1px dashed var(--glass-border)',
+                        borderRadius: 12,
+                        color: 'var(--text-2)',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 8,
+                        fontSize: 14,
+                        fontWeight: 600
+                      }}
+                    >
+                      <Plus size={16} />
+                      Add Beneficiary
+                    </motion.button>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Step 4: First Message */}
+              {currentStep === 4 && (
+                <motion.div
+                  key="step-4"
+                  custom={1}
+                  variants={slideVariants}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  transition={{ duration: 0.3 }}
+                  style={{ padding: '20px 0' }}
+                >
+                  <h2 style={{ fontSize: 24, fontWeight: 700, color: '#f0f4ff', marginBottom: 8, textAlign: 'center' }}>Leave a Message</h2>
+                  <p style={{ fontSize: 14, color: 'var(--text-2)', textAlign: 'center', marginBottom: 24 }}>
+                    Write a heartfelt message for your loved ones (optional)
+                  </p>
+                  <div style={{ maxWidth: 500, margin: '0 auto' }}>
+                    <div style={{ marginBottom: 16 }}>
+                      <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-2)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Title</label>
+                      <input
+                        type="text"
+                        value={formData.firstMessageTitle}
+                        onChange={(e) => setFormData({ ...formData, firstMessageTitle: e.target.value })}
+                        placeholder="e.g., For my family's future"
+                        style={{ width: '100%', padding: '14px 16px', background: 'var(--glass-1)', border: '1px solid var(--glass-border)', borderRadius: 12, color: '#f0f4ff', fontSize: 15 }}
+                      />
+                    </div>
+                    <div style={{ marginBottom: 16 }}>
+                      <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-2)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Message</label>
+                      <textarea
+                        value={formData.firstMessageContent}
+                        onChange={(e) => setFormData({ ...formData, firstMessageContent: e.target.value })}
+                        placeholder="Write your message here..."
+                        rows={5}
+                        style={{ width: '100%', padding: '14px 16px', background: 'var(--glass-1)', border: '1px solid var(--glass-border)', borderRadius: 12, color: '#f0f4ff', fontSize: 15, resize: 'none' }}
+                      />
+                    </div>
+                    <div style={{ padding: 16, background: 'rgba(255,184,48,0.08)', border: '1px solid rgba(255,184,48,0.2)', borderRadius: 12 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                        <Sparkles size={16} color="#ffb830" />
+                        <span style={{ fontSize: 13, fontWeight: 600, color: '#ffb830' }}>Pro Tip</span>
+                      </div>
+                      <p style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.5 }}>
+                        You can also create time capsules later to schedule messages for specific dates.
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Step 5: Complete */}
+              {currentStep === 5 && (
+                <motion.div
+                  key="step-5"
+                  custom={1}
+                  variants={slideVariants}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  transition={{ duration: 0.3 }}
+                  style={{ textAlign: 'center', padding: '20px 0' }}
+                >
+                  <motion.div
+                    animate={{ scale: [1, 1.1, 1] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                    style={{ marginBottom: 24 }}
+                  >
+                    <div style={{ width: 100, height: 100, borderRadius: 28, background: 'linear-gradient(135deg,#00e5a0,#4f9eff)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', boxShadow: '0 0 60px rgba(0,229,160,0.4)' }}>
+                      <CheckCircle size={48} color="white" />
+                    </div>
+                  </motion.div>
+                  <h2 style={{ fontSize: 28, fontWeight: 800, color: '#f0f4ff', marginBottom: 12 }}>You're All Set!</h2>
+                  <p style={{ fontSize: 16, color: 'var(--text-2)', maxWidth: 450, margin: '0 auto 32px', lineHeight: 1.6 }}>
+                    Your digital legacy is ready to be built. Start adding vault items, create time capsules, and preserve your memories.
+                  </p>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, maxWidth: 500, margin: '0 auto' }}>
+                    {[
+                      { label: 'Vault Items', value: 0, color: '#4f9eff' },
+                      { label: 'Loved Ones', value: formData.beneficiaries.length, color: '#a78bfa' },
+                      { label: 'Time Capsules', value: 0, color: '#ffb830' }
+                    ].map((stat, i) => (
+                      <div key={i} style={{ padding: 16, background: 'var(--glass-1)', border: '1px solid var(--glass-border)', borderRadius: 16 }}>
+                        <div style={{ fontSize: 28, fontWeight: 800, color: stat.color }}>{stat.value}</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{stat.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </motion.div>
+      </div>
     </div>
   );
 };

@@ -11,7 +11,7 @@ exports.getMyCapsules = async (req, res) => {
     });
   } catch (error) {
     res.status(400).json({
-      status: 'error',
+      status: 'fail',
       message: error.message
     });
   }
@@ -27,7 +27,7 @@ exports.createCapsule = async (req, res) => {
     });
   } catch (error) {
     res.status(400).json({
-      status: 'error',
+      status: 'fail',
       message: error.message
     });
   }
@@ -44,7 +44,7 @@ exports.updateCapsule = async (req, res) => {
 
     if (!capsule) {
       return res.status(404).json({
-        status: 'error',
+        status: 'fail',
         message: 'Capsule not found'
       });
     }
@@ -55,7 +55,7 @@ exports.updateCapsule = async (req, res) => {
     });
   } catch (error) {
     res.status(400).json({
-      status: 'error',
+      status: 'fail',
       message: error.message
     });
   }
@@ -68,7 +68,7 @@ exports.deleteCapsule = async (req, res) => {
 
     if (!capsule) {
       return res.status(404).json({
-        status: 'error',
+        status: 'fail',
         message: 'Capsule not found'
       });
     }
@@ -79,7 +79,7 @@ exports.deleteCapsule = async (req, res) => {
     });
   } catch (error) {
     res.status(400).json({
-      status: 'error',
+      status: 'fail',
       message: error.message
     });
   }

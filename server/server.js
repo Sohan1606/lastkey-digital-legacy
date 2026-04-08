@@ -12,15 +12,14 @@ const Asset = require('./models/Asset');
 const Beneficiary = require('./models/Beneficiary');
 const Capsule = require('./models/Capsule');
 
-const PORT = process.env.PORT || 5000;
-const MONGO_URI = process.env.MONGO_URI;
-
 const app = express();
 
 const http = require('http');
 const { Server } = require('socket.io');
 
 const server = http.createServer(app);
+const PORT = process.env.PORT || 5000;
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/lastkey';
 
 // Middleware
 app.use(helmet({
@@ -145,6 +144,26 @@ cron.schedule('*/5 * * * *', async () => {
         id: capsule._id,
         title: capsule.title
       });
+      
+      // Notify beneficiaries via email
+      const User = require('./models/User');
+      const user = await User.findById(capsule.userId);
+      const beneficiaries = await Beneficiary.find({ userId: capsule.userId });
+      for (const beneficiary of beneficiaries) {
+        await sendEmail({
+          to: beneficiary.email,
+          subject: `🔓 LastKey Alert: Time Capsule Released`,
+          html: `
+            <h2>Important Notice</h2>
+            <p><strong>${user ? user.name : 'A loved one'}</strong> has scheduled a time capsule to be released.</p>
+            <p><strong>Capsule:</strong> ${capsule.title}</p>
+            <p><strong>Released:</strong> ${new Date().toLocaleString()}</p>
+            <p>You can access this capsule through your beneficiary portal.</p>
+            <hr />
+            <p>Access the legacy: <a href="https://lastkey.com/emergency">LastKey Emergency Portal</a></p>
+          `
+        });
+      }
     }
   } catch (error) {
     console.error('Capsule CRON error:', error);
@@ -247,11 +266,8 @@ app.get('/api/test', (req, res) => {
 
 const startServer = async () => {
   try {
-    // Load environment variables
-    require('dotenv').config();
-    
     // Connect to MongoDB
-    await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/lastkey');
+    await mongoose.connect(MONGO_URI);
     console.log('✅ Database connected successfully');
     
     // Create indexes for performance
@@ -262,8 +278,6 @@ const startServer = async () => {
     console.log('✅ Database indexes created');
     
     // Start server with error handling
-    const PORT = process.env.PORT || 5000;
-    
     server.listen(PORT, () => {
       console.log(`✅ Server running on port ${PORT}`);
       console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);

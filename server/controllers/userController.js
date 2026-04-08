@@ -25,7 +25,8 @@ exports.ping = async (req, res, next) => {
       message: 'Ping received',
       user: {
         name: user.name,
-        triggerStatus: user.triggerStatus
+        triggerStatus: user.triggerStatus,
+        inactivityDuration: user.inactivityDuration
       }
     });
   } catch (error) {

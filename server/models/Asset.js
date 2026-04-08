@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const CryptoJS = require('crypto-js');
 
-const ENCRYPTION_KEY = process.env.ASSET_ENCRYPTION_KEY || 'lastkey-asset-encryption-key-32chars!!'; // 32 bytes for AES-256
+const ENCRYPTION_KEY = process.env.ASSET_ENCRYPTION_KEY || 'K32chark3yLastKey2024Secure!!'; // 32 bytes for AES-256
 
 const assetSchema = new mongoose.Schema({
   platform: {
