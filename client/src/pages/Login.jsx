@@ -1,52 +1,51 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
+import { Shield } from 'lucide-react';
 import AuthForm from '../components/AuthForm';
 
 const Login = () => {
   const [error, setError] = useState('');
-  const { login } = useAuth();
+  const { login, loginLoading } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = (formData) => {
     setError('');
-    const { email, password } = formData;
-    login({ email, password }, {
+    login({ email: formData.email, password: formData.password }, {
       onSuccess: () => navigate('/dashboard'),
-      onError: (err) => {
-        console.error('Login error:', err);
-        setError(err.response?.data?.message || 'Login failed');
-      }
+      onError: (err) => setError(err.response?.data?.message || 'Invalid credentials'),
     });
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4 sm:p-8">
-      <div className="max-w-md w-full space-y-8 bg-white/80 backdrop-blur-xl p-8 sm:p-10 rounded-3xl shadow-2xl border border-white/50">
-        <div className="text-center">
-          <h2 className="text-4xl font-extrabold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent mb-2">
-            Welcome Back
-          </h2>
-          <p className="text-gray-600 text-lg">Sign in to your LastKey account</p>
+    <div className="page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 24px' }}>
+      <div className="stars" />
+      <div style={{ position: 'absolute', top: '25%', left: '15%', width: 380, height: 380, borderRadius: '50%', background: 'radial-gradient(circle,rgba(79,158,255,0.06),transparent)', filter: 'blur(80px)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', bottom: '25%', right: '15%', width: 300, height: 300, borderRadius: '50%', background: 'radial-gradient(circle,rgba(124,92,252,0.06),transparent)', filter: 'blur(80px)', pointerEvents: 'none' }} />
+
+      <motion.div initial={{ opacity: 0, y: 28, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.45, ease: [0.23,1,0.32,1] }}
+        style={{ width: '100%', maxWidth: 420, background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(40px)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 26, padding: '44px 38px', position: 'relative', zIndex: 1 }}>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 36 }}>
+          <div style={{ width: 34, height: 34, borderRadius: 10, background: 'linear-gradient(135deg,#4f9eff,#7c5cfc)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 18px rgba(79,158,255,0.4)' }}>
+            <Shield size={16} color="white" />
+          </div>
+          <span style={{ fontFamily: 'Syne,sans-serif', fontWeight: 800, fontSize: 20, background: 'linear-gradient(135deg,#4f9eff,#a78bfa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>LastKey</span>
         </div>
-        <AuthForm
-          type="login"
-          onSubmit={handleSubmit}
-          buttonText="Sign In"
-          loading={login.isPending}
-          error={error}
-        />
-        <div className="text-center space-y-4">
-          <p className="text-md text-gray-600">
-            Don't have an account? <Link to="/register" className="font-bold text-purple-600 hover:text-purple-700 transition-colors">Sign up</Link>
+
+        <h1 style={{ fontFamily: 'Syne,sans-serif', fontWeight: 800, fontSize: 26, color: '#f0f4ff', marginBottom: 6, letterSpacing: '-0.02em' }}>Welcome back</h1>
+        <p style={{ fontSize: 14, color: 'var(--text-2)', marginBottom: 30 }}>Sign in to access your digital legacy</p>
+
+        <AuthForm type="login" onSubmit={handleSubmit} loading={loginLoading} error={error} buttonText="Sign In" />
+
+        <div style={{ textAlign: 'center', marginTop: 24, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <p style={{ fontSize: 13, color: 'var(--text-2)' }}>
+            No account? <Link to="/register" style={{ color: 'var(--ion)', fontWeight: 600, textDecoration: 'none' }}>Create one free</Link>
           </p>
-          <p className="text-sm">
-            <Link to="/forgot-password" className="text-indigo-600 hover:text-indigo-700 transition-colors font-medium">
-              Forgot your password?
-            </Link>
-          </p>
+          <Link to="/forgot-password" style={{ fontSize: 12, color: 'var(--text-3)', textDecoration: 'none' }}>Forgot your password?</Link>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 };

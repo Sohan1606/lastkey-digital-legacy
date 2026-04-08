@@ -67,91 +67,52 @@ const ActivityFeed = () => {
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, x: 20 }}
-      animate={{ opacity: 1, x: 0 }}
-      className={`rounded-2xl p-6 shadow-lg border ${
-        theme === 'dark' 
-          ? 'bg-gray-900 border-gray-800' 
-          : 'bg-white border-gray-200'
-      }`}
-    >
-      <div className="flex items-center justify-between mb-6">
-        <h3 className={`text-lg font-bold ${
-          theme === 'dark' ? 'text-white' : 'text-gray-900'
-        }`}>
-          Recent Activity
-        </h3>
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          className={`text-sm px-3 py-1 rounded-lg transition-colors ${
-            theme === 'dark' 
-              ? 'bg-gray-800 hover:bg-gray-700 text-gray-300' 
-              : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
-          }`}
+    <motion.div initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }}
+      style={{ background: 'var(--glass-2)', backdropFilter: 'blur(32px)', border: '1px solid var(--glass-border)', borderRadius: 20, padding: 20 }}>
+      
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <h3 style={{ fontSize: 16, fontWeight: 700, color: '#f0f4ff' }}>Recent Activity</h3>
+        <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+          style={{ background: 'var(--glass-1)', border: '1px solid var(--glass-border)', borderRadius: 10, padding: '6px 12px', fontSize: 12, fontWeight: 600, color: 'var(--text-2)', cursor: 'pointer' }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--ion)'; e.currentTarget.style.background = 'rgba(79,158,255,0.08)'; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--glass-border)'; e.currentTarget.style.background = 'var(--glass-1)'; }}
         >
           View All
         </motion.button>
       </div>
 
-      <div className="space-y-4 max-h-96 overflow-y-auto">
+      {/* Activity List */}
+      <div style={{ maxHeight: 380, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
         <AnimatePresence>
-          {activities.map((activity, index) => (
-            <motion.div
-              key={activity.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, x: -100 }}
-              transition={{ delay: index * 0.1 }}
-              className={`flex items-start gap-3 p-3 rounded-lg transition-colors ${
-                theme === 'dark' 
-                  ? 'hover:bg-gray-800' 
-                  : 'hover:bg-gray-50'
-              }`}
+          {activities.map((activity, i) => (
+            <motion.div key={activity.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -100 }} transition={{ delay: i * 0.08 }}
+              style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: 12, borderRadius: 12, cursor: 'pointer', transition: 'all 0.22s' }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'var(--glass-3)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'var(--glass-1)'; }}
             >
               {getActivityIcon(activity)}
               
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between mb-1">
-                  <h4 className={`font-medium text-sm ${
-                    theme === 'dark' ? 'text-white' : 'text-gray-900'
-                  }`}>
-                    {activity.title}
-                  </h4>
-                  <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    onClick={() => removeActivity(activity.id)}
-                    className={`p-1 rounded transition-colors ${
-                      theme === 'dark' ? 'hover:bg-gray-700' : 'hover:bg-gray-200'
-                    }`}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                  <h4 style={{ fontSize: 13, fontWeight: 600, color: '#f0f4ff' }}>{activity.title}</h4>
+                  <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={() => removeActivity(activity.id)}
+                    style={{ padding: 2, borderRadius: 6, cursor: 'pointer' }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'var(--glass-3)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
                   >
-                    <X className="w-3 h-3 text-gray-400" />
+                    <X size={12} color="var(--text-3)" />
                   </motion.button>
                 </div>
                 
-                <p className={`text-xs ${
-                  theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-                } mb-2`}>
-                  {activity.description}
-                </p>
+                <p style={{ fontSize: 12, color: 'var(--text-2)', marginBottom: 6, lineHeight: 1.4 }}>{activity.description}</p>
                 
-                <div className="flex items-center justify-between">
-                  <span className={`text-xs ${
-                    theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
-                  }`}>
-                    {formatDistanceToNow(activity.timestamp, { addSuffix: true })}
-                  </span>
-                  
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    className={`text-xs px-2 py-1 rounded transition-colors ${
-                      theme === 'dark' 
-                        ? 'bg-gray-800 hover:bg-gray-700 text-gray-300' 
-                        : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
-                    }`}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{formatDistanceToNow(activity.timestamp, { addSuffix: true })}</span>
+                  <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                    style={{ background: 'var(--glass-1)', border: '1px solid var(--glass-border)', borderRadius: 8, padding: '4px 8px', fontSize: 11, fontWeight: 600, color: 'var(--ion)', cursor: 'pointer' }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--ion)'; e.currentTarget.style.background = 'rgba(79,158,255,0.08)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--glass-border)'; e.currentTarget.style.background = 'var(--glass-1)'; }}
                   >
                     {activity.action}
                   </motion.button>
@@ -162,29 +123,15 @@ const ActivityFeed = () => {
         </AnimatePresence>
       </div>
 
+      {/* Empty State */}
       {activities.length === 0 && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="text-center py-8"
-        >
-          <div className={`w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center ${
-            theme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'
-          }`}>
-            <Zap className={`w-8 h-8 ${
-              theme === 'dark' ? 'text-gray-600' : 'text-gray-400'
-            }`} />
+        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+          style={{ textAlign: 'center', padding: '40px 20px' }}>
+          <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'var(--glass-1)', margin: '0 auto 12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Zap size={20} color="var(--text-3)" />
           </div>
-          <p className={`text-sm ${
-            theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-          }`}>
-            No recent activity
-          </p>
-          <p className={`text-xs mt-1 ${
-            theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
-          }`}>
-            Start building your legacy to see updates here
-          </p>
+          <p style={{ fontSize: 13, color: 'var(--text-2)', margin: '0 0 4px' }}>No recent activity</p>
+          <p style={{ fontSize: 11, color: 'var(--text-3)', margin: 0 }}>Start building your legacy to see updates here</p>
         </motion.div>
       )}
     </motion.div>

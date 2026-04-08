@@ -27,7 +27,7 @@ const LoadingSkeleton = ({
             repeat: Infinity,
             delay: index * 0.1,
           }}
-          className={`${height} ${width} bg-gray-200 dark:bg-gray-700 ${skeletonVariants[variant]}`}
+          className={`${height} ${width} ${skeletonVariants[variant]}`}
         />
       ))}
     </div>
@@ -38,7 +38,8 @@ export const CardSkeleton = () => (
   <motion.div
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
-    className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700"
+    className="glass"
+    style={{ padding: 24, borderRadius: 20 }}
   >
     <div className="flex items-start space-x-4">
       <LoadingSkeleton variant="circular" className="w-12 h-12 flex-shrink-0" />

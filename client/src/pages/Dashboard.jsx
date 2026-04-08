@@ -33,67 +33,39 @@ const Dashboard = () => {
   const { user, token } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [dmsStatus, setDmsStatus] = useState({
-    status: user?.triggerStatus || 'active',
-    remainingMinutes: user?.inactivityDuration || 60,
-    message: user?.triggerStatus === 'active' ? '✅ Active & Secure' : 'Guardian Protocol Status Update'
-  });
+  const [dmsStatus, setDmsStatus] = useState({ status: 'active', remainingMinutes: 30 });
+  const [isPremium, setIsPremium] = useState(false);
 
-  // Sync initial state when user loads
-  useEffect(() => {
-    if (user) {
-      setDmsStatus({
-        status: user.triggerStatus,
-        remainingMinutes: user.inactivityDuration, // Simple fallback
-        message: user.triggerStatus === 'active' ? '✅ Active & Secure' : 'Guardian Protocol Status Update'
-      });
-    }
-  }, [user]);
-
-  const isPremium = !!user?.isPremium;
-
-  // Handle ping to reset Guardian Protocol timer
-  const handlePing = async () => {
-    try {
-      await axios.post(`${API_BASE}/user/ping`, {}, {
+  // Fetch user stats and premium status
+  const { data: stats, isLoading: statsLoading } = useQuery({
+    queryKey: ['user-stats'],
+    queryFn: async () => {
+      const res = await axios.get(`${API_BASE}/user/stats`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
-      // Update local state
-      setDmsStatus(prev => ({
-        ...prev,
-        status: 'active',
-        remainingMinutes: user.inactivityDuration,
-        message: '✅ Active & Secure'
-      }));
-      
-      toast.success('Guardian Protocol reset! You\'re confirmed active.');
-    } catch (error) {
-      console.error('Ping error:', error);
-      toast.error('Failed to reset timer. Please try again.');
-    }
-  };
+      return res.data;
+    },
+    enabled: !!token,
+  });
 
-  // 1. AI Suggestions Query
-  const { data: suggestionsData, isPending: suggestionsLoading } = useQuery({
-    queryKey: ['aiSuggestions'],
+  // Fetch AI suggestions
+  const { data: suggestions = [], isLoading: suggestionsLoading } = useQuery({
+    queryKey: ['ai-suggestions'],
     queryFn: async () => {
       const res = await axios.get(`${API_BASE}/ai/suggestions`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       return res.data;
     },
-    enabled: !!user && !!token,
+    enabled: !!token,
   });
 
-  const suggestions = suggestionsData?.data || [];
-
-  // 2. Socket.IO DMS Setup
+  // Initialize socket and listen for DMS updates
   useEffect(() => {
-    if (!user || !token) return;
-
-    const socket = initSocket(user._id || user.id);
-
+    if (!token) return;
+    
+    const socket = initSocket(token);
+    
     const handleDMS = (data) => {
       setDmsStatus(data);
     };
@@ -105,15 +77,40 @@ const Dashboard = () => {
       socket.off('dms-sync', handleDMS);
       socket.off('dms-update', handleDMS);
     };
-  }, [user, token]);
+  }, [token]);
 
-  // 4. Status styling
-  const getStatusStyle = (status) => {
-    switch (status) {
-      case 'active': return 'from-green-400 to-emerald-500 ring-green-200';
-      case 'warning': return 'from-yellow-400 to-orange-500 ring-yellow-200 animate-pulse';
-      case 'triggered': return 'from-red-400 to-rose-500 ring-red-200 animate-pulse';
-      default: return 'from-gray-400 to-gray-500';
+  // Handle ping to reset DMS timer
+  const handlePing = async () => {
+    try {
+      const res = await axios.post(`${API_BASE}/dms/ping`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setDmsStatus(res.data);
+      toast.success('✋ I\'m Here — Timer Reset', {
+        icon: '👋',
+        style: {
+          background: 'linear-gradient(135deg, #00e5a0, #4f9eff)',
+          color: 'white',
+          border: 'none',
+        }
+      });
+      
+      // Play ping sound
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain); 
+        gain.connect(ctx.destination);
+        osc.frequency.setValueAtTime(660, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(1100, ctx.currentTime + 0.12);
+        gain.gain.setValueAtTime(0.12, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+        osc.start(); 
+        osc.stop(ctx.currentTime + 0.35);
+      } catch(e) {}
+    } catch (error) {
+      toast.error('Failed to reset timer');
     }
   };
 
@@ -125,206 +122,94 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-indigo-100 p-6 md:p-8">
-      {/* Guardian Protocol Panel */}
-      <GuardianProtocolPanel 
-        dmsStatus={dmsStatus}
-        onPing={handlePing}
-        isPremium={isPremium}
-      />
+    <div className="page spatial-bg">
+      <div className="stars" />
+      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '28px 24px 80px', display: 'grid', gridTemplateColumns: '300px 1fr', gap: 24, alignItems: 'start' }}>
 
-      {/* Quick Access Cards */}
-      <div className="max-w-6xl mx-auto mt-8">
-        <div className="flex items-center gap-3 mb-8">
-          <Sparkles className="w-8 h-8 text-purple-500" />
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
-            Quick Access
-          </h1>
+        {/* ── SIDEBAR ── */}
+        <div style={{ position: 'sticky', top: 96, display: 'flex', flexDirection: 'column', gap: 18 }}>
+          <GuardianProtocolPanel dmsStatus={dmsStatus} onPing={handlePing} isPremium={isPremium} />
         </div>
-        
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-          <motion.div
-            whileHover={{ scale: 1.05, y: -4 }}
-            className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50 hover:shadow-xl transition-all cursor-pointer"
-            onClick={() => navigate('/voice-messages')}
-          >
-            <div className="flex items-center gap-4 mb-4">
-              <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
-                <Mic className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h3 className="font-bold text-gray-900">Voice Messages</h3>
-                <p className="text-sm text-gray-500">Create AI voice messages</p>
-              </div>
-            </div>
-          </motion.div>
 
-          <motion.div
-            whileHover={{ scale: 1.05, y: -4 }}
-            className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50 hover:shadow-xl transition-all cursor-pointer"
-            onClick={() => navigate('/life-timeline')}
-          >
-            <div className="flex items-center gap-4 mb-4">
-              <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center">
-                <Calendar className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h3 className="font-bold text-gray-900">Life Timeline</h3>
-                <p className="text-sm text-gray-500">Document your journey</p>
-              </div>
-            </div>
-          </motion.div>
+        {/* ── MAIN ── */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
 
-          <motion.div
-            whileHover={{ scale: 1.05, y: -4 }}
-            className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50 hover:shadow-xl transition-all cursor-pointer"
-            onClick={() => navigate('/memoir-ai')}
-          >
-            <div className="flex items-center gap-4 mb-4">
-              <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl flex items-center justify-center">
-                <BookOpen className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h3 className="font-bold text-gray-900">Memoir AI</h3>
-                <p className="text-sm text-gray-500">Write your life story</p>
-              </div>
-            </div>
-          </motion.div>
-
-          <motion.div
-            whileHover={{ scale: 1.05, y: -4 }}
-            className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50 hover:shadow-xl transition-all cursor-pointer"
-            onClick={() => navigate('/gamification')}
-          >
-            <div className="flex items-center gap-4 mb-4">
-              <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-yellow-500 rounded-xl flex items-center justify-center">
-                <Trophy className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h3 className="font-bold text-gray-900">Achievements</h3>
-                <p className="text-sm text-gray-500">View your progress</p>
-              </div>
-            </div>
-          </motion.div>
-
-          <motion.div
-            whileHover={{ scale: 1.05, y: -4 }}
-            className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50 hover:shadow-xl transition-all cursor-pointer"
-            onClick={() => navigate('/emergency')}
-          >
-            <div className="flex items-center gap-4 mb-4">
-              <div className="w-12 h-12 bg-gradient-to-r from-red-500 to-rose-500 rounded-xl flex items-center justify-center">
-                <Heart className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h3 className="font-bold text-gray-900">Emergency Access</h3>
-                <p className="text-sm text-gray-500">Beneficiary portal</p>
-              </div>
-            </div>
-          </motion.div>
-
-          <motion.div
-            whileHover={{ scale: 1.05, y: -4 }}
-            className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50 hover:shadow-xl transition-all cursor-pointer"
-            onClick={() => navigate('/onboarding')}
-          >
-            <div className="flex items-center gap-4 mb-4">
-              <div className="w-12 h-12 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center">
-                <Zap className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h3 className="font-bold text-gray-900">Onboarding</h3>
-                <p className="text-sm text-gray-500">Setup guide</p>
-              </div>
-            </div>
-          </motion.div>
-        </div>
-      </div>
-
-      {/* Two Column Layout for AI Suggestions and Activity Feed */}
-      <div className="max-w-6xl mx-auto grid lg:grid-cols-3 gap-8">
-        {/* AI Suggestions - 2 columns */}
-        <div className="lg:col-span-2">
-          <div className="flex items-center gap-3 mb-8">
-            <Sparkles className="w-8 h-8 text-purple-500" />
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
-              AI Smart Suggestions
+          {/* Header */}
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
+            <p style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 4 }}>Welcome back</p>
+            <h1 className="display" style={{ fontSize: 28, display: 'flex', alignItems: 'center', gap: 10 }}>
+              {user?.name?.split(' ')[0]}'s Legacy Hub
+              {(user?.streak >= 3) && <span style={{ fontSize: 20, animation: 'float 3s ease-in-out infinite' }}>🔥</span>}
             </h1>
+          </motion.div>
+
+          {/* Quick Access */}
+          <div>
+            <p style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 14 }}>Quick Access</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+              {[
+                { label: 'Voice Messages', sub: 'AI-narrated farewell', path: '/voice-messages', color: '#7c5cfc', icon: '🎤' },
+                { label: 'Life Timeline', sub: 'Your visual story', path: '/life-timeline', color: '#4f9eff', icon: '📅' },
+                { label: 'Memoir AI', sub: 'Write your chapters', path: '/memoir-ai', color: '#00e5a0', icon: '📖' },
+                { label: 'Achievements', sub: 'Legacy score', path: '/gamification', color: '#ffb830', icon: '🏆' },
+                { label: 'Emergency Access', sub: 'Beneficiary portal', path: '/emergency', color: '#ff4d6d', icon: '🛡️' },
+                { label: 'Setup Guide', sub: 'Complete onboarding', path: '/onboarding', color: '#a78bfa', icon: '⚡' },
+              ].map((item, i) => (
+                <motion.button key={item.path} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
+                  whileHover={{ y: -4, scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                  onClick={() => navigate(item.path)}
+                  style={{ background: 'var(--glass-1)', backdropFilter: 'blur(20px)', border: '1px solid var(--glass-border)', borderRadius: 15, padding: '16px 14px', cursor: 'pointer', textAlign: 'left', transition: 'all 0.25s cubic-bezier(0.23,1,0.32,1)', position: 'relative', overflow: 'hidden' }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = item.color + '45'; e.currentTarget.style.background = item.color + '08'; e.currentTarget.style.boxShadow = `0 8px 30px rgba(0,0,0,0.35), 0 0 18px ${item.color}18`; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--glass-border)'; e.currentTarget.style.background = 'var(--glass-1)'; e.currentTarget.style.boxShadow = 'none'; }}
+                >
+                  <div style={{ fontSize: 22, marginBottom: 8 }}>{item.icon}</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#f0f4ff', marginBottom: 2 }}>{item.label}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{item.sub}</div>
+                </motion.button>
+              ))}
+            </div>
           </div>
 
-          {suggestionsLoading ? (
-            <div className="flex flex-col items-center justify-center py-20 bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50">
-              <Loader2 className="w-12 h-12 animate-spin text-indigo-500 mb-4" />
-              <span className="text-lg font-semibold text-gray-700">Analyzing your legacy...</span>
+          {/* AI Suggestions + Activity Feed */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: 20 }}>
+            <div>
+              <p style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 14 }}>AI Smart Suggestions</p>
+              {suggestionsLoading ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {[1,2].map(i => <div key={i} className="skeleton" style={{ height: 110 }} />)}
+                </div>
+              ) : suggestions.length === 0 ? (
+                <div style={{ background: 'rgba(0,229,160,0.04)', border: '1px solid rgba(0,229,160,0.14)', borderRadius: 16, padding: 28, textAlign: 'center' }}>
+                  <div style={{ fontSize: 28, marginBottom: 8 }}>✨</div>
+                  <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--pulse)', margin: '0 0 4px' }}>Perfect Setup!</p>
+                  <p style={{ fontSize: 12, color: 'var(--text-3)', margin: 0 }}>Your digital legacy is fully optimized.</p>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {suggestions.map((s, i) => {
+                    const c = { critical: '#ff4d6d', high: '#ffb830', medium: '#4f9eff', low: '#8899bb' }[s.priority] || '#8899bb';
+                    return (
+                      <motion.div key={s.id} initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.07 }}
+                        whileHover={{ x: 4 }}
+                        style={{ background: 'var(--glass-1)', backdropFilter: 'blur(20px)', borderRadius: 14, borderLeft: `3px solid ${c}`, border: `1px solid var(--glass-border)`, borderLeftColor: c, padding: '15px 18px', cursor: 'pointer', transition: 'all 0.22s' }}
+                        onClick={() => navigate('/' + s.action)}
+                        onMouseEnter={e => { e.currentTarget.style.background = c + '08'; e.currentTarget.style.borderColor = c + '35'; e.currentTarget.style.borderLeftColor = c; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = 'var(--glass-1)'; e.currentTarget.style.borderColor = 'var(--glass-border)'; e.currentTarget.style.borderLeftColor = c; }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 5 }}>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: '#f0f4ff' }}>{s.title}</span>
+                          <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: c, background: c + '18', border: `1px solid ${c}28`, borderRadius: 6, padding: '2px 7px', flexShrink: 0, marginLeft: 8 }}>{s.priority}</span>
+                        </div>
+                        <p style={{ fontSize: 12, color: 'var(--text-2)', margin: '0 0 10px', lineHeight: 1.55 }}>{s.description}</p>
+                        <span style={{ fontSize: 11, color: c, fontWeight: 600 }}>Take action →</span>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
-          ) : suggestions.length === 0 ? (
-            <motion.div 
-              className="text-center py-20 bg-white/70 rounded-2xl backdrop-blur-sm border border-white/50 shadow-lg"
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-            >
-              <Sparkles className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-gray-700 mb-2">Perfect Setup! 🎉</h3>
-              <p className="text-gray-500">Your digital legacy is fully secured and optimized. No immediate AI suggestions.</p>
-            </motion.div>
-          ) : (
-            <div className="grid md:grid-cols-2 gap-6">
-              {suggestions.map((suggestion, index) => {
-                const priorityStyle = `bg-gradient-to-r ${priorityColors[suggestion.priority] || 'bg-gray-500'} px-3 py-1 rounded-full text-white text-xs font-bold inline-block mb-3`;
-
-                return (
-                  <motion.div
-                    key={suggestion.id}
-                    layout
-                    initial={{ opacity: 0, y: 30 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                    whileHover={{ scale: 1.02, y: -4, boxShadow: "0 15px 30px rgba(0,0,0,0.1)" }}
-                    className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-lg hover:shadow-xl border border-white/50 group hover:border-indigo-200 transition-all cursor-pointer"
-                  >
-                    {/* Priority Badge */}
-                    <div className={`px-3 py-1 rounded-full text-white text-xs font-bold inline-block mb-3 ${priorityColors[suggestion.priority] || 'bg-gray-500'}`}>
-                      {suggestion.priority.toUpperCase()}
-                    </div>
-
-                    {/* Icon + Title */}
-                    <div className="flex items-start gap-3 mb-4">
-                      <div className={`p-3 rounded-xl bg-gradient-to-br ${priorityColors[suggestion.priority] || 'bg-gray-200'} shadow-md`}>
-                        <IconDisplay iconName={suggestion.icon} />
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-lg text-gray-800 mb-1 group-hover:text-indigo-600 transition">
-                          {suggestion.title}
-                        </h3>
-                        <span className="text-xs bg-gray-100 px-2 py-1 rounded-full text-gray-600">
-                          {suggestion.category}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Description */}
-                    <p className="text-gray-600 mb-6 leading-relaxed text-sm">
-                      {suggestion.description}
-                    </p>
-
-                    {/* Action Button */}
-                    <motion.button
-                      whileTap={{ scale: 0.98 }}
-                      className="w-full bg-gradient-to-r from-indigo-600 to-purple-700 text-white py-3 px-4 rounded-xl font-semibold hover:shadow-lg transition-all hover:from-indigo-700 hover:to-purple-800"
-                      onClick={() => navigate(suggestion.action)}
-                    >
-                      Take Action Now →
-                    </motion.button>
-                  </motion.div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Activity Feed - 1 column */}
-        <div className="lg:col-span-1">
-          <ActivityFeed />
+            <ActivityFeed />
+          </div>
         </div>
       </div>
     </div>

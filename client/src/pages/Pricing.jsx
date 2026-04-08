@@ -148,8 +148,9 @@ const Pricing = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-indigo-100 pt-20 p-6 md:p-8">
-      <div className="max-w-7xl mx-auto px-6 py-16">
+    <div className="page spatial-bg">
+      <div className="stars" />
+      <div className="container" style={{ padding: '80px 24px' }}>
         
         {/* Header */}
         <motion.div
@@ -186,9 +187,28 @@ const Pricing = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className={`relative rounded-3xl p-8 border-2 ${borderClasses} ${colorClasses} ${
-                  plan.featured ? 'shadow-2xl scale-105' : 'shadow-lg'
-                } hover:shadow-2xl transition-all duration-300`}
+                whileHover={{ y: -8, scale: plan.featured ? 1.05 : 1.02 }}
+                className="glass"
+                style={{ 
+                  padding: 32, 
+                  borderRadius: 24, 
+                  border: plan.featured ? '2px solid var(--ion)' : '1px solid var(--glass-border)',
+                  position: 'relative',
+                  transform: plan.featured ? 'scale(1.05)' : 'scale(1)',
+                  boxShadow: plan.featured ? 'var(--glow-ion)' : 'none'
+                }}
+                onMouseEnter={e => { 
+                  if (!plan.featured) {
+                    e.currentTarget.style.borderColor = 'var(--ion)';
+                    e.currentTarget.style.boxShadow = 'var(--glow-ion)';
+                  }
+                }}
+                onMouseLeave={e => { 
+                  if (!plan.featured) {
+                    e.currentTarget.style.borderColor = 'var(--glass-border)';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }
+                }}
               >
                 {/* Popular Badge */}
                 {plan.popular && (

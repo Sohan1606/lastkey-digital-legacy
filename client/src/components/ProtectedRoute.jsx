@@ -1,15 +1,20 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { motion } from 'framer-motion';
+import { Shield } from 'lucide-react';
 
 const ProtectedRoute = ({ children }) => {
-  const { token, user, fetchingUser } = useAuth();
+  const { token, fetchingUser } = useAuth();
 
   if (fetchingUser) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-          <p className="text-slate-600 font-medium">Loading your legacy...</p>
+      <div style={{ minHeight: '100vh', background: 'var(--void)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 18, position: 'relative' }}>
+        <div className="stars" />
+        <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+          style={{ width: 44, height: 44, borderRadius: '50%', border: '2px solid rgba(79,158,255,0.15)', borderTopColor: '#4f9eff', position: 'relative', zIndex: 1 }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, position: 'relative', zIndex: 1 }}>
+          <Shield size={14} color="var(--text-3)" />
+          <span style={{ fontSize: 13, color: 'var(--text-3)', letterSpacing: '0.05em' }}>Loading your legacy...</span>
         </div>
       </div>
     );

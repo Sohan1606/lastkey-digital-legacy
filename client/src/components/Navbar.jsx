@@ -1,146 +1,217 @@
+import { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
-import { useTheme } from '../contexts/ThemeContext';
-import { Link, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Menu, X } from 'lucide-react';
-import { useState } from 'react';
-import ThemeToggle from './ThemeToggle';
-import GlobalSearch from './GlobalSearch';
+import {
+  LayoutDashboard, Lock, Users, Clock, Bot, Mic,
+  Calendar, BookOpen, Trophy, Menu, X, LogOut,
+  ChevronDown, Shield, Zap, Heart
+} from 'lucide-react';
 
 const Navbar = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [isOpen, setIsOpen] = useState(false);
+  const location = useLocation();
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
-  const handleLogout = () => {
-    logout();
-    navigate('/');
-    setIsOpen(false);
+  useEffect(() => {
+    const fn = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', fn);
+    return () => window.removeEventListener('scroll', fn);
+  }, []);
+
+  // Close dropdowns on route change
+  useEffect(() => { setMoreOpen(false); setMobileOpen(false); }, [location.pathname]);
+
+  const primary = [
+    { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+    { name: 'Vault', path: '/vault', icon: Lock },
+    { name: 'Capsules', path: '/capsules', icon: Clock },
+    { name: 'AI Writer', path: '/ai', icon: Bot },
+  ];
+
+  const more = [
+    { name: 'Beneficiaries', path: '/beneficiaries', icon: Users },
+    { name: 'Voice', path: '/voice-messages', icon: Mic },
+    { name: 'Timeline', path: '/life-timeline', icon: Calendar },
+    { name: 'Memoir', path: '/memoir-ai', icon: BookOpen },
+    { name: 'Achievements', path: '/gamification', icon: Trophy },
+    { name: 'Emergency', path: '/emergency', icon: Heart },
+    { name: 'Pricing', path: '/pricing', icon: Zap },
+  ];
+
+  const isActive = (path) => location.pathname === path;
+
+  const linkStyle = (active) => ({
+    display: 'flex', alignItems: 'center', gap: 6,
+    padding: '7px 13px', borderRadius: 10,
+    fontSize: 13, fontWeight: active ? 600 : 500,
+    color: active ? '#4f9eff' : 'rgba(136,153,187,0.85)',
+    background: active ? 'rgba(79,158,255,0.10)' : 'transparent',
+    border: active ? '1px solid rgba(79,158,255,0.22)' : '1px solid transparent',
+    textDecoration: 'none', transition: 'all 0.18s ease', whiteSpace: 'nowrap',
+  });
+
+  const hoverLink = (e, active) => {
+    if (!active) { e.currentTarget.style.color = '#f0f4ff'; e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }
+  };
+  const unhoverLink = (e, active) => {
+    if (!active) { e.currentTarget.style.color = 'rgba(136,153,187,0.85)'; e.currentTarget.style.background = 'transparent'; }
   };
 
-  const navItems = user ? [
-    { name: 'Dashboard', path: '/dashboard', icon: '🏠' },
-    { name: 'Vault', path: '/vault', icon: '🔒' },
-    { name: 'Beneficiaries', path: '/beneficiaries', icon: '👥' },
-    { name: 'Capsules', path: '/capsules', icon: '⏰' },
-    { name: 'AI', path: '/ai', icon: '🤖' },
-    { name: 'Voice', path: '/voice-messages', icon: '🎤' },
-    { name: 'Timeline', path: '/life-timeline', icon: '📅' },
-    { name: 'Memoir', path: '/memoir-ai', icon: '📖' },
-    { name: 'Gamification', path: '/gamification', icon: '🏆' },
-  ] : [];
-
   return (
-    <motion.nav 
-      initial={{ y: -100 }}
-      animate={{ y: 0 }}
-      transition={{ type: "spring", stiffness: 120, damping: 20 }}
-      className="bg-white/80 backdrop-blur-xl shadow-lg fixed top-0 left-0 right-0 z-50 border-b border-white/50"
-    >
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16 items-center">
-          <Link to="/" className="text-3xl font-extrabold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
-            LastKey
+    <>
+      <motion.nav
+        initial={{ y: -80, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ type: 'spring', stiffness: 200, damping: 26 }}
+        style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, padding: '10px 16px' }}
+      >
+        <div style={{
+          maxWidth: 1200, margin: '0 auto',
+          background: scrolled ? 'rgba(7,14,27,0.92)' : 'rgba(7,14,27,0.6)',
+          backdropFilter: 'blur(32px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(32px) saturate(180%)',
+          border: '1px solid rgba(255,255,255,0.07)',
+          borderRadius: 16, padding: '8px 16px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          transition: 'all 0.3s ease',
+          boxShadow: scrolled ? '0 8px 40px rgba(0,0,0,0.5)' : 'none',
+        }}>
+          {/* Logo */}
+          <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none', flexShrink: 0 }}>
+            <div style={{ width: 30, height: 30, borderRadius: 9, background: 'linear-gradient(135deg,#4f9eff,#7c5cfc)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 14px rgba(79,158,255,0.45)' }}>
+              <Shield size={15} color="white" />
+            </div>
+            <span style={{ fontFamily: 'Syne,sans-serif', fontWeight: 800, fontSize: 19, background: 'linear-gradient(135deg,#4f9eff,#a78bfa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>LastKey</span>
           </Link>
 
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-4">
-            <GlobalSearch />
-            <ThemeToggle />
-            {user && navItems.map((item) => (
-              <Link 
-                key={item.name} 
-                to={item.path} 
-                className="text-gray-700 hover:text-purple-600 px-3 py-2 rounded-md font-medium transition-all hover:bg-purple-50 flex items-center gap-2 text-sm"
-              >
-                <span className="text-lg">{item.icon}</span>
-                <span>{item.name}</span>
-              </Link>
-            ))}
+          {/* Desktop nav */}
+          {user && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 2 }} className="hidden md:flex">
+              {primary.map(item => {
+                const Icon = item.icon;
+                const active = isActive(item.path);
+                return (
+                  <Link key={item.path} to={item.path} style={linkStyle(active)}
+                    onMouseEnter={e => hoverLink(e, active)} onMouseLeave={e => unhoverLink(e, active)}>
+                    <Icon size={13} />{item.name}
+                  </Link>
+                );
+              })}
+
+              {/* More dropdown */}
+              <div style={{ position: 'relative' }}>
+                <button onClick={() => setMoreOpen(o => !o)}
+                  style={{ ...linkStyle(false), background: 'transparent', cursor: 'pointer', border: '1px solid transparent' }}
+                  onMouseEnter={e => { e.currentTarget.style.color = '#f0f4ff'; e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.color = 'rgba(136,153,187,0.85)'; e.currentTarget.style.background = 'transparent'; }}
+                >
+                  More
+                  <motion.span animate={{ rotate: moreOpen ? 180 : 0 }} transition={{ duration: 0.2 }} style={{ display: 'inline-flex' }}>
+                    <ChevronDown size={12} />
+                  </motion.span>
+                </button>
+
+                <AnimatePresence>
+                  {moreOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -8, scale: 0.96 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -8, scale: 0.96 }}
+                      transition={{ duration: 0.15, ease: 'easeOut' }}
+                      style={{
+                        position: 'absolute', top: 'calc(100% + 8px)', right: 0,
+                        background: 'rgba(7,14,27,0.97)',
+                        backdropFilter: 'blur(24px)',
+                        border: '1px solid rgba(255,255,255,0.09)',
+                        borderRadius: 14, padding: 6, minWidth: 180,
+                        boxShadow: '0 20px 60px rgba(0,0,0,0.7)', zIndex: 200,
+                      }}
+                    >
+                      {more.map(item => {
+                        const Icon = item.icon;
+                        const active = isActive(item.path);
+                        return (
+                          <Link key={item.path} to={item.path}
+                            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 8, fontSize: 13, fontWeight: 500, color: active ? '#4f9eff' : 'rgba(136,153,187,0.9)', textDecoration: 'none' }}
+                            onMouseEnter={e => { e.currentTarget.style.color = '#f0f4ff'; e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
+                            onMouseLeave={e => { e.currentTarget.style.color = active ? '#4f9eff' : 'rgba(136,153,187,0.9)'; e.currentTarget.style.background = 'transparent'; }}
+                          >
+                            <Icon size={13} />{item.name}
+                          </Link>
+                        );
+                      })}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </div>
+          )}
+
+          {/* Right */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             {user ? (
               <>
-                <span className="text-gray-700 ml-4 font-medium text-lg">Hi, {user.name}</span>
-                <motion.button 
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={handleLogout}
-                  className="bg-red-500 text-white px-5 py-2 rounded-lg hover:bg-red-600 transition-colors shadow-md"
+                <div className="hidden md:flex" style={{ alignItems: 'center', gap: 7, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 9, padding: '5px 11px' }}>
+                  <div style={{ width: 22, height: 22, borderRadius: '50%', background: 'linear-gradient(135deg,#4f9eff,#7c5cfc)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: 'white' }}>
+                    {user.name?.charAt(0)?.toUpperCase()}
+                  </div>
+                  <span style={{ fontSize: 12, color: 'rgba(240,244,255,0.8)', fontWeight: 500 }}>{user.name?.split(' ')[0]}</span>
+                  {user.isPremium && <Zap size={11} color="#ffb830" />}
+                </div>
+                <button onClick={() => { logout(); navigate('/'); }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 13px', borderRadius: 10, fontSize: 12, fontWeight: 600, color: 'rgba(255,77,109,0.8)', background: 'rgba(255,77,109,0.08)', border: '1px solid rgba(255,77,109,0.18)', cursor: 'pointer', transition: 'all 0.18s' }}
+                  onMouseEnter={e => { e.currentTarget.style.color = '#ff4d6d'; e.currentTarget.style.background = 'rgba(255,77,109,0.15)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,77,109,0.8)'; e.currentTarget.style.background = 'rgba(255,77,109,0.08)'; }}
                 >
-                  Logout
-                </motion.button>
+                  <LogOut size={13} />
+                  <span className="hidden md:inline">Sign out</span>
+                </button>
               </>
             ) : (
-              <>
-                <Link to="/login" className="text-gray-700 hover:text-purple-600 font-medium text-lg transition-colors">Login</Link>
-                <motion.button 
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => navigate('/register')}
-                  className="bg-purple-600 text-white px-5 py-2 rounded-lg hover:bg-purple-700 transition-colors shadow-md"
-                >
-                  Sign Up
-                </motion.button>
-              </>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <Link to="/login" style={{ padding: '7px 14px', borderRadius: 10, fontSize: 13, fontWeight: 500, color: 'rgba(136,153,187,0.9)', textDecoration: 'none' }}>Sign in</Link>
+                <Link to="/register" className="btn btn-primary btn-sm" style={{ textDecoration: 'none' }}>Get Started</Link>
+              </div>
             )}
-          </div>
-
-          {/* Mobile Menu Button */}
-          <div className="md:hidden flex items-center">
-            <button onClick={() => setIsOpen(!isOpen)} className="text-gray-700 hover:text-purple-600 focus:outline-none">
-              {isOpen ? <X size={28} /> : <Menu size={28} />}
+            <button className="md:hidden" onClick={() => setMobileOpen(o => !o)}
+              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: 7, color: '#f0f4ff', cursor: 'pointer', display: 'flex' }}>
+              {mobileOpen ? <X size={17} /> : <Menu size={17} />}
             </button>
           </div>
         </div>
-      </div>
+      </motion.nav>
 
-      {/* Mobile Menu */}
-      {isOpen && (
-        <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: "auto" }}
-          exit={{ opacity: 0, height: 0 }}
-          className="md:hidden bg-white/90 backdrop-blur-xl border-t border-white/50 pb-4"
-        >
-          <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-            {user && navItems.map((item) => (
-              <Link 
-                key={item.name} 
-                to={item.path} 
-                onClick={() => setIsOpen(false)}
-                className="block text-gray-700 hover:bg-purple-50 hover:text-purple-600 px-3 py-2 rounded-md text-base font-medium transition-colors"
-              >
-                {item.name}
-              </Link>
-            ))}
-            {user ? (
-              <button 
-                onClick={handleLogout}
-                className="block w-full text-left text-red-500 hover:bg-red-50 hover:text-red-600 px-3 py-2 rounded-md text-base font-medium transition-colors"
-              >
-                Logout
+      {/* Mobile menu */}
+      <AnimatePresence>
+        {mobileOpen && (
+          <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
+            style={{ position: 'fixed', top: 74, left: 12, right: 12, zIndex: 99, background: 'rgba(7,14,27,0.98)', backdropFilter: 'blur(32px)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: 12 }}>
+            {[...primary, ...more].map(item => {
+              const Icon = item.icon;
+              return (
+                <Link key={item.path} to={item.path}
+                  style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 12px', borderRadius: 10, fontSize: 14, fontWeight: 500, color: isActive(item.path) ? '#4f9eff' : 'rgba(136,153,187,0.9)', textDecoration: 'none', marginBottom: 2 }}
+                  onMouseEnter={e => { e.currentTarget.style.color = '#f0f4ff'; e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.color = isActive(item.path) ? '#4f9eff' : 'rgba(136,153,187,0.9)'; e.currentTarget.style.background = 'transparent'; }}
+                >
+                  <Icon size={15} />{item.name}
+                </Link>
+              );
+            })}
+            {user && (
+              <button onClick={() => { logout(); navigate('/'); setMobileOpen(false); }}
+                style={{ width: '100%', marginTop: 8, padding: '11px 12px', borderRadius: 10, fontSize: 14, fontWeight: 600, color: '#ff4d6d', background: 'rgba(255,77,109,0.08)', border: '1px solid rgba(255,77,109,0.18)', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 12 }}>
+                <LogOut size={15} /> Sign out
               </button>
-            ) : (
-              <>
-                <Link 
-                  to="/login" 
-                  onClick={() => setIsOpen(false)}
-                  className="block text-gray-700 hover:bg-purple-50 hover:text-purple-600 px-3 py-2 rounded-md text-base font-medium transition-colors"
-                >
-                  Login
-                </Link>
-                <Link 
-                  to="/register" 
-                  onClick={() => setIsOpen(false)}
-                  className="block bg-purple-600 text-white px-3 py-2 rounded-md text-base font-medium text-center hover:bg-purple-700 transition-colors mt-2"
-                >
-                  Sign Up
-                </Link>
-              </>
             )}
-          </div>
-        </motion.div>
-      )}
-    </motion.nav>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 };
 

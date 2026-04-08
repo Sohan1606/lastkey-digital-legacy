@@ -161,7 +161,9 @@ const VoiceMessages = () => {
         setRecordingTime(prev => prev + 1);
       }, 1000);
     }
-    return () => clearInterval(interval);
+    return () => {
+      if (interval) clearInterval(interval);
+    };
   }, [isRecording]);
 
   const voices = [

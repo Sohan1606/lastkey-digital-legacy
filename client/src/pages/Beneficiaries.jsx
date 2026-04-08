@@ -72,17 +72,18 @@ const Beneficiaries = () => {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 py-12 px-6">
-      <div className="max-w-6xl mx-auto">
-        <header className="mb-12">
-          <Link to="/dashboard" className="inline-flex items-center gap-2 text-slate-500 hover:text-purple-600 mb-8 transition-colors font-bold uppercase text-sm tracking-widest">
-            <ArrowLeft size={16} />
+    <div className="page spatial-bg">
+      <div className="stars" />
+      <div className="container">
+        <header style={{ marginBottom: 32 }}>
+          <Link to="/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: 'var(--text-2)', marginBottom: 20, textDecoration: 'none', fontWeight: 600, fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+            <ArrowLeft size={14} />
             Back to Dashboard
           </Link>
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, md: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' } }}>
             <div>
-              <h1 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white mb-2">Beneficiaries</h1>
-              <p className="text-slate-600 dark:text-slate-400 font-medium text-lg">Nominate trusted individuals to manage your digital legacy.</p>
+              <h1 className="display" style={{ fontSize: 32, fontWeight: 800, color: '#f0f4ff', marginBottom: 8 }}>Beneficiaries</h1>
+              <p style={{ fontSize: 16, color: 'var(--text-2)', lineHeight: 1.5 }}>Nominate trusted individuals to manage your digital legacy.</p>
             </div>
           </div>
         </header>

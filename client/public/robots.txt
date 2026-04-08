@@ -1,0 +1,16 @@
+User-agent: *
+Allow: /
+Allow: /pricing
+Allow: /privacy
+Allow: /terms
+Disallow: /dashboard
+Disallow: /vault
+Disallow: /beneficiaries
+Disallow: /capsules
+Disallow: /ai
+Disallow: /voice-messages
+Disallow: /life-timeline
+Disallow: /memoir-ai
+Disallow: /gamification
+Disallow: /onboarding
+Sitemap: https://lastkey.app/sitemap.xml

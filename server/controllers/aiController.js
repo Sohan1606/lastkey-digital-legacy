@@ -176,7 +176,7 @@ const getAISuggestions = async (req, res) => {
 const generateVoiceMessage = async (req, res) => {
   try {
     if (!openai) {
-      return res.status(500).json({ error: 'OpenAI not configured' });
+      return res.status(503).json({ error: 'OpenAI not configured' });
     }
 
     const { text, voice = 'alloy', emotion = 'warm' } = req.body;
@@ -238,7 +238,7 @@ const generateVoiceMessage = async (req, res) => {
 const generateMemoir = async (req, res) => {
   try {
     if (!openai) {
-      return res.status(500).json({ error: 'OpenAI not configured' });
+      return res.status(503).json({ error: 'OpenAI not configured' });
     }
 
     const { stage, prompts, existingChapters } = req.body;

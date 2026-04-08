@@ -51,7 +51,7 @@ router.post('/access', async (req, res) => {
     // Find beneficiary with valid access code
     const beneficiary = await Beneficiary.findOne({
       emergencyAccessCode: code,
-      emergencyAccessExpires: { $gt: Date.now() }
+      emergencyAccessExpires: { $gt: new Date() }
     }).populate('userId');
     
     if (!beneficiary) {

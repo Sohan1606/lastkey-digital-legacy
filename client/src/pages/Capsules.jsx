@@ -6,6 +6,8 @@ import { Clock, Lock, Unlock, Trash2, Send, ArrowLeft, Calendar, MessageSquare, 
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import { format } from 'date-fns';
+import toast from 'react-hot-toast';
+import confetti from 'canvas-confetti';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
@@ -39,6 +41,13 @@ const Capsules = () => {
       queryClient.invalidateQueries(['capsules']);
       setFormData({ title: '', message: '', unlockAt: '' });
       setShowForm(false);
+      // Trigger confetti celebration
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 }
+      });
+      toast.success('🎉 Time capsule sealed successfully!');
     }
   });
 
@@ -64,26 +73,27 @@ const Capsules = () => {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 py-12 px-6">
-      <div className="max-w-6xl mx-auto">
-        <header className="mb-12">
-          <Link to="/dashboard" className="inline-flex items-center gap-2 text-slate-500 hover:text-emerald-600 mb-8 transition-colors font-bold uppercase text-sm tracking-widest">
-            <ArrowLeft size={16} />
+    <div className="page spatial-bg">
+      <div className="stars" />
+      <div className="container">
+        <header style={{ marginBottom: 32 }}>
+          <Link to="/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: 'var(--text-2)', marginBottom: 20, textDecoration: 'none', fontWeight: 600, fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+            <ArrowLeft size={14} />
             Back to Dashboard
           </Link>
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, md: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' } }}>
             <div>
-              <h1 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white mb-2">Time Capsules</h1>
-              <p className="text-slate-600 dark:text-slate-400 font-medium text-lg">Send messages and assets to the future.</p>
+              <h1 className="display" style={{ fontSize: 32, fontWeight: 800, color: '#f0f4ff', marginBottom: 8 }}>Time Capsules</h1>
+              <p style={{ fontSize: 16, color: 'var(--text-2)', lineHeight: 1.5 }}>Send messages and assets to the future.</p>
             </div>
             {!showForm && (
               <motion.button
                 whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                whileTap={{ scale: 0.97 }}
                 onClick={() => setShowForm(true)}
-                className="bg-emerald-600 text-white px-8 py-4 rounded-2xl font-bold flex items-center gap-2 shadow-xl shadow-emerald-500/20 hover:bg-emerald-700 transition-all"
+                className="btn btn-success btn-lg"
               >
-                <Plus size={24} />
+                <Plus size={20} />
                 Create Capsule
               </motion.button>
             )}

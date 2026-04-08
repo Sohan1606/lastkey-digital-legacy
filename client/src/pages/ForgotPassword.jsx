@@ -44,7 +44,8 @@ const ForgotPassword = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center px-6">
+    <div className="page spatial-bg" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+      <div className="stars" />
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}

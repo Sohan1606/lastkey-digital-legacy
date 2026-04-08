@@ -5,7 +5,7 @@ import {
   Mic, Calendar, BookOpen, Trophy, Users,
   ArrowRight, CheckCircle, Star, MessageSquare, Lock
 } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext'
+import { useAuth } from '../contexts/AuthContext';
 
 const Landing = () => {
   const navigate = useNavigate();
@@ -20,208 +20,102 @@ const Landing = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-slate-950 overflow-hidden">
-      {/* Animated Background Shapes */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <motion.div 
-          animate={{ 
-            scale: [1, 1.2, 1],
-            rotate: [0, 90, 0],
-            x: [0, 50, 0],
-            y: [0, 30, 0]
-          }}
-          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-          className="absolute -top-24 -left-24 w-96 h-96 bg-purple-200/40 dark:bg-purple-900/20 rounded-full blur-3xl"
-        />
-        <motion.div 
-          animate={{ 
-            scale: [1, 1.1, 1],
-            rotate: [0, -45, 0],
-            x: [0, -30, 0],
-            y: [0, 50, 0]
-          }}
-          transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
-          className="absolute top-1/2 -right-24 w-80 h-80 bg-indigo-200/40 dark:bg-indigo-900/20 rounded-full blur-3xl"
-        />
-        <motion.div 
-          animate={{ 
-            scale: [1, 1.3, 1],
-            x: [0, 40, 0],
-            y: [0, -40, 0]
-          }}
-          transition={{ duration: 18, repeat: Infinity, ease: "linear" }}
-          className="absolute -bottom-24 left-1/2 w-96 h-96 bg-emerald-100/40 dark:bg-emerald-900/10 rounded-full blur-3xl"
-        />
-      </div>
-
-      {/* Hero */}
-      <section className="pt-32 pb-20 px-6 relative">
-        <motion.div 
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          className="max-w-6xl mx-auto text-center"
-        >
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.2 }}
-            className="inline-block px-4 py-1.5 mb-6 text-sm font-semibold tracking-wide text-indigo-600 uppercase bg-indigo-50 rounded-full dark:bg-indigo-900/30 dark:text-indigo-400"
-          >
-            Trusted by 50,000+ users worldwide
-          </motion.div>
-          <h1 className="text-6xl md:text-8xl font-black bg-gradient-to-r from-slate-900 via-indigo-800 to-purple-900 dark:from-white dark:via-indigo-200 dark:to-purple-100 bg-clip-text text-transparent mb-8 leading-tight tracking-tight">
-            Your love, outliving <br className="hidden md:block" />you.
-          </h1>
-          <p className="text-xl md:text-2xl text-slate-600 dark:text-slate-400 max-w-3xl mx-auto mb-12 leading-relaxed font-medium">
-            LastKey is not a vault. It's a time machine of the heart. A place where your voice, your wisdom, and your love are preserved — to be discovered by the people you cherish most, at exactly the moment they need it.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
-            <motion.button 
-              onClick={handleGetStarted}
-              whileHover={{ scale: 1.05, translateY: -2 }}
-              whileTap={{ scale: 0.98 }}
-              className="group bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-10 py-5 rounded-2xl font-bold text-xl shadow-2xl hover:shadow-indigo-500/25 transition-all duration-300 flex items-center gap-2"
-            >
-              Get Started Now
-              <ArrowRight className="group-hover:translate-x-1 transition-transform" size={24} />
-            </motion.button>
-            <motion.button 
-              onClick={() => {
-                const featuresSection = document.getElementById('features');
-                featuresSection?.scrollIntoView({ behavior: 'smooth' });
-              }}
-              whileHover={{ scale: 1.05, backgroundColor: "rgba(255,255,255,1)" }}
-              className="px-10 py-5 rounded-2xl font-bold text-xl bg-white/80 dark:bg-slate-800/80 backdrop-blur-md text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 shadow-xl hover:shadow-2xl transition-all duration-300"
-            >
-              How it works
-            </motion.button>
-          </div>
-        </motion.div>
-      </section>
-
-      {/* Trust Section */}
-      <section className="py-20 border-y border-slate-100 dark:border-slate-800">
-        <div className="max-w-6xl mx-auto px-6">
-          <p className="text-center text-sm font-bold uppercase tracking-[0.2em] text-slate-400 mb-12">
-            Built with modern security standards
-          </p>
-          <div className="flex flex-wrap justify-center gap-12 md:gap-24 opacity-50 grayscale hover:grayscale-0 transition-all duration-500">
-            <div className="flex items-center gap-2 font-black text-2xl text-slate-400">
-              <Shield className="w-8 h-8" />
-              AES-256
-            </div>
-            <div className="flex items-center gap-2 font-black text-2xl text-slate-400">
-              <Lock className="w-8 h-8" />
-              TLS 1.3
-            </div>
-            <div className="flex items-center gap-2 font-black text-2xl text-slate-400">
-              <Users className="w-8 h-8" />
-              SOC 2
-            </div>
-            <div className="flex items-center gap-2 font-black text-2xl text-slate-400">
-              <Zap className="w-8 h-8" />
-              FAST-API
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Features */}
-      <section id="features" className="py-32 px-6 relative bg-slate-50 dark:bg-slate-900/50">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center max-w-3xl mx-auto mb-20">
-            <motion.h2 
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              className="text-4xl md:text-5xl font-black mb-6 text-slate-900 dark:text-white"
-            >
-              Everything You Need to Preserve Your Love
-            </motion.h2>
-            <p className="text-lg text-slate-600 dark:text-slate-400">
-              Powerful tools designed to give you peace of mind and your loved ones a connection that transcends time.
-            </p>
-          </div>
+    <div className="page spatial-bg">
+      <div className="stars" />
+      {/* Hero Section */}
+      <section style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', padding: 40 }}>
+        <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: [0.23,1,0.32,1] }}
+          style={{ textAlign: 'center', maxWidth: 800, zIndex: 1 }}>
           
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-10">
-            {[
-              {
-                icon: Shield,
-                title: "Guardian Protocol™",
-                desc: "Advanced inactivity monitoring ensures your legacy is delivered exactly when needed, with multiple alert channels.",
-                color: "indigo"
-              },
-              {
-                icon: Clock,
-                title: "Time Letters",
-                desc: "Schedule heartfelt messages to be delivered at perfect moments—birthdays, weddings, or when they need your voice most.",
-                color: "emerald"
-              },
-              {
-                icon: MessageSquare,
-                title: "AI Voice Messages",
-                desc: "Transform your written words into warm, realistic voice messages that your loved ones can treasure forever.",
-                color: "rose"
-              }
-            ].map((feature, idx) => (
-              <motion.div 
-                key={idx}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: idx * 0.1 }}
-                whileHover={{ y: -10 }}
-                className="group p-10 bg-white dark:bg-slate-800 rounded-[2.5rem] border border-slate-100 dark:border-slate-700 shadow-xl hover:shadow-2xl transition-all duration-500"
-              >
-                <div className={`w-16 h-16 bg-${feature.color}-100 dark:bg-${feature.color}-900/30 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform duration-500`}>
-                  <feature.icon className={`w-8 h-8 text-${feature.color}-600 dark:text-${feature.color}-400`} />
-                </div>
-                <h3 className="text-2xl font-bold mb-4 text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                  {feature.title}
-                </h3>
-                <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-                  {feature.desc}
-                </p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
+          {/* Floating Orbs */}
+          <div style={{ position: 'absolute', top: -120, left: -80, width: 200, height: 200, borderRadius: '50%', background: 'radial-gradient(circle,rgba(79,158,255,0.08),transparent)', filter: 'blur(60px)', animation: 'float 6s ease-in-out infinite' }} />
+          <div style={{ position: 'absolute', bottom: -100, right: -60, width: 160, height: 160, borderRadius: '50%', background: 'radial-gradient(circle,rgba(124,92,252,0.06),transparent)', filter: 'blur(50px)', animation: 'float 8s ease-in-out infinite' }} />
 
-      {/* Final CTA */}
-      <section className="py-32 px-6">
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.95 }}
-          whileInView={{ opacity: 1, scale: 1 }}
-          viewport={{ once: true }}
-          className="max-w-5xl mx-auto bg-gradient-to-br from-indigo-600 to-purple-700 rounded-[3rem] p-12 md:p-20 text-center text-white shadow-3xl relative overflow-hidden"
-        >
-          <div className="relative z-10">
-            <h2 className="text-4xl md:text-6xl font-black mb-8">Ready to make your love eternal?</h2>
-            <p className="text-xl text-indigo-100 mb-12 max-w-2xl mx-auto">
-              Join thousands who have chosen LastKey to ensure their voice and wisdom live on forever.
-            </p>
-            <motion.button 
-              onClick={handleGetStarted}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="bg-white text-indigo-600 px-12 py-5 rounded-2xl font-bold text-xl shadow-xl hover:shadow-2xl transition-all"
-            >
-              Begin Your Legacy
-            </motion.button>
+          <div style={{ marginBottom: 24 }}>
+            <motion.div animate={{ rotate: 360 }} transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
+              style={{ width: 60, height: 60, borderRadius: 15, background: 'linear-gradient(135deg,#4f9eff,#7c5cfc)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--glow-ion)' }}>
+              <Shield size={24} color="white" />
+            </motion.div>
           </div>
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl" />
-          <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-400/20 rounded-full translate-y-1/2 -translate-x-1/2 blur-3xl" />
+
+          <h1 className="display" style={{ fontSize: 'clamp(2.5rem,5vw,4rem)', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: 12, background: 'linear-gradient(135deg,#4f9eff,#a78bfa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+            Your love, outliving you.
+          </h1>
+          <p style={{ fontSize: 18, color: 'var(--text-2)', marginBottom: 32, lineHeight: 1.6, maxWidth: 540, margin: '0 auto 32px' }}>
+            LastKey is your Digital Afterlife Platform. Preserve memories, protect assets, and send time‑locked messages to the people you love most.
+          </p>
+
+          <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <motion.button whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.97 }} onClick={handleGetStarted}
+              style={{ background: 'linear-gradient(135deg,#4f9eff,#7c5cfc)', border: 'none', borderRadius: 12, padding: '16px 32px', fontSize: 16, fontWeight: 700, color: 'white', cursor: 'pointer', boxShadow: 'var(--glow-ion)' }}
+              onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 0 32px rgba(79,158,255,0.55)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+              onMouseLeave={e => { e.currentTarget.style.boxShadow = 'var(--glow-ion)'; e.currentTarget.style.transform = 'translateY(0)'; }}
+            >
+              Get Started Free
+              <ArrowRight size={18} style={{ marginLeft: 8 }} />
+            </motion.button>
+            <Link to="/login" style={{ padding: '16px 24px', fontSize: 15, fontWeight: 600, color: 'var(--text-2)', textDecoration: 'none' }}>Sign In</Link>
+          </div>
         </motion.div>
       </section>
 
-      {/* Footer */}
-      <footer className="py-12 px-6 border-t border-slate-100 dark:border-slate-800 text-center text-slate-500 text-sm">
-        <p>© 2026 LastKey Digital Legacy. All rights reserved.</p>
-      </footer>
-    </div>
-  )
-}
+      {/* Features Grid */}
+      <section style={{ padding: '80px 24px', maxWidth: 1200, margin: '0 auto' }}>
+        <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.8 }}
+          style={{ textAlign: 'center', marginBottom: 48 }}>
+          <h2 className="display" style={{ fontSize: 32, marginBottom: 12 }}>Everything you'd want them to remember</h2>
+          <p style={{ fontSize: 16, color: 'var(--text-2)' }}>One platform for your complete digital legacy</p>
+        </motion.div>
 
-export default Landing
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 24 }}>
+          {[
+            { icon: MessageSquare, title: 'Time Capsules', desc: 'Send messages to the future. Your voice, wisdom, and love delivered exactly when they\'re needed most.' },
+            { icon: Shield, title: 'Guardian Protocol', desc: 'Our dead‑man\'s switch ensures your loved ones are notified if you\'re inactive. Peace of mind for everyone.' },
+            { icon: Heart, title: 'Beneficiary Vault', desc: 'Securely store passwords, documents, and digital assets. Your loved ones get access when the time comes.' },
+            { icon: Mic, title: 'AI Voice Messages', desc: 'Create ultra‑realistic voice messages in your own tone. Surprise them with your voice, even when you\'re not here.' },
+            { icon: BookOpen, title: 'Memoir AI', desc: 'Let AI help you write your life story. Beautiful chapters that capture your journey and legacy.' },
+            { icon: Trophy, title: 'Legacy Score', desc: 'Gamified encouragement to build your legacy. Earn achievements and see your impact grow over time.' },
+          ].map((feat, i) => (
+            <motion.div key={feat.title} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 + i * 0.08 }}
+              whileHover={{ y: -4, scale: 1.02 }}
+              style={{ background: 'var(--glass-2)', backdropFilter: 'blur(32px)', border: '1px solid var(--glass-border)', borderRadius: 20, padding: 32, textAlign: 'center', cursor: 'pointer', transition: 'all 0.3s cubic-bezier(0.23,1,0.32,1)', position: 'relative', overflow: 'hidden' }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--ion)'; e.currentTarget.style.background = 'rgba(79,158,255,0.08)'; e.currentTarget.style.boxShadow = '0 20px 60px rgba(0,0,0,0.4)'; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--glass-border)'; e.currentTarget.style.background = 'var(--glass-2)'; e.currentTarget.style.boxShadow = 'none'; }}
+            >
+              {/* Glow effect */}
+              <div style={{ position: 'absolute', top: -30, left: -30, width: 100, height: 100, borderRadius: '50%', background: 'radial-gradient(circle,rgba(79,158,255,0.12),transparent)', filter: 'blur(40px)', pointerEvents: 'none' }} />
+              
+              <feat.icon size={32} color="var(--ion)" style={{ marginBottom: 16 }} />
+              <h3 style={{ fontSize: 18, fontWeight: 700, color: '#f0f4ff', marginBottom: 12 }}>{feat.title}</h3>
+              <p style={{ fontSize: 14, color: 'var(--text-2)', lineHeight: 1.5, margin: 0 }}>{feat.desc}</p>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section style={{ padding: '80px 24px', textAlign: 'center' }}>
+        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.8, duration: 0.8 }}
+          style={{ background: 'var(--glass-2)', backdropFilter: 'blur(32px)', border: '1px solid var(--glass-border)', borderRadius: 24, padding: '48px 32px', maxWidth: 600, margin: '0 auto' }}>
+          <h2 className="display" style={{ fontSize: 28, marginBottom: 16 }}>Ready to preserve your legacy?</h2>
+          <p style={{ fontSize: 16, color: 'var(--text-2)', marginBottom: 32, lineHeight: 1.5 }}>
+            Join thousands who trust LastKey to protect what matters most. Start free, upgrade when you need more.
+          </p>
+          <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <motion.button whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.97 }} onClick={handleGetStarted}
+              style={{ background: 'linear-gradient(135deg,#4f9eff,#7c5cfc)', border: 'none', borderRadius: 12, padding: '16px 32px', fontSize: 16, fontWeight: 700, color: 'white', cursor: 'pointer', boxShadow: 'var(--glow-ion)' }}
+              onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 0 32px rgba(79,158,255,0.55)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+              onMouseLeave={e => { e.currentTarget.style.boxShadow = 'var(--glow-ion)'; e.currentTarget.style.transform = 'translateY(0)'; }}
+            >
+              Start Your Legacy
+              <ArrowRight size={18} style={{ marginLeft: 8 }} />
+            </motion.button>
+            <Link to="/pricing" style={{ padding: '16px 24px', fontSize: 15, fontWeight: 600, color: 'var(--text-2)', textDecoration: 'none' }}>View Plans</Link>
+          </div>
+        </motion.div>
+      </section>
+    </div>
+  );
+};
+
+export default Landing;

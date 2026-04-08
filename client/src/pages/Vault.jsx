@@ -69,7 +69,7 @@ const Vault = () => {
     },
     onError: (err) => {
       console.error('Create asset error:', err);
-      alert(err.response?.data?.message || 'Failed to save asset. Please check your inputs.');
+      toast.error(err.response?.data?.message || 'Failed to save asset. Please check your inputs.');
     }
   });
 
@@ -83,7 +83,7 @@ const Vault = () => {
     },
     onError: (err) => {
       console.error('Update asset error:', err);
-      alert(err.response?.data?.message || 'Failed to update asset.');
+      toast.error(err.response?.data?.message || 'Failed to update asset.');
     }
   });
 
@@ -169,26 +169,27 @@ const Vault = () => {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 py-12 px-6">
-      <div className="max-w-6xl mx-auto">
-        <header className="mb-12">
+    <div className="page spatial-bg">
+      <div className="stars" />
+      <div className="container">
+        <header style={{ marginBottom: 32 }}>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="flex flex-col md:flex-row md:items-center justify-between gap-6"
           >
             <div>
-              <h1 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white mb-2">Digital Vault</h1>
-              <p className="text-slate-600 dark:text-slate-400 font-medium text-lg">Your secure legacy, protected by AES-256 encryption.</p>
+              <h1 className="display" style={{ fontSize: 32, fontWeight: 800, color: '#f0f4ff', marginBottom: 8 }}>Digital Vault</h1>
+              <p style={{ fontSize: 16, color: 'var(--text-2)', lineHeight: 1.5 }}>Your secure legacy, protected by AES-256 encryption.</p>
             </div>
             {!showForm && (
               <motion.button
                 whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                whileTap={{ scale: 0.97 }}
                 onClick={() => { setShowForm(false); setEditingId(null); setFormData({ platform: '', username: '', url: '', password: '', notes: '', instruction: 'delete' }); setShowForm(true); scrollToForm(); }}
-                className="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-bold flex items-center gap-2 shadow-xl shadow-indigo-500/20 hover:bg-indigo-700 transition-all"
+                className="btn btn-primary btn-lg"
               >
-                <Plus size={24} />
+                <Plus size={20} />
                 Add New Asset
               </motion.button>
             )}
@@ -204,16 +205,18 @@ const Vault = () => {
               exit={{ opacity: 0, height: 0, y: -20 }}
               className="mb-12 overflow-hidden"
             >
-              <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-slate-800">
-                <div className="flex items-center justify-between mb-8">
-                  <h3 className="text-2xl font-bold text-slate-900 dark:text-white">
+              <div className="glass" style={{ padding: 32 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                  <h3 style={{ fontSize: 20, fontWeight: 700, color: '#f0f4ff' }}>
                     {editingId ? 'Edit Secured Asset' : 'Secure New Asset'}
                   </h3>
                   <button 
                     onClick={() => { setShowForm(false); setEditingId(null); setFormData({ platform: '', username: '', url: '', password: '', notes: '', instruction: 'delete' }); }}
-                    className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
+                    style={{ padding: 8, borderRadius: '50%', cursor: 'pointer', background: 'transparent', border: 'none' }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'var(--glass-3)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
                   >
-                    <X size={24} className="text-slate-400" />
+                    <X size={20} color="var(--text-3)" />
                   </button>
                 </div>
                 

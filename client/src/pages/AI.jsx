@@ -63,8 +63,10 @@ const AI = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 sm:p-8">
-      <Toaster position="top-right" />
+    <div className="page spatial-bg">
+      <div className="stars" />
+      <div className="container" style={{ padding: '32px 24px' }}>
+        <Toaster position="top-right" />
       
       <motion.div 
         initial={{ opacity: 0, y: 30 }}
@@ -239,6 +241,7 @@ const AI = () => {
           </motion.div>
         </div>
       </motion.div>
+      </div>
     </div>
   );
 };

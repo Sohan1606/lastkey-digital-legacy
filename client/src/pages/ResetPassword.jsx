@@ -86,7 +86,8 @@ const ResetPassword = () => {
 
   if (tokenStatus === 'loading') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center px-6">
+      <div className="page spatial-bg" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+        <div className="stars" />
         <div className="text-center">
           <Loader2 className="w-12 h-12 animate-spin text-indigo-600 mx-auto mb-4" />
           <p className="text-gray-600">Validating reset token...</p>
@@ -97,7 +98,8 @@ const ResetPassword = () => {
 
   if (tokenStatus === 'invalid') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center px-6">
+      <div className="page spatial-bg" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+        <div className="stars" />
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -126,7 +128,8 @@ const ResetPassword = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center px-6">
+    <div className="page spatial-bg" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+      <div className="stars" />
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
