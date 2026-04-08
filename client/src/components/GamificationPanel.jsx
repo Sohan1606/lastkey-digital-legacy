@@ -51,16 +51,16 @@ const GamificationPanel = () => {
     return titles[level] || 'Digital Sage';
   };
 
-  const getLevelGradient = (level) => {
-    const gradients = {
-      1: 'from-gray-400 to-gray-600',
-      2: 'from-green-400 to-green-600',
-      3: 'from-blue-400 to-blue-600',
-      4: 'from-purple-400 to-purple-600',
-      5: 'from-orange-400 to-orange-600'
-    };
-    return gradients[level] || gradients[1];
+  const getLevelGradientStyle = (level) => {
+  const gradients = {
+    1: 'linear-gradient(135deg, #8899bb, #556688)',
+    2: 'linear-gradient(135deg, #00e5a0, #00b87a)',
+    3: 'linear-gradient(135deg, #4f9eff, #0066cc)',
+    4: 'linear-gradient(135deg, #7c5cfc, #5b3fc5)',
+    5: 'linear-gradient(135deg, #ffb830, #ff8c00)',
   };
+  return gradients[level] || gradients[1];
+};
 
   if (isLoading) {
     return (

@@ -22,6 +22,7 @@ exports.createAsset = async (req, res, next) => {
 };
 
 exports.getAssets = async (req, res, next) => {
+  console.log(`🔐 Vault accessed by user ${req.user._id} from IP ${req.ip} at ${new Date().toISOString()}`);
   try {
     const assets = await Asset.find({ userId: req.user._id });
 
@@ -56,9 +57,15 @@ exports.updateAsset = async (req, res, next) => {
     }
 
     // Update fields
-    Object.keys(req.body).forEach(key => {
-      asset[key] = req.body[key];
+    const { password, ...otherFields } = req.body;
+    Object.keys(otherFields).forEach(key => {
+      asset[key] = otherFields[key];
     });
+
+    // Only update password if a new one was explicitly provided
+    if (password && password !== '••••••••••••' && password.trim() !== '') {
+      asset.password = password; // pre('save') hook will encrypt it
+    }
 
     await asset.save();
 

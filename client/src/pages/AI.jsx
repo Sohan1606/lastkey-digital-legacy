@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Copy, Bot, MessageSquare, Loader2, Sparkles } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
@@ -67,8 +67,7 @@ const AI = () => {
     <div className="page spatial-bg">
       <div className="stars" />
       <div className="container" style={{ padding: '32px 24px' }}>
-        <Toaster position="top-right" />
-      
+              
         <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} style={{ maxWidth: 1100, margin: '0 auto' }}>
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }} style={{ textAlign: 'center', marginBottom: 40 }}>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 12, background: `linear-gradient(135deg, ${selectedEmotionColor}30, var(--plasma))`, border: `1px solid ${selectedEmotionColor}40`, padding: '12px 24px', borderRadius: 20, marginBottom: 20 }}>

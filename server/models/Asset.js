@@ -1,7 +1,13 @@
 const mongoose = require('mongoose');
 const CryptoJS = require('crypto-js');
 
-const ENCRYPTION_KEY = process.env.ASSET_ENCRYPTION_KEY || 'K32chark3yLastKey2024Secure!!'; // 32 bytes for AES-256
+const ENCRYPTION_KEY = process.env.ASSET_ENCRYPTION_KEY;
+
+if (!ENCRYPTION_KEY) {
+  console.error('⚠️  ASSET_ENCRYPTION_KEY not set — vault encryption uses insecure fallback');
+}
+
+const KEY = ENCRYPTION_KEY || 'INSECURE-DEV-KEY-CHANGE-THIS-NOW-32C';
 
 const assetSchema = new mongoose.Schema({
   platform: {
@@ -41,13 +47,13 @@ const assetSchema = new mongoose.Schema({
 // Encrypt password before saving
 assetSchema.pre('save', function() {
   if (this.isModified('password')) {
-    this.password = CryptoJS.AES.encrypt(this.password, ENCRYPTION_KEY).toString();
+    this.password = CryptoJS.AES.encrypt(this.password, KEY).toString();
   }
 });
 
 // Decrypt password method
 assetSchema.methods.decryptPassword = function() {
-  const bytes = CryptoJS.AES.decrypt(this.password, ENCRYPTION_KEY);
+  const bytes = CryptoJS.AES.decrypt(this.password, KEY);
   return bytes.toString(CryptoJS.enc.Utf8);
 };
 

@@ -6,6 +6,12 @@ const mongoose = require('mongoose');
 const path = require('path');
 require('dotenv').config();
 
+// Validate required environment variables
+if (!process.env.JWT_SECRET && process.env.NODE_ENV === 'production') {
+  console.error('❌ JWT_SECRET environment variable is required in production');
+  process.exit(1);
+}
+
 // Import models
 const User = require('./models/User');
 const Asset = require('./models/Asset');
@@ -25,7 +31,22 @@ const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/lastkey';
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
-app.use(cors());
+const allowedOrigins = process.env.NODE_ENV === 'production'
+  ? [process.env.FRONTEND_URL].filter(Boolean)
+  : ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175', 'http://localhost:5176', 'http://localhost:5177'];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
 app.use(express.json());
 
 // Add this line after app.use(express.json())

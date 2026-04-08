@@ -1,4 +1,6 @@
 import { Routes, Route } from 'react-router-dom';
+import { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import CookieBanner from './components/CookieBanner';
 import Landing from './pages/Landing';
@@ -23,9 +25,18 @@ import GamificationPanel from './components/GamificationPanel';
 import Onboarding from './pages/Onboarding';
 import ProtectedRoute from './components/ProtectedRoute';
 
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [pathname]);
+  return null;
+}
+
 function App() {
   return (
     <div className="App">
+      <ScrollToTop />
       <Navbar />
       <Routes>
 <Route path="/" element={<Landing />} />

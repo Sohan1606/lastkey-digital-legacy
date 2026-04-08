@@ -4,32 +4,10 @@ import { useAuth } from '../contexts/AuthContext';
 import { Pencil, Trash2, Eye, EyeOff, Plus, Shield, Lock, ExternalLink, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
-import CryptoJS from 'crypto-js';
 import toast from 'react-hot-toast';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
-const getEncryptionKey = (userId) => {
-  const salt = import.meta.env.VITE_ENCRYPTION_SALT || 'default-salt-for-development';
-  return `${userId}-${salt}`;
-};
-
-const encryptPassword = (password, userId) => {
-  if (!password) return '';
-  const key = getEncryptionKey(userId);
-  return CryptoJS.AES.encrypt(password, key).toString();
-};
-
-const decryptPassword = (encryptedPassword, userId) => {
-  if (!encryptedPassword) return '';
-  try {
-    const key = getEncryptionKey(userId);
-    const bytes = CryptoJS.AES.decrypt(encryptedPassword, key);
-    return bytes.toString(CryptoJS.enc.Utf8);
-  } catch {
-    return '•••••••••••';
-  }
-};
 
 const Vault = () => {
   const [showForm, setShowForm] = useState(false);
@@ -43,6 +21,7 @@ const Vault = () => {
     instruction: 'delete'
   });
   const [showPasswords, setShowPasswords] = useState({});
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
   const formRef = useRef(null);
 
   const { user } = useAuth();
@@ -97,9 +76,6 @@ const Vault = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     const submitData = { ...formData };
-    if (submitData.password && user?.id) {
-      submitData.password = encryptPassword(submitData.password, user.id);
-    }
     if (editingId) {
       updateMutation.mutate({ id: editingId, assetData: submitData });
     } else {
@@ -116,7 +92,7 @@ const Vault = () => {
       platform: asset.platform,
       username: asset.username,
       url: asset.url || '',
-      password: decryptPassword(asset.password, user.id),
+      password: asset.password,
       notes: asset.notes || '',
       instruction: asset.instruction
     });
@@ -148,23 +124,7 @@ const Vault = () => {
     </div>
   );
 
-  return (
-    <div className="page spatial-bg" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div className="stars" />
-      <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} style={{ background: 'var(--glass-1)', backdropFilter: 'blur(20px)', border: '1px solid var(--glass-border)', borderRadius: 24, padding: 40, textAlign: 'center', maxWidth: 420 }}>
-        <div style={{ width: 56, height: 56, borderRadius: 16, background: 'rgba(255,77,109,0.1)', border: '1px solid rgba(255,77,109,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-          <X style={{ width: 28, height: 28, color: 'var(--danger)' }} />
-        </div>
-        <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-1)', marginBottom: 8 }}>Error Loading Vault</h2>
-        <p style={{ fontSize: 14, color: 'var(--text-2)', marginBottom: 24 }}>We couldn't retrieve your secure assets.</p>
-        <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => queryClient.invalidateQueries(['assets'])}
-          style={{ padding: '12px 24px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg, #4f9eff, #7c5cfc)', color: 'white', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>
-          Retry
-        </motion.button>
-      </motion.div>
-    </div>
-  );
-
+  
   return (
     <div className="page spatial-bg">
       <div className="stars" />
@@ -257,14 +217,29 @@ const Vault = () => {
                     <Shield style={{ width: 20, height: 20, color: 'var(--ion)' }} />
                   </div>
                   <div style={{ display: 'flex', gap: 6 }}>
-                    <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={() => handleEdit(asset)}
-                      style={{ padding: 8, borderRadius: 10, border: '1px solid var(--glass-border)', background: 'var(--glass-1)', cursor: 'pointer' }}>
-                      <Pencil style={{ width: 14, height: 14, color: 'var(--text-2)' }} />
-                    </motion.button>
-                    <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={() => { if (window.confirm('Delete this asset?')) deleteMutation.mutate(asset._id); }}
-                      style={{ padding: 8, borderRadius: 10, border: '1px solid rgba(255,77,109,0.2)', background: 'rgba(255,77,109,0.08)', cursor: 'pointer' }}>
-                      <Trash2 style={{ width: 14, height: 14, color: 'var(--danger)' }} />
-                    </motion.button>
+                    {deleteConfirm === asset._id ? (
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button onClick={() => { deleteMutation.mutate(asset._id); setDeleteConfirm(null); }}
+                          style={{ padding: '6px 12px', borderRadius: 8, background: 'rgba(255,77,109,0.15)', border: '1px solid rgba(255,77,109,0.3)', color: '#ff4d6d', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
+                          Confirm
+                        </button>
+                        <button onClick={() => setDeleteConfirm(null)}
+                          style={{ padding: '6px 12px', borderRadius: 8, background: 'var(--glass-1)', border: '1px solid var(--glass-border)', color: 'var(--text-2)', fontSize: 11, cursor: 'pointer' }}>
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={() => handleEdit(asset)}
+                          style={{ padding: 8, borderRadius: 10, border: '1px solid var(--glass-border)', background: 'var(--glass-1)', cursor: 'pointer' }}>
+                          <Pencil style={{ width: 14, height: 14, color: 'var(--text-2)' }} />
+                        </motion.button>
+                        <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setDeleteConfirm(asset._id)}
+                          style={{ padding: 8, borderRadius: 10, border: '1px solid var(--glass-border)', background: 'var(--glass-1)', cursor: 'pointer' }}>
+                          <Trash2 style={{ width: 14, height: 14, color: 'var(--danger)' }} />
+                        </motion.button>
+                      </>
+                    )}
                   </div>
                 </div>
                 <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-1)', marginBottom: 14 }}>{asset.platform}</h3>
@@ -276,7 +251,7 @@ const Vault = () => {
                   <span style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Secure Key</span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
                     <span style={{ fontFamily: 'var(--font-mono)', fontSize: 14, color: 'var(--text-1)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {showPasswords[asset._id] ? decryptPassword(asset.password, user.id) : '•••••••••••'}
+                      {showPasswords[asset._id] ? asset.password : '•••••••••••'}
                     </span>
                     <button onClick={() => togglePassword(asset._id)} style={{ padding: 6, background: 'none', border: 'none', cursor: 'pointer' }}>
                       {showPasswords[asset._id] ? <EyeOff style={{ width: 16, height: 16, color: 'var(--text-2)' }} /> : <Eye style={{ width: 16, height: 16, color: 'var(--text-2)' }} />}

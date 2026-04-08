@@ -22,6 +22,20 @@ const VoiceMessages = () => {
   
   const [audioUrl, setAudioUrl] = useState('');
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+
+useEffect(() => {
+  let interval;
+  if (isRecording) {
+    interval = setInterval(() => setRecordingTime(prev => prev + 1), 1000);
+  } else {
+    setRecordingTime(0);
+  }
+  return () => clearInterval(interval);
+}, [isRecording]);
+
+const formatRecordingTime = (s) => `${Math.floor(s/60).toString().padStart(2,'0')}:${(s%60).toString().padStart(2,'0')}`;
 
   const getAudioSrc = (url) => {
     if (!url) return '';

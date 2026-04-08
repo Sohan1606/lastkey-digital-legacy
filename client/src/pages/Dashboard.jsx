@@ -127,10 +127,10 @@ const Dashboard = () => {
   return (
     <div className="page spatial-bg">
       <div className="stars" />
-      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '28px 24px 80px', display: 'grid', gridTemplateColumns: '300px 1fr', gap: 24, alignItems: 'start' }}>
+      <div className="dashboard-grid" style={{ maxWidth: 1280, margin: '0 auto', padding: '28px 24px 80px', display: 'grid', gridTemplateColumns: 'clamp(240px, 25vw, 300px) 1fr', gap: 24, alignItems: 'start' }}>
 
         {/* ── SIDEBAR ── */}
-        <div style={{ position: 'sticky', top: 96, display: 'flex', flexDirection: 'column', gap: 18 }}>
+        <div className="dashboard-sidebar" style={{ position: 'sticky', top: 96, display: 'flex', flexDirection: 'column', gap: 18 }}>
           <GuardianProtocolPanel dmsStatus={dmsStatus} onPing={handlePing} isPremium={isPremium} />
         </div>
 

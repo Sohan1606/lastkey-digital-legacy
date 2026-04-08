@@ -24,7 +24,6 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api
 
 const ActivityFeed = () => {
   const { user, token } = useAuth();
-  const { theme } = useTheme();
   const [localActivities, setLocalActivities] = useState([]);
 
   const { data: activityData, isLoading } = useQuery({
@@ -48,17 +47,19 @@ const ActivityFeed = () => {
       capsule: Clock,
     };
     const Icon = iconMap[activity.type] || Heart;
-    const colorClasses = {
-      green: 'from-green-500 to-emerald-500',
-      purple: 'from-purple-500 to-pink-500',
-      yellow: 'from-yellow-500 to-orange-500',
-      blue: 'from-blue-500 to-indigo-500',
-      indigo: 'from-indigo-500 to-purple-500'
+    const colorMap = {
+      blue: 'linear-gradient(135deg, #4f9eff, #0066cc)',
+      green: 'linear-gradient(135deg, #00e5a0, #00b87a)',
+      purple: 'linear-gradient(135deg, #7c5cfc, #a855f7)',
+      vault: 'linear-gradient(135deg, #4f9eff, #0066cc)',
+      beneficiary: 'linear-gradient(135deg, #00e5a0, #00b87a)',
+      capsule: 'linear-gradient(135deg, #7c5cfc, #a855f7)',
     };
+    const bg = colorMap[activity.color] || colorMap[activity.type] || 'linear-gradient(135deg, #8899bb, #445577)';
 
     return (
-      <div className={`w-10 h-10 rounded-lg bg-gradient-to-r ${colorClasses[activity.color]} flex items-center justify-center flex-shrink-0`}>
-        <Icon className="w-5 h-5 text-white" />
+      <div style={{ width: 36, height: 36, borderRadius: 10, background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <Icon style={{ width: 16, height: 16, color: 'white' }} />
       </div>
     );
   };
@@ -68,74 +69,32 @@ const ActivityFeed = () => {
   };
 
   return (
-    <motion.div initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }}
-      style={{ background: 'var(--glass-2)', backdropFilter: 'blur(32px)', border: '1px solid var(--glass-border)', borderRadius: 20, padding: 20 }}>
-      
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <h3 style={{ fontSize: 16, fontWeight: 700, color: '#f0f4ff' }}>Recent Activity</h3>
-        <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-          style={{ background: 'var(--glass-1)', border: '1px solid var(--glass-border)', borderRadius: 10, padding: '6px 12px', fontSize: 12, fontWeight: 600, color: 'var(--text-2)', cursor: 'pointer' }}
-          onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--ion)'; e.currentTarget.style.background = 'rgba(79,158,255,0.08)'; }}
-          onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--glass-border)'; e.currentTarget.style.background = 'var(--glass-1)'; }}
-        >
-          View All
-        </motion.button>
-      </div>
-
-      {/* Activity List */}
-      <div style={{ maxHeight: 380, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <AnimatePresence>
-          {activities.map((activity, i) => (
-            <motion.div key={activity._id || i} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -100 }} transition={{ delay: i * 0.08 }}
-              style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: 12, borderRadius: 12, cursor: 'pointer', transition: 'all 0.22s' }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'var(--glass-3)'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'var(--glass-1)'; }}
-            >
-              {getActivityIcon(activity)}
-              
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                  <h4 style={{ fontSize: 13, fontWeight: 600, color: '#f0f4ff' }}>{activity.title}</h4>
-                  <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={() => removeActivity(activity._id)}
-                    style={{ padding: 2, borderRadius: 6, cursor: 'pointer' }}
-                    onMouseEnter={e => { e.currentTarget.style.background = 'var(--glass-3)'; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
-                  >
-                    <X size={12} color="var(--text-3)" />
-                  </motion.button>
-                </div>
-                
-                <p style={{ fontSize: 12, color: 'var(--text-2)', marginBottom: 6, lineHeight: 1.4 }}>{activity.title}</p>
-                
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true })}</span>
-                  <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-                    style={{ background: 'var(--glass-1)', border: '1px solid var(--glass-border)', borderRadius: 8, padding: '4px 8px', fontSize: 11, fontWeight: 600, color: 'var(--ion)', cursor: 'pointer' }}
-                    onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--ion)'; e.currentTarget.style.background = 'rgba(79,158,255,0.08)'; }}
-                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--glass-border)'; e.currentTarget.style.background = 'var(--glass-1)'; }}
-                  >
-                    {activity.type}
-                  </motion.button>
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-      </div>
-
-      {/* Empty State */}
-      {activities.length === 0 && (
-        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-          style={{ textAlign: 'center', padding: '40px 20px' }}>
-          <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'var(--glass-1)', margin: '0 auto 12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Zap size={20} color="var(--text-3)" />
+    <div>
+      <p style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 14 }}>Recent Activity</p>
+      <div style={{ background: 'var(--glass-1)', backdropFilter: 'blur(24px)', border: '1px solid var(--glass-border)', borderRadius: 18, padding: 16, display: 'flex', flexDirection: 'column', gap: 4 }}>
+        {isLoading ? (
+          [1, 2, 3].map(i => <div key={i} className="skeleton" style={{ height: 52, borderRadius: 10 }} />)
+        ) : activities.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '28px 16px' }}>
+            <div style={{ fontSize: 28, marginBottom: 8 }}>📭</div>
+            <p style={{ fontSize: 12, color: 'var(--text-3)' }}>No activity yet</p>
           </div>
-          <p style={{ fontSize: 13, color: 'var(--text-2)', margin: '0 0 4px' }}>No recent activity</p>
-          <p style={{ fontSize: 11, color: 'var(--text-3)', margin: 0 }}>Start building your legacy to see updates here</p>
-        </motion.div>
-      )}
-    </motion.div>
+        ) : activities.map((activity, i) => (
+          <motion.div key={activity._id || i}
+            initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
+            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 8px', borderRadius: 10, transition: 'background 0.18s', cursor: 'default' }}
+            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.04)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+          >
+            {getActivityIcon(activity)}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-1)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{activity.title}</p>
+              <p style={{ fontSize: 11, color: 'var(--text-3)', margin: '2px 0 0' }}>{formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true })}</p>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+    </div>
   );
 };
 
