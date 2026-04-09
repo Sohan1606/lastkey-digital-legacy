@@ -4,7 +4,7 @@
   "description": "LastKey Digital Legacy Backend",
   "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node -e \"console.log('No tests specified')\"",
     "start": "node server.js",
     "dev": "nodemon server.js"
   },

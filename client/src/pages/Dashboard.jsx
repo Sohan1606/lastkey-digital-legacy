@@ -36,20 +36,6 @@ const Dashboard = () => {
   const [dmsStatus, setDmsStatus] = useState({ status: 'active', remainingMinutes: 30 });
   const [isPremium, setIsPremium] = useState(false);
 
-  // Derive real DMS status from stats
-  useEffect(() => {
-    if (stats?.data) {
-      const { triggerStatus, inactivityDuration, lastActive, isPremium: premium } = stats.data;
-      const lastActiveDate = new Date(lastActive || Date.now());
-      const inactiveMs = Date.now() - lastActiveDate.getTime();
-      const inactiveMinutes = Math.floor(inactiveMs / (1000 * 60));
-      const remainingMinutes = Math.max(0, inactivityDuration - inactiveMinutes);
-      
-      setDmsStatus({ status: triggerStatus || 'active', remainingMinutes });
-      setIsPremium(premium || false);
-    }
-  }, [stats]);
-
   // Fetch user stats and premium status
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ['user-stats'],
@@ -61,6 +47,20 @@ const Dashboard = () => {
     },
     enabled: !!token,
   });
+
+  // Derive real DMS status from stats
+  useEffect(() => {
+    if (stats?.data) {
+      const { triggerStatus, inactivityDuration, lastActive, isPremium: premium } = stats.data;
+      const lastActiveDate = new Date(lastActive || Date.now());
+      const inactiveMs = Date.now() - lastActiveDate.getTime();
+      const inactiveMinutes = Math.floor(inactiveMs / (1000 * 60));
+      const remainingMinutes = Math.max(0, inactivityDuration - inactiveMinutes);
+
+      setDmsStatus({ status: triggerStatus || 'active', remainingMinutes });
+      setIsPremium(premium || false);
+    }
+  }, [stats]);
 
   // Fetch AI suggestions
   const { data: suggestionsData, isLoading: suggestionsLoading } = useQuery({
@@ -125,7 +125,9 @@ const Dashboard = () => {
         gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
         osc.start(); 
         osc.stop(ctx.currentTime + 0.35);
-      } catch(e) {}
+      } catch (_e) {
+        return;
+      }
     } catch (error) {
       toast.error('Failed to reset timer');
     }

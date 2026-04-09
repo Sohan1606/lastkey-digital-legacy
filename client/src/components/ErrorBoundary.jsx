@@ -8,7 +8,7 @@ class ErrorBoundary extends Component {
     this.state = { hasError: false, error: null, errorInfo: null };
   }
 
-  static getDerivedStateFromError(error) {
+  static getDerivedStateFromError(_error) {
     return { hasError: true };
   }
 
@@ -75,7 +75,7 @@ const ErrorFallback = ({ error, errorInfo, onReset, navigate }) => {
           We're sorry, but something unexpected happened. Our team has been notified.
         </p>
 
-        {process.env.NODE_ENV === 'development' && (
+        {import.meta.env.DEV && (
           <details className="mb-6 text-left">
             <summary className="cursor-pointer text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
               Error Details (Development Mode)

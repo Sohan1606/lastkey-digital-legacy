@@ -147,18 +147,7 @@ app.get('/api/test', (req, res) => {
 
 const startServer = async () => {
   try {
-    // Connect to MongoDB
-    await mongoose.connect(MONGO_URI);
-    console.log('✅ Database connected successfully');
-    
-    // Create indexes for performance
-    await User.createIndexes();
-    await Asset.createIndexes();
-    await Beneficiary.createIndexes();
-    await Capsule.createIndexes();
-    console.log('✅ Database indexes created');
-    
-    // Start server with error handling
+    // Start server first so the process can boot even if DB is unavailable.
     server.listen(PORT, () => {
       console.log(`✅ Server running on port ${PORT}`);
       console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
@@ -173,7 +162,29 @@ const startServer = async () => {
         process.exit(1);
       }
     });
-    
+
+    // Connect to MongoDB in the background with retry.
+    const connectWithRetry = async () => {
+      try {
+        if (mongoose.connection.readyState === 1) return;
+        await mongoose.connect(MONGO_URI);
+        console.log('✅ Database connected successfully');
+
+        // Create indexes for performance (safe to run on every successful connect)
+        await User.createIndexes();
+        await Asset.createIndexes();
+        await Beneficiary.createIndexes();
+        await Capsule.createIndexes();
+        console.log('✅ Database indexes created');
+      } catch (error) {
+        console.warn('⚠️  MongoDB connection failed (server still running).');
+        console.warn(`   URI: ${MONGO_URI}`);
+        console.warn(`   Error: ${error?.message || error}`);
+      }
+    };
+
+    await connectWithRetry();
+    setInterval(connectWithRetry, 15000);
   } catch (error) {
     console.error('❌ Server startup failed:', error);
     process.exit(1);
@@ -182,13 +193,14 @@ const startServer = async () => {
 
 const startWorkers = async () => {
   // Check if Redis is available
-  const { redisConnection } = require('./services/queue');
-  const Redis = require('ioredis');
+  const { redisConnection, redisClient } = require('./services/queue');
   
   try {
-    const redis = new Redis(redisConnection);
-    await redis.ping();
-    redis.disconnect();
+    if (!redisClient) {
+      throw new Error('Redis disabled (set REDIS_ENABLED=true to enable BullMQ)');
+    }
+    // Use shared client (it has error handlers attached)
+    await redisClient.ping();
     
     // Start workers (they will handle null case internally)
     const guardianWorker = require('./workers/guardianWorker');
@@ -199,6 +211,10 @@ const startWorkers = async () => {
       
       // Schedule guardian jobs for all existing active users on startup
       const { scheduleGuardianJobs } = require('./services/guardianScheduler');
+      if (mongoose.connection.readyState !== 1) {
+        console.warn('MongoDB not connected; skipping guardian job scheduling for now.');
+        return;
+      }
       const users = await User.find({ triggerStatus: { $ne: 'triggered' } });
       for (const user of users) {
         await scheduleGuardianJobs(user);

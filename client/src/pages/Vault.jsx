@@ -336,7 +336,9 @@ const Vault = () => {
                             try {
                               const c = await navigator.clipboard.readText();
                               if (c === asset.password) await navigator.clipboard.writeText('');
-                            } catch {}
+                            } catch {
+                              return;
+                            }
                           }, 30000);
                         } catch { toast.error('Copy failed'); }
                       }}

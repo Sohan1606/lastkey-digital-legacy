@@ -5,11 +5,18 @@ const { guardianQueue } = require('./queue');
  * Call this whenever user.lastActive is updated.
  */
 exports.scheduleGuardianJobs = async (user) => {
+  if (!guardianQueue) {
+    // Redis/BullMQ disabled or unavailable; server falls back to cron in development.
+    return;
+  }
   const userId = user._id.toString();
   const inactivityMs = user.inactivityDuration * 60 * 1000;
 
   // Remove existing jobs for this user
-  await guardianQueue.drain(); // simple approach \u2014 see note below
+  const existingWarning = await guardianQueue.getJob(`warning-${userId}`);
+  const existingTrigger = await guardianQueue.getJob(`trigger-${userId}`);
+  if (existingWarning) await existingWarning.remove();
+  if (existingTrigger) await existingTrigger.remove();
 
   // Warning job fires at inactivityDuration * 1.0 (first threshold)
   await guardianQueue.add(`warning-${userId}`, 
@@ -41,6 +48,10 @@ exports.scheduleGuardianJobs = async (user) => {
  * Call this when user pings (checks in).
  */
 exports.cancelGuardianJobs = async (userId) => {
+  if (!guardianQueue) {
+    // Redis/BullMQ disabled or unavailable; nothing to cancel.
+    return;
+  }
   const warningJob = await guardianQueue.getJob(`warning-${userId}`);
   const triggerJob = await guardianQueue.getJob(`trigger-${userId}`);
   
