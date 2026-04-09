@@ -67,7 +67,7 @@ const GuardianProtocolPanel = ({ onPing, dmsStatus, isPremium }) => {
       osc.start(ctx.currentTime);
       osc.stop(ctx.currentTime + 0.4);
     } catch (error) {
-      console.log('Audio playback failed:', error);
+      return;
     }
   };
 
@@ -95,15 +95,6 @@ const GuardianProtocolPanel = ({ onPing, dmsStatus, isPremium }) => {
     },
   ].filter(Boolean) : [];
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'active': return 'from-emerald-400 to-green-500 ring-emerald-200';
-      case 'warning': return 'from-yellow-400 to-orange-500 ring-yellow-200 animate-pulse';
-      case 'triggered': return 'from-red-400 to-rose-500 ring-red-200 animate-pulse';
-      default: return 'from-gray-400 to-gray-500';
-    }
-  };
-
   const getStatusIcon = (status) => {
     switch (status) {
       case 'active': return <CheckCircle className="w-5 h-5" />;
@@ -114,10 +105,10 @@ const GuardianProtocolPanel = ({ onPing, dmsStatus, isPremium }) => {
   };
 
   const getScoreColor = (score) => {
-    if (score >= 80) return 'text-emerald-600 bg-emerald-100';
-    if (score >= 60) return 'text-blue-600 bg-blue-100';
-    if (score >= 40) return 'text-yellow-600 bg-yellow-100';
-    return 'text-red-600 bg-red-100';
+    if (score >= 80) return { color: 'var(--pulse)', background: 'rgba(0,229,160,0.12)', border: '1px solid rgba(0,229,160,0.25)' };
+    if (score >= 60) return { color: 'var(--ion)', background: 'rgba(79,158,255,0.12)', border: '1px solid rgba(79,158,255,0.25)' };
+    if (score >= 40) return { color: 'var(--amber)', background: 'rgba(255,184,48,0.12)', border: '1px solid rgba(255,184,48,0.25)' };
+    return { color: 'var(--danger)', background: 'rgba(255,77,109,0.12)', border: '1px solid rgba(255,77,109,0.25)' };
   };
 
   const formatTime = (minutes) => {
@@ -193,7 +184,7 @@ const GuardianProtocolPanel = ({ onPing, dmsStatus, isPremium }) => {
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <h3 style={{ fontSize: 16, fontWeight: 700, color: '#f0f4ff' }}>Legacy Health Score</h3>
-            <div style={{ padding: '4px 10px', borderRadius: 10, fontSize: 12, fontWeight: 700, background: getScoreColor(scoreData.score).background, color: getScoreColor(scoreData.score).color }}>
+            <div style={{ padding: '4px 10px', borderRadius: 10, fontSize: 12, fontWeight: 700, background: getScoreColor(scoreData.score).background, color: getScoreColor(scoreData.score).color, border: getScoreColor(scoreData.score).border }}>
               {scoreData.score}/100
             </div>
           </div>

@@ -1,5 +1,16 @@
 const Capsule = require('../models/Capsule');
-const { scheduleCapsuleRelease } = require('../services/capsuleScheduler');
+
+let _capsuleScheduler = null;
+const getCapsuleScheduler = () => {
+  if (!_capsuleScheduler) {
+    try {
+      _capsuleScheduler = require('../services/capsuleScheduler');
+    } catch {
+      _capsuleScheduler = null;
+    }
+  }
+  return _capsuleScheduler;
+};
 
 // Get user's capsules
 exports.getMyCapsules = async (req, res) => {
@@ -24,7 +35,12 @@ exports.createCapsule = async (req, res) => {
     const capsule = await Capsule.create({ ...req.body, userId: req.user._id });
     
     // Schedule release job
-    await scheduleCapsuleRelease(capsule);
+    try {
+      const s = getCapsuleScheduler();
+      if (s) await s.scheduleCapsuleRelease(capsule);
+    } catch (schedErr) {
+      console.warn('Capsule scheduler non-fatal:', schedErr?.message || schedErr);
+    }
     
     res.status(201).json({
       status: 'success',

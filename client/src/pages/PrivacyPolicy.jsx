@@ -4,23 +4,24 @@ import { Link } from 'react-router-dom';
 
 const PrivacyPolicy = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-indigo-50">
-      <div className="max-w-4xl mx-auto px-6 py-12">
+    <div className="page spatial-bg">
+      <div className="stars" />
+      <div className="container-sm" style={{ maxWidth: 980, paddingTop: 40 }}>
         
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-12"
+          style={{ textAlign: 'center', marginBottom: 28 }}
         >
-          <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <Shield className="w-8 h-8 text-indigo-600" />
+          <div style={{ width: 64, height: 64, borderRadius: 18, background: 'rgba(124,92,252,0.10)', border: '1px solid rgba(124,92,252,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>
+            <Shield style={{ width: 28, height: 28, color: 'var(--plasma)' }} />
           </div>
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">Privacy Policy</h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+          <h1 className="display" style={{ fontSize: 30, marginBottom: 8 }}>Privacy Policy</h1>
+          <p style={{ color: 'var(--text-2)', fontSize: 14, maxWidth: 720, margin: '0 auto', lineHeight: 1.7 }}>
             Your trust is our foundation. We're committed to protecting your digital legacy with transparency and security.
           </p>
-          <p className="text-sm text-gray-500 mt-2">Last updated: April 6, 2026</p>
+          <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 10 }}>Last updated: April 6, 2026</p>
         </motion.div>
 
         {/* Content */}
@@ -28,15 +29,15 @@ const PrivacyPolicy = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="space-y-8"
+          style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
         >
           {/* Introduction */}
-          <section className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-white/50">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <Eye className="w-6 h-6 text-indigo-600" />
+          <section style={{ background: 'var(--glass-1)', backdropFilter: 'blur(24px)', borderRadius: 20, padding: 24, border: '1px solid var(--glass-border)' }}>
+            <h2 className="display" style={{ fontSize: 18, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <Eye style={{ width: 18, height: 18, color: 'var(--ion)' }} />
               Our Commitment to Your Privacy
             </h2>
-            <div className="space-y-4 text-gray-700 leading-relaxed">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, color: 'var(--text-2)', lineHeight: 1.8, fontSize: 13 }}>
               <p>
                 LastKey is more than a service—it's a sacred trust. We understand that you're entrusting us with your most precious memories, final wishes, and digital legacy. This privacy policy outlines how we protect, use, and respect your data.
               </p>
@@ -47,210 +48,169 @@ const PrivacyPolicy = () => {
           </section>
 
           {/* Data We Collect */}
-          <section className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-white/50">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Information We Collect</h2>
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <h3 className="font-semibold text-gray-900">Account Information</h3>
-                <ul className="space-y-2 text-gray-700">
-                  <li className="flex items-start gap-2">
-                    <span className="text-indigo-600 mt-1">•</span>
-                    <span>Name and email address</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-indigo-600 mt-1">•</span>
-                    <span>Phone number (for alerts, optional)</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-indigo-600 mt-1">•</span>
-                    <span>Password (encrypted and salted)</span>
-                  </li>
-                </ul>
-              </div>
-              <div className="space-y-4">
-                <h3 className="font-semibold text-gray-900">Legacy Content</h3>
-                <ul className="space-y-2 text-gray-700">
-                  <li className="flex items-start gap-2">
-                    <span className="text-indigo-600 mt-1">•</span>
-                    <span>Time letters and messages</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-indigo-600 mt-1">•</span>
-                    <span>Digital asset instructions</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-indigo-600 mt-1">•</span>
-                    <span>Beneficiary information</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-indigo-600 mt-1">•</span>
-                    <span>Life timeline events</span>
-                  </li>
-                </ul>
-              </div>
+          <section style={{ background: 'var(--glass-1)', backdropFilter: 'blur(24px)', borderRadius: 20, padding: 24, border: '1px solid var(--glass-border)' }}>
+            <h2 className="display" style={{ fontSize: 18, marginBottom: 10 }}>Information We Collect</h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 14 }}>
+              {[
+                {
+                  title: 'Account Information',
+                  items: ['Name and email address', 'Phone number (for alerts, optional)', 'Password (encrypted and salted)'],
+                  accent: 'rgba(79,158,255,0.12)',
+                  border: 'rgba(79,158,255,0.22)',
+                },
+                {
+                  title: 'Legacy Content',
+                  items: ['Time letters and messages', 'Digital asset instructions', 'Beneficiary information', 'Life timeline events'],
+                  accent: 'rgba(124,92,252,0.12)',
+                  border: 'rgba(124,92,252,0.22)',
+                },
+              ].map(card => (
+                <div key={card.title} style={{ background: card.accent, border: `1px solid ${card.border}`, borderRadius: 16, padding: 16 }}>
+                  <h3 style={{ fontSize: 13, fontWeight: 900, color: 'var(--text-1)', margin: '0 0 10px' }}>{card.title}</h3>
+                  <ul style={{ display: 'grid', gap: 8, paddingLeft: 18, margin: 0, color: 'var(--text-2)', fontSize: 12, lineHeight: 1.7 }}>
+                    {card.items.map(i => <li key={i}>{i}</li>)}
+                  </ul>
+                </div>
+              ))}
             </div>
           </section>
 
           {/* How We Protect Your Data */}
-          <section className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-white/50">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <Lock className="w-6 h-6 text-indigo-600" />
+          <section style={{ background: 'var(--glass-1)', backdropFilter: 'blur(24px)', borderRadius: 20, padding: 24, border: '1px solid var(--glass-border)' }}>
+            <h2 className="display" style={{ fontSize: 18, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <Lock style={{ width: 18, height: 18, color: 'var(--amber)' }} />
               How We Protect Your Data
             </h2>
-            <div className="space-y-6">
-              <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-6 border border-indigo-200">
-                <h3 className="font-semibold text-gray-900 mb-3">🔐 Zero-Knowledge Vault Encryption</h3>
-                <p className="text-gray-700">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ background: 'rgba(0,229,160,0.06)', border: '1px solid rgba(0,229,160,0.22)', borderRadius: 16, padding: 16 }}>
+                <h3 style={{ fontSize: 13, fontWeight: 900, color: 'var(--text-1)', margin: '0 0 8px' }}>🔐 Zero-Knowledge Vault Encryption</h3>
+                <p style={{ color: 'var(--text-2)', fontSize: 13, lineHeight: 1.8, margin: 0 }}>
                   Your Memory Vault passwords are encrypted <strong>client-side</strong> using AES-256 encryption before they ever leave your device. We cannot access, read, or reset your vault passwords. This is true zero-knowledge security.
                 </p>
               </div>
               
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="bg-gray-50 rounded-xl p-4">
-                  <h4 className="font-semibold text-gray-900 mb-2">Transport Security</h4>
-                  <p className="text-sm text-gray-700">All data transmitted uses TLS 1.3 encryption</p>
-                </div>
-                <div className="bg-gray-50 rounded-xl p-4">
-                  <h4 className="font-semibold text-gray-900 mb-2">Storage Security</h4>
-                  <p className="text-sm text-gray-700">Database encryption at rest with regular security audits</p>
-                </div>
-                <div className="bg-gray-50 rounded-xl p-4">
-                  <h4 className="font-semibold text-gray-900 mb-2">Access Controls</h4>
-                  <p className="text-sm text-gray-700">Strict role-based access and authentication</p>
-                </div>
-                <div className="bg-gray-50 rounded-xl p-4">
-                  <h4 className="font-semibold text-gray-900 mb-2">Regular Backups</h4>
-                  <p className="text-sm text-gray-700">Encrypted backups with disaster recovery</p>
-                </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+                {[
+                  { t: 'Transport Security', d: 'All data transmitted uses TLS 1.3 encryption' },
+                  { t: 'Storage Security', d: 'Database encryption at rest with regular security audits' },
+                  { t: 'Access Controls', d: 'Strict role-based access and authentication' },
+                  { t: 'Regular Backups', d: 'Encrypted backups with disaster recovery' },
+                ].map(x => (
+                  <div key={x.t} style={{ background: 'var(--glass-2)', border: '1px solid var(--glass-border)', borderRadius: 16, padding: 14 }}>
+                    <h4 style={{ fontSize: 13, fontWeight: 900, color: 'var(--text-1)', margin: '0 0 6px' }}>{x.t}</h4>
+                    <p style={{ fontSize: 12, color: 'var(--text-2)', margin: 0, lineHeight: 1.7 }}>{x.d}</p>
+                  </div>
+                ))}
               </div>
             </div>
           </section>
 
           {/* How We Use Your Data */}
-          <section className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-white/50">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">How We Use Your Information</h2>
-            <div className="space-y-4 text-gray-700">
-              <div className="flex items-start gap-3">
-                <span className="bg-indigo-100 text-indigo-600 rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold mt-0.5">1</span>
-                <div>
-                  <h4 className="font-semibold">Service Operation</h4>
-                  <p>To provide the LastKey service, store your legacy content, and execute your Guardian Protocol</p>
+          <section style={{ background: 'var(--glass-1)', backdropFilter: 'blur(24px)', borderRadius: 20, padding: 24, border: '1px solid var(--glass-border)' }}>
+            <h2 className="display" style={{ fontSize: 18, marginBottom: 10 }}>How We Use Your Information</h2>
+            <div style={{ display: 'grid', gap: 12 }}>
+              {[
+                { n: '1', t: 'Service Operation', d: 'To provide the LastKey service, store your legacy content, and execute your Guardian Protocol' },
+                { n: '2', t: 'Communication', d: 'To send account notifications, security alerts, and deliver your legacy to beneficiaries' },
+                { n: '3', t: 'Service Improvement', d: 'To analyze usage patterns and improve our service (anonymized data only)' },
+                { n: '4', t: 'Legal Compliance', d: 'To comply with legal obligations and protect our users’ rights' },
+              ].map(row => (
+                <div key={row.n} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, background: 'var(--glass-2)', border: '1px solid var(--glass-border)', borderRadius: 16, padding: 14 }}>
+                  <div style={{ width: 26, height: 26, borderRadius: 999, background: 'rgba(79,158,255,0.12)', border: '1px solid rgba(79,158,255,0.25)', color: 'var(--ion)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 900, flexShrink: 0 }}>
+                    {row.n}
+                  </div>
+                  <div>
+                    <h4 style={{ margin: '0 0 4px', fontSize: 13, fontWeight: 900, color: 'var(--text-1)' }}>{row.t}</h4>
+                    <p style={{ margin: 0, fontSize: 13, color: 'var(--text-2)', lineHeight: 1.7 }}>{row.d}</p>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <span className="bg-indigo-100 text-indigo-600 rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold mt-0.5">2</span>
-                <div>
-                  <h4 className="font-semibold">Communication</h4>
-                  <p>To send account notifications, security alerts, and deliver your legacy to beneficiaries</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <span className="bg-indigo-100 text-indigo-600 rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold mt-0.5">3</span>
-                <div>
-                  <h4 className="font-semibold">Service Improvement</h4>
-                  <p>To analyze usage patterns and improve our service (anonymized data only)</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <span className="bg-indigo-100 text-indigo-600 rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold mt-0.5">4</span>
-                <div>
-                  <h4 className="font-semibold">Legal Compliance</h4>
-                  <p>To comply with legal obligations and protect our users' rights</p>
-                </div>
-              </div>
+              ))}
             </div>
           </section>
 
           {/* Third-Party Services */}
-          <section className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-white/50">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Third-Party Services</h2>
-            <p className="text-gray-700 mb-6">We use trusted third-party services to enhance your experience:</p>
-            <div className="space-y-4">
-              <div className="border-l-4 border-indigo-500 pl-4">
-                <h4 className="font-semibold text-gray-900">OpenAI</h4>
-                <p className="text-gray-700">For AI-powered message generation and memoir creation. Your content is processed securely and not used for training.</p>
-              </div>
-              <div className="border-l-4 border-indigo-500 pl-4">
-                <h4 className="font-semibold text-gray-900">Stripe</h4>
-                <p className="text-gray-700">For secure payment processing. We never store your credit card information.</p>
-              </div>
-              <div className="border-l-4 border-indigo-500 pl-4">
-                <h4 className="font-semibold text-gray-900">Twilio</h4>
-                <p className="text-gray-700">For WhatsApp alerts (optional). Your phone number is encrypted and only used for alerts you authorize.</p>
-              </div>
+          <section style={{ background: 'var(--glass-1)', backdropFilter: 'blur(24px)', borderRadius: 20, padding: 24, border: '1px solid var(--glass-border)' }}>
+            <h2 className="display" style={{ fontSize: 18, marginBottom: 10 }}>Third-Party Services</h2>
+            <p style={{ color: 'var(--text-2)', margin: '0 0 14px', fontSize: 13, lineHeight: 1.8 }}>We use trusted third-party services to enhance your experience:</p>
+            <div style={{ display: 'grid', gap: 10 }}>
+              {[
+                { t: 'OpenAI', d: 'For AI-powered message generation and memoir creation. Your content is processed securely and not used for training.' },
+                { t: 'Stripe', d: 'For secure payment processing. We never store your credit card information.' },
+                { t: 'Twilio', d: 'For WhatsApp alerts (optional). Your phone number is encrypted and only used for alerts you authorize.' },
+              ].map(x => (
+                <div key={x.t} style={{ borderLeft: '3px solid var(--ion)', paddingLeft: 12, background: 'rgba(255,255,255,0.02)', borderRadius: 12, paddingTop: 10, paddingBottom: 10, paddingRight: 12 }}>
+                  <h4 style={{ margin: '0 0 4px', fontSize: 13, fontWeight: 900, color: 'var(--text-1)' }}>{x.t}</h4>
+                  <p style={{ margin: 0, fontSize: 13, color: 'var(--text-2)', lineHeight: 1.7 }}>{x.d}</p>
+                </div>
+              ))}
             </div>
           </section>
 
           {/* Your Rights */}
-          <section className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-white/50">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <Trash2 className="w-6 h-6 text-indigo-600" />
+          <section style={{ background: 'var(--glass-1)', backdropFilter: 'blur(24px)', borderRadius: 20, padding: 24, border: '1px solid var(--glass-border)' }}>
+            <h2 className="display" style={{ fontSize: 18, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <Trash2 style={{ width: 18, height: 18, color: 'var(--danger)' }} />
               Your Data Rights
             </h2>
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="space-y-3">
-                <h4 className="font-semibold text-gray-900">Access & Portability</h4>
-                <p className="text-gray-700">You can export all your data at any time from your dashboard.</p>
-              </div>
-              <div className="space-y-3">
-                <h4 className="font-semibold text-gray-900">Correction</h4>
-                <p className="text-gray-700">Update your information anytime through your account settings.</p>
-              </div>
-              <div className="space-y-3">
-                <h4 className="font-semibold text-gray-900">Deletion</h4>
-                <p className="text-gray-700">Request permanent deletion of your account and all associated data.</p>
-              </div>
-              <div className="space-y-3">
-                <h4 className="font-semibold text-gray-900">Consent Withdrawal</h4>
-                <p className="text-gray-700">Change your mind about data collection at any time.</p>
-              </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 12 }}>
+              {[
+                { t: 'Access & Portability', d: 'You can export all your data at any time from your dashboard.' },
+                { t: 'Correction', d: 'Update your information anytime through your account settings.' },
+                { t: 'Deletion', d: 'Request permanent deletion of your account and all associated data.' },
+                { t: 'Consent Withdrawal', d: 'Change your mind about data collection at any time.' },
+              ].map(x => (
+                <div key={x.t} style={{ background: 'var(--glass-2)', border: '1px solid var(--glass-border)', borderRadius: 16, padding: 14 }}>
+                  <h4 style={{ margin: '0 0 6px', fontSize: 13, fontWeight: 900, color: 'var(--text-1)' }}>{x.t}</h4>
+                  <p style={{ margin: 0, fontSize: 13, color: 'var(--text-2)', lineHeight: 1.7 }}>{x.d}</p>
+                </div>
+              ))}
             </div>
           </section>
 
           {/* Data Retention */}
-          <section className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-white/50">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Data Retention</h2>
-            <div className="space-y-4 text-gray-700">
+          <section style={{ background: 'var(--glass-1)', backdropFilter: 'blur(24px)', borderRadius: 20, padding: 24, border: '1px solid var(--glass-border)' }}>
+            <h2 className="display" style={{ fontSize: 18, marginBottom: 10 }}>Data Retention</h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, color: 'var(--text-2)', fontSize: 13, lineHeight: 1.8 }}>
               <p>
                 Your legacy content is stored indefinitely unless you choose to delete it. Even after account deletion, we may retain certain information:
               </p>
-              <ul className="space-y-2 ml-6">
-                <li className="list-disc">Legal compliance requirements</li>
-                <li className="list-disc">Fraud prevention</li>
-                <li className="list-disc">Security analysis</li>
-                <li className="list-disc">Anonymized service improvement data</li>
+              <ul style={{ display: 'grid', gap: 8, paddingLeft: 18, margin: 0 }}>
+                <li>Legal compliance requirements</li>
+                <li>Fraud prevention</li>
+                <li>Security analysis</li>
+                <li>Anonymized service improvement data</li>
               </ul>
             </div>
           </section>
 
           {/* Contact */}
-          <section className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-8 text-white">
-            <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-              <Mail className="w-6 h-6" />
+          <section style={{ background: 'linear-gradient(135deg, rgba(124,92,252,0.12), rgba(79,158,255,0.10))', border: '1px solid rgba(124,92,252,0.25)', borderRadius: 20, padding: 24 }}>
+            <h2 className="display" style={{ fontSize: 18, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <Mail style={{ width: 18, height: 18, color: 'var(--plasma)' }} />
               Questions About Your Privacy?
             </h2>
-            <p className="mb-6 text-indigo-100">
+            <p style={{ marginBottom: 14, color: 'var(--text-2)', fontSize: 13, lineHeight: 1.8 }}>
               We're here to answer any questions about how we protect your data. Your privacy is not just policy—it's our promise.
             </p>
-            <div className="space-y-2">
-              <p><strong>Email:</strong> privacy@lastkey.com</p>
-              <p><strong>Response Time:</strong> Within 48 hours</p>
-              <p><strong>Data Requests:</strong> We'll respond within 30 days as required by GDPR</p>
+            <div style={{ display: 'grid', gap: 8, color: 'var(--text-2)', fontSize: 13 }}>
+              <p style={{ margin: 0 }}><strong style={{ color: 'var(--text-1)' }}>Email:</strong> privacy@lastkey.com</p>
+              <p style={{ margin: 0 }}><strong style={{ color: 'var(--text-1)' }}>Response Time:</strong> Within 48 hours</p>
+              <p style={{ margin: 0 }}><strong style={{ color: 'var(--text-1)' }}>Data Requests:</strong> We'll respond within 30 days as required by GDPR</p>
             </div>
           </section>
 
           {/* Footer */}
-          <div className="text-center py-8 border-t border-gray-200">
-            <p className="text-gray-600 text-sm">
+          <div style={{ textAlign: 'center', padding: '26px 0 0', borderTop: '1px solid var(--glass-border)' }}>
+            <p style={{ color: 'var(--text-2)', fontSize: 12, lineHeight: 1.7, margin: 0 }}>
               This privacy policy is part of our commitment to transparency and trust. 
               By using LastKey, you agree to the practices described here.
             </p>
-            <div className="mt-4 space-x-4">
-              <Link to="/terms" className="text-indigo-600 hover:text-indigo-700 text-sm font-medium">
+            <div style={{ marginTop: 12, display: 'flex', justifyContent: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <Link to="/terms" style={{ color: 'var(--ion)', fontSize: 12, fontWeight: 800, textDecoration: 'none' }}>
                 Terms of Service
               </Link>
-              <span className="text-gray-400">•</span>
-              <Link to="/" className="text-indigo-600 hover:text-indigo-700 text-sm font-medium">
+              <span style={{ color: 'var(--text-3)' }}>•</span>
+              <Link to="/" style={{ color: 'var(--ion)', fontSize: 12, fontWeight: 800, textDecoration: 'none' }}>
                 Back to Home
               </Link>
             </div>

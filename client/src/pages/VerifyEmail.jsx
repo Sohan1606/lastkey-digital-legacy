@@ -50,35 +50,36 @@ const VerifyEmail = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center px-6">
+    <div className="page spatial-bg" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+      <div className="stars" />
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="w-full max-w-md"
+        style={{ width: '100%', maxWidth: 460 }}
       >
-        <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/50 p-8 text-center">
+        <div style={{ background: 'var(--glass-1)', backdropFilter: 'blur(24px)', borderRadius: 28, border: '1px solid var(--glass-border)', padding: 32, textAlign: 'center', boxShadow: '0 24px 80px rgba(0,0,0,0.55)' }}>
           
           {/* Icon */}
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ delay: 0.2, duration: 0.5 }}
-            className="w-20 h-20 mx-auto mb-6 rounded-full flex items-center justify-center"
+            style={{ width: 80, height: 80, margin: '0 auto 18px', borderRadius: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >
             {status === 'loading' && (
-              <div className="w-20 h-20 bg-indigo-100 rounded-full flex items-center justify-center">
-                <Loader2 className="w-10 h-10 text-indigo-600 animate-spin" />
+              <div style={{ width: 80, height: 80, background: 'rgba(79,158,255,0.10)', border: '1px solid rgba(79,158,255,0.22)', borderRadius: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Loader2 style={{ width: 34, height: 34, color: 'var(--ion)', animation: 'spin 0.8s linear infinite' }} />
               </div>
             )}
             {status === 'success' && (
-              <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center">
-                <CheckCircle className="w-10 h-10 text-emerald-600" />
+              <div style={{ width: 80, height: 80, background: 'rgba(0,229,160,0.10)', border: '1px solid rgba(0,229,160,0.25)', borderRadius: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <CheckCircle style={{ width: 34, height: 34, color: 'var(--pulse)' }} />
               </div>
             )}
             {status === 'error' && (
-              <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center">
-                <XCircle className="w-10 h-10 text-red-600" />
+              <div style={{ width: 80, height: 80, background: 'rgba(255,77,109,0.10)', border: '1px solid rgba(255,77,109,0.25)', borderRadius: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <XCircle style={{ width: 34, height: 34, color: 'var(--danger)' }} />
               </div>
             )}
           </motion.div>
@@ -88,7 +89,8 @@ const VerifyEmail = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
-            className="text-2xl font-bold text-gray-900 mb-4"
+            className="display"
+            style={{ fontSize: 22, marginBottom: 10 }}
           >
             {status === 'loading' && 'Verifying Your Email...'}
             {status === 'success' && 'Email Verified!'}
@@ -100,7 +102,7 @@ const VerifyEmail = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.4 }}
-            className="text-gray-600 mb-8 leading-relaxed"
+            style={{ color: 'var(--text-2)', marginBottom: 18, lineHeight: 1.6, fontSize: 13 }}
           >
             {status === 'loading' && 'Please wait while we verify your email address...'}
             {status === 'success' && message}
@@ -118,7 +120,7 @@ const VerifyEmail = () => {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={handleGoToDashboard}
-                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 px-6 rounded-xl font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-lg"
+                style={{ width: '100%', padding: '14px 18px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg,#4f9eff,#7c5cfc)', color: 'white', fontWeight: 800, boxShadow: 'var(--glow-ion)' }}
               >
                 Go to Dashboard
               </motion.button>
@@ -129,7 +131,7 @@ const VerifyEmail = () => {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={handleGoToLogin}
-                className="w-full bg-gradient-to-r from-gray-600 to-gray-700 text-white py-3 px-6 rounded-xl font-semibold hover:from-gray-700 hover:to-gray-800 transition-all duration-200 shadow-lg"
+                style={{ width: '100%', padding: '14px 18px', borderRadius: 14, border: '1px solid var(--glass-border)', cursor: 'pointer', background: 'var(--glass-2)', color: 'var(--text-1)', fontWeight: 800 }}
               >
                 Back to Login
               </motion.button>
@@ -142,10 +144,10 @@ const VerifyEmail = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.6 }}
-              className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-xl"
+              style={{ marginTop: 18, padding: 14, background: 'rgba(255,184,48,0.06)', border: '1px solid rgba(255,184,48,0.22)', borderRadius: 14 }}
             >
-              <div className="flex items-center gap-2 text-amber-800 text-sm">
-                <Mail className="w-4 h-4" />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--amber)', fontSize: 12 }}>
+                <Mail style={{ width: 14, height: 14 }} />
                 <span>
                   If you continue to have trouble, contact support at support@lastkey.com
                 </span>

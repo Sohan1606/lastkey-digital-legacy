@@ -1,6 +1,18 @@
 const User = require('../models/User');
 const Asset = require('../models/Asset');
-const { scheduleGuardianJobs, cancelGuardianJobs } = require('../services/guardianScheduler');
+
+// Lazy-load to avoid crash when Redis/BullMQ not configured
+let _guardianScheduler = null;
+const getScheduler = () => {
+  if (!_guardianScheduler) {
+    try {
+      _guardianScheduler = require('../services/guardianScheduler');
+    } catch {
+      _guardianScheduler = null;
+    }
+  }
+  return _guardianScheduler;
+};
 
 // Ping - update lastActive
 exports.ping = async (req, res, next) => {
@@ -12,8 +24,15 @@ exports.ping = async (req, res, next) => {
     );
 
     // Cancel old jobs and schedule new ones from now
-    await cancelGuardianJobs(user._id.toString());
-    await scheduleGuardianJobs(user);
+    try {
+      const s = getScheduler();
+      if (s) {
+        await s.cancelGuardianJobs(user._id.toString());
+        await s.scheduleGuardianJobs(user);
+      }
+    } catch (schedErr) {
+      console.warn('Scheduler non-fatal error:', schedErr?.message || schedErr);
+    }
 
     // Emit status update to user
     global.io.to(user._id.toString()).emit('dms-update', {
@@ -45,11 +64,15 @@ exports.ping = async (req, res, next) => {
 // Update settings
 exports.updateSettings = async (req, res, next) => {
   try {
-    const { inactivityDuration } = req.body;
+    const { inactivityDuration, phone, alertChannels } = req.body;
+    const updateData = {};
+    if (inactivityDuration != null) updateData.inactivityDuration = inactivityDuration;
+    if (phone !== undefined) updateData.phone = phone;
+    if (alertChannels) updateData.alertChannels = alertChannels;
 
     const user = await User.findByIdAndUpdate(
       req.user._id,
-      { inactivityDuration },
+      updateData,
       { new: true, runValidators: true }
     );
 
@@ -57,6 +80,8 @@ exports.updateSettings = async (req, res, next) => {
       status: 'success',
       data: {
         inactivityDuration: user.inactivityDuration,
+        phone: user.phone,
+        alertChannels: user.alertChannels,
         triggerStatus: user.triggerStatus
       }
     });

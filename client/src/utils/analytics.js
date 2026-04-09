@@ -15,15 +15,15 @@ export const initAnalytics = () => {
           debug: import.meta.env.DEV
         });
 
-        console.log('📊 PostHog analytics initialized');
+        if (import.meta.env.DEV) console.log('📊 PostHog analytics initialized');
       }).catch(err => {
-        console.warn('PostHog not available:', err);
+        if (import.meta.env.DEV) console.warn('PostHog not available:', err);
       });
     } else {
-      console.log('📊 PostHog analytics disabled (no API key)');
+      if (import.meta.env.DEV) console.log('📊 PostHog analytics disabled (no API key)');
     }
   } catch (error) {
-    console.error('Analytics initialization error:', error);
+    if (import.meta.env.DEV) console.error('Analytics initialization error:', error);
   }
 };
 
@@ -31,7 +31,7 @@ export const initAnalytics = () => {
 export const trackEvent = (eventName, properties = {}) => {
   if (posthog) {
     posthog.capture(eventName, properties);
-    console.log('📊 Event tracked:', eventName, properties);
+    if (import.meta.env.DEV) console.log('📊 Event tracked:', eventName, properties);
   }
 };
 
@@ -42,7 +42,7 @@ export const trackPageView = (pageName, properties = {}) => {
       page: pageName,
       ...properties
     });
-    console.log('📊 Page view tracked:', pageName);
+    if (import.meta.env.DEV) console.log('📊 Page view tracked:', pageName);
   }
 };
 
@@ -53,7 +53,7 @@ export const trackEngagement = (action, details = {}) => {
       action,
       ...details
     });
-    console.log('📊 Engagement tracked:', action, details);
+    if (import.meta.env.DEV) console.log('📊 Engagement tracked:', action, details);
   }
 };
 
@@ -64,7 +64,7 @@ export const trackFeatureUsage = (featureName, properties = {}) => {
       feature: featureName,
       ...properties
     });
-    console.log('📊 Feature usage tracked:', featureName, properties);
+    if (import.meta.env.DEV) console.log('📊 Feature usage tracked:', featureName, properties);
   }
 };
 
@@ -75,7 +75,7 @@ export const trackConversion = (conversionType, properties = {}) => {
       type: conversionType,
       ...properties
     });
-    console.log('📊 Conversion tracked:', conversionType, properties);
+    if (import.meta.env.DEV) console.log('📊 Conversion tracked:', conversionType, properties);
   }
 };
 
@@ -86,7 +86,7 @@ export const trackError = (errorType, errorDetails = {}) => {
       type: errorType,
       ...errorDetails
     });
-    console.log('📊 Error tracked:', errorType, errorDetails);
+    if (import.meta.env.DEV) console.log('📊 Error tracked:', errorType, errorDetails);
   }
 };
 
@@ -94,7 +94,7 @@ export const trackError = (errorType, errorDetails = {}) => {
 export const setUserProperties = (properties) => {
   if (posthog) {
     posthog.people.set(properties);
-    console.log('📊 User properties set:', properties);
+    if (import.meta.env.DEV) console.log('📊 User properties set:', properties);
   }
 };
 
@@ -102,7 +102,7 @@ export const setUserProperties = (properties) => {
 export const identifyUser = (userId, properties = {}) => {
   if (posthog) {
     posthog.identify(userId, properties);
-    console.log('📊 User identified:', userId, properties);
+    if (import.meta.env.DEV) console.log('📊 User identified:', userId, properties);
   }
 };
 
@@ -110,7 +110,7 @@ export const identifyUser = (userId, properties = {}) => {
 export const resetUser = () => {
   if (posthog) {
     posthog.reset();
-    console.log('📊 User reset');
+    if (import.meta.env.DEV) console.log('📊 User reset');
   }
 };
 

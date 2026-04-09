@@ -9,20 +9,22 @@ export const initSocket = (userId) => {
   socket = io(import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:5000');
 
   socket.on('connect', () => {
-    console.log('⚡ Connected:', socket.id);
+    if (import.meta.env.DEV) console.log('⚡ Connected:', socket.id);
     socket.emit('join-room', userId);
   });
 
   socket.on('dms-sync', handleDMSUpdate);
   socket.on('dms-update', handleDMSUpdate);
 
-  socket.on('disconnect', () => console.log('🔌 Disconnected'));
+  socket.on('disconnect', () => {
+    if (import.meta.env.DEV) console.log('🔌 Disconnected');
+  });
 
   return socket;
 };
 
 const handleDMSUpdate = (data) => {
-  console.log('💡 DMS:', data);
+  if (import.meta.env.DEV) console.log('💡 DMS:', data);
   const { status, remainingMinutes, message } = data;
 
   switch (status) {
@@ -44,7 +46,7 @@ const handleDMSUpdate = (data) => {
       });
       break;
     default:
-      console.warn('Unknown status:', status);
+      if (import.meta.env.DEV) console.warn('Unknown status:', status);
   }
 };
 

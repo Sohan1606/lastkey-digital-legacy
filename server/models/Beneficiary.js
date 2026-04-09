@@ -31,6 +31,10 @@ const beneficiarySchema = new mongoose.Schema({
     type: Date,
     select: false
   },
+  accessLog: [{
+    accessedAt: { type: Date },
+    ip: { type: String }
+  }],
   userId: {
     type: mongoose.Schema.ObjectId,
     ref: 'User',

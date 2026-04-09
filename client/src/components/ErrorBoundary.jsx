@@ -19,7 +19,7 @@ class ErrorBoundary extends Component {
     });
     
     // Log error to service in production
-    console.error('Error Boundary caught an error:', error, errorInfo);
+    if (import.meta.env.DEV) console.error('Error Boundary caught an error:', error, errorInfo);
   }
 
   handleReset = () => {
@@ -52,54 +52,55 @@ const ErrorFallback = ({ error, errorInfo, onReset, navigate }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 flex items-center justify-center p-4">
+    <div className="page spatial-bg" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+      <div className="stars" />
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="max-w-md w-full bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 text-center"
+        style={{ maxWidth: 520, width: '100%', background: 'var(--glass-1)', border: '1px solid var(--glass-border)', borderRadius: 24, padding: 28, textAlign: 'center', boxShadow: '0 24px 80px rgba(0,0,0,0.6)', backdropFilter: 'blur(24px)' }}
       >
         <motion.div
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ delay: 0.2, type: "spring" }}
-          className="w-16 h-16 bg-gradient-to-r from-red-500 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-6"
+          style={{ width: 64, height: 64, borderRadius: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px', background: 'linear-gradient(135deg, rgba(255,77,109,0.75), rgba(255,184,48,0.75))', border: '1px solid rgba(255,255,255,0.12)' }}
         >
-          <AlertTriangle className="w-8 h-8 text-white" />
+          <AlertTriangle style={{ width: 28, height: 28, color: 'white' }} />
         </motion.div>
 
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+        <h1 className="display" style={{ fontSize: 22, marginBottom: 10 }}>
           Oops! Something went wrong
         </h1>
 
-        <p className="text-gray-600 dark:text-gray-400 mb-6">
+        <p style={{ color: 'var(--text-2)', marginBottom: 18, fontSize: 13, lineHeight: 1.6 }}>
           We're sorry, but something unexpected happened. Our team has been notified.
         </p>
 
         {import.meta.env.DEV && (
-          <details className="mb-6 text-left">
-            <summary className="cursor-pointer text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+          <details style={{ marginBottom: 18, textAlign: 'left' }}>
+            <summary style={{ cursor: 'pointer', fontSize: 12, fontWeight: 700, color: 'var(--text-2)', marginBottom: 8 }}>
               Error Details (Development Mode)
             </summary>
-            <div className="mt-2 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg text-xs font-mono text-gray-800 dark:text-gray-200 overflow-auto max-h-32">
-              <div className="mb-2">
+            <div style={{ marginTop: 8, padding: 12, background: 'var(--glass-2)', border: '1px solid var(--glass-border)', borderRadius: 14, fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--text-1)', overflow: 'auto', maxHeight: 160 }}>
+              <div style={{ marginBottom: 10 }}>
                 <strong>Error:</strong> {error?.toString()}
               </div>
               <div>
                 <strong>Stack:</strong>
-                <pre className="whitespace-pre-wrap">{errorInfo?.componentStack}</pre>
+                <pre style={{ whiteSpace: 'pre-wrap' }}>{errorInfo?.componentStack}</pre>
               </div>
             </div>
           </details>
         )}
 
-        <div className="flex flex-col sm:flex-row gap-3">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={onReset}
-            className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-6 py-3 rounded-xl font-semibold hover:from-purple-700 hover:to-indigo-700 transition-all flex items-center justify-center gap-2"
+            style={{ width: '100%', background: 'linear-gradient(135deg,#4f9eff,#7c5cfc)', border: 'none', borderRadius: 14, padding: '12px 16px', fontWeight: 800, color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, boxShadow: 'var(--glow-ion)' }}
           >
-            <RefreshCw className="w-4 h-4" />
+            <RefreshCw style={{ width: 14, height: 14 }} />
             Try Again
           </motion.button>
 
@@ -107,17 +108,17 @@ const ErrorFallback = ({ error, errorInfo, onReset, navigate }) => {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={handleGoHome}
-            className="flex-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white px-6 py-3 rounded-xl font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 transition-all flex items-center justify-center gap-2"
+            style={{ width: '100%', background: 'var(--glass-2)', border: '1px solid var(--glass-border)', borderRadius: 14, padding: '12px 16px', fontWeight: 800, color: 'var(--text-1)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}
           >
-            <Home className="w-4 h-4" />
+            <Home style={{ width: 14, height: 14 }} />
             Go Home
           </motion.button>
         </div>
 
-        <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-          <p className="text-xs text-gray-500 dark:text-gray-400">
+        <div style={{ marginTop: 18, paddingTop: 18, borderTop: '1px solid var(--glass-border)' }}>
+          <p style={{ fontSize: 12, color: 'var(--text-3)' }}>
             Need help? Contact us at{' '}
-            <a href="mailto:support@lastkey.com" className="text-purple-600 hover:text-purple-700">
+            <a href="mailto:support@lastkey.com" style={{ color: 'var(--ion)', textDecoration: 'none', fontWeight: 700 }}>
               support@lastkey.com
             </a>
           </p>

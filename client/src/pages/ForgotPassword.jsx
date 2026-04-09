@@ -50,9 +50,9 @@ const ForgotPassword = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="w-full max-w-md"
+        style={{ width: '100%', maxWidth: 460 }}
       >
-        <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/50 p-8">
+        <div style={{ background: 'var(--glass-1)', backdropFilter: 'blur(24px)', borderRadius: 28, border: '1px solid var(--glass-border)', padding: 32, boxShadow: '0 24px 80px rgba(0,0,0,0.55)' }}>
           
           {/* Back Button */}
           <motion.button
@@ -60,10 +60,12 @@ const ForgotPassword = () => {
             animate={{ opacity: 1 }}
             transition={{ delay: 0.1 }}
             onClick={handleBackToLogin}
-            className="mb-6 flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+            style={{ marginBottom: 18, display: 'inline-flex', alignItems: 'center', gap: 8, background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-2)', fontWeight: 600 }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-1)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-2)'; }}
           >
-            <ArrowLeft className="w-4 h-4" />
-            <span className="text-sm">Back to Login</span>
+            <ArrowLeft style={{ width: 14, height: 14 }} />
+            <span style={{ fontSize: 13 }}>Back to Login</span>
           </motion.button>
 
           {!isSubmitted ? (
@@ -73,9 +75,9 @@ const ForgotPassword = () => {
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ delay: 0.2, duration: 0.5 }}
-                className="w-16 h-16 mx-auto mb-6 bg-indigo-100 rounded-full flex items-center justify-center"
+                style={{ width: 64, height: 64, margin: '0 auto 18px', borderRadius: 20, background: 'rgba(79,158,255,0.10)', border: '1px solid rgba(79,158,255,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
-                <Mail className="w-8 h-8 text-indigo-600" />
+                <Mail style={{ width: 28, height: 28, color: 'var(--ion)' }} />
               </motion.div>
 
               {/* Title */}
@@ -83,7 +85,8 @@ const ForgotPassword = () => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.3 }}
-                className="text-2xl font-bold text-gray-900 mb-2 text-center"
+                className="display"
+                style={{ fontSize: 22, marginBottom: 8, textAlign: 'center' }}
               >
                 Forgot Your Password?
               </motion.h1>
@@ -93,7 +96,7 @@ const ForgotPassword = () => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.4 }}
-                className="text-gray-600 mb-8 text-center leading-relaxed"
+                style={{ color: 'var(--text-2)', marginBottom: 22, textAlign: 'center', lineHeight: 1.6, fontSize: 13 }}
               >
                 No worries! Enter your email address and we'll send you a link to reset your password.
               </motion.p>
@@ -104,15 +107,13 @@ const ForgotPassword = () => {
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.5 }}
                 onSubmit={handleSubmit}
-                className="space-y-6"
+                style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
               >
                 <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                    Email Address
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <Mail className="h-5 w-5 text-gray-400" />
+                  <label htmlFor="email">Email Address</label>
+                  <div style={{ position: 'relative' }}>
+                    <div style={{ position: 'absolute', top: '50%', left: 12, transform: 'translateY(-50%)', pointerEvents: 'none' }}>
+                      <Mail style={{ width: 16, height: 16, color: 'var(--text-3)' }} />
                     </div>
                     <input
                       type="email"
@@ -120,7 +121,7 @@ const ForgotPassword = () => {
                       name="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-white/50"
+                      style={{ paddingLeft: 40 }}
                       placeholder="Enter your email"
                       required
                     />
@@ -132,11 +133,27 @@ const ForgotPassword = () => {
                   disabled={isLoading}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 px-6 rounded-xl font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  style={{
+                    width: '100%',
+                    padding: '14px 18px',
+                    borderRadius: 14,
+                    border: 'none',
+                    cursor: isLoading ? 'not-allowed' : 'pointer',
+                    background: 'linear-gradient(135deg,#4f9eff,#7c5cfc)',
+                    color: 'white',
+                    fontWeight: 800,
+                    fontSize: 14,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 10,
+                    boxShadow: 'var(--glow-ion)',
+                    opacity: isLoading ? 0.7 : 1,
+                  }}
                 >
                   {isLoading ? (
                     <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <Loader2 style={{ width: 16, height: 16, animation: 'spin 0.8s linear infinite' }} />
                       <span>Sending...</span>
                     </>
                   ) : (
@@ -152,16 +169,17 @@ const ForgotPassword = () => {
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ delay: 0.2, duration: 0.5 }}
-                className="w-16 h-16 mx-auto mb-6 bg-emerald-100 rounded-full flex items-center justify-center"
+                style={{ width: 64, height: 64, margin: '0 auto 18px', borderRadius: 20, background: 'rgba(0,229,160,0.10)', border: '1px solid rgba(0,229,160,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
-                <CheckCircle className="w-8 h-8 text-emerald-600" />
+                <CheckCircle style={{ width: 28, height: 28, color: 'var(--pulse)' }} />
               </motion.div>
 
               <motion.h1
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.3 }}
-                className="text-2xl font-bold text-gray-900 mb-4 text-center"
+                className="display"
+                style={{ fontSize: 22, marginBottom: 10, textAlign: 'center' }}
               >
                 Check Your Email
               </motion.h1>
@@ -170,7 +188,7 @@ const ForgotPassword = () => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.4 }}
-                className="text-gray-600 mb-8 text-center leading-relaxed"
+                style={{ color: 'var(--text-2)', marginBottom: 18, textAlign: 'center', lineHeight: 1.6, fontSize: 13 }}
               >
                 We've sent a password reset link to <strong>{email}</strong>. 
                 The link will expire in 1 hour.
@@ -180,17 +198,19 @@ const ForgotPassword = () => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.5 }}
-                className="space-y-4"
+                style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
               >
-                <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
-                  <p className="text-amber-800 text-sm text-center">
-                    <strong>Didn't receive the email?</strong> Check your spam folder or 
-                    <button 
+                <div style={{ padding: 14, background: 'rgba(255,184,48,0.06)', border: '1px solid rgba(255,184,48,0.22)', borderRadius: 14 }}>
+                  <p style={{ color: 'var(--amber)', fontSize: 12, textAlign: 'center', margin: 0 }}>
+                    <strong>Didn’t receive the email?</strong> Check spam, or{' '}
+                    <button
+                      type="button"
                       onClick={() => setIsSubmitted(false)}
-                      className="text-indigo-600 hover:text-indigo-700 underline ml-1"
+                      style={{ background: 'transparent', border: 'none', padding: 0, color: 'var(--ion)', cursor: 'pointer', textDecoration: 'underline', fontWeight: 700 }}
                     >
                       try again
                     </button>
+                    .
                   </p>
                 </div>
 
@@ -198,7 +218,9 @@ const ForgotPassword = () => {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={handleBackToLogin}
-                  className="w-full bg-gray-100 text-gray-700 py-3 px-6 rounded-xl font-semibold hover:bg-gray-200 transition-all duration-200"
+                  style={{ width: '100%', padding: '14px 18px', borderRadius: 14, background: 'var(--glass-2)', border: '1px solid var(--glass-border)', color: 'var(--text-1)', cursor: 'pointer', fontWeight: 700 }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--glass-3)'; e.currentTarget.style.borderColor = 'var(--glass-border-hover)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--glass-2)'; e.currentTarget.style.borderColor = 'var(--glass-border)'; }}
                 >
                   Back to Login
                 </motion.button>

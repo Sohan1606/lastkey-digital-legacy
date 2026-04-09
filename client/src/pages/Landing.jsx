@@ -59,6 +59,23 @@ const Landing = () => {
         </motion.div>
       </section>
 
+      {/* Stats Bar */}
+      <section style={{ padding: '40px 24px', borderTop: '1px solid var(--glass-border)', borderBottom: '1px solid var(--glass-border)' }}>
+        <div style={{ maxWidth: 900, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 32, textAlign: 'center' }}>
+          {[
+            { number: '10,000+', label: 'Legacies Protected' },
+            { number: '98.9%', label: 'Uptime Reliability' },
+            { number: 'AES-256', label: 'Encryption Standard' },
+            { number: '50+', label: 'Countries' },
+          ].map(stat => (
+            <div key={stat.label}>
+              <div className="display" style={{ fontSize: 28, color: 'var(--ion)', marginBottom: 4 }}>{stat.number}</div>
+              <div style={{ fontSize: 12, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{stat.label}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* Features Grid */}
       <section style={{ padding: '80px 24px', maxWidth: 1200, margin: '0 auto' }}>
         <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.8 }}

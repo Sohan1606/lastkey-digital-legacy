@@ -11,6 +11,7 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api
 const MemoirAI = () => {
   const { user, token } = useAuth();
   const queryClient = useQueryClient();
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
   
   const [selectedStage, setSelectedStage] = useState('childhood');
   const [currentChapter, setCurrentChapter] = useState('');
@@ -256,10 +257,27 @@ const MemoirAI = () => {
                       </div>
                       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                         <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{new Date(chapter.createdAt).toLocaleDateString()}</span>
-                        <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={() => { if (window.confirm('Delete this chapter?')) deleteChapterMutation.mutate(chapter._id); }}
-                          style={{ padding: 6, borderRadius: 8, border: '1px solid rgba(255,77,109,0.2)', background: 'rgba(255,77,109,0.08)', color: 'var(--danger)', cursor: 'pointer' }}>
-                          <Trash2 style={{ width: 13, height: 13 }} />
-                        </motion.button>
+                        {deleteConfirm === chapter._id ? (
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            <button
+                              onClick={() => { deleteChapterMutation.mutate(chapter._id); setDeleteConfirm(null); }}
+                              style={{ padding: '5px 12px', borderRadius: 8, background: 'rgba(255,77,109,0.15)', border: '1px solid rgba(255,77,109,0.3)', color: '#ff4d6d', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
+                            >
+                              Delete
+                            </button>
+                            <button
+                              onClick={() => setDeleteConfirm(null)}
+                              style={{ padding: '5px 12px', borderRadius: 8, background: 'var(--glass-1)', border: '1px solid var(--glass-border)', color: 'var(--text-2)', fontSize: 12, cursor: 'pointer' }}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={() => setDeleteConfirm(chapter._id)}
+                            style={{ padding: 6, borderRadius: 8, border: '1px solid rgba(255,77,109,0.2)', background: 'rgba(255,77,109,0.08)', color: 'var(--danger)', cursor: 'pointer' }}>
+                            <Trash2 style={{ width: 13, height: 13 }} />
+                          </motion.button>
+                        )}
                       </div>
                     </div>
                     <p style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.6 }}>{chapter.chapter.substring(0, 200)}...</p>

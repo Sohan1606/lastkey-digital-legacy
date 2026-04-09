@@ -65,20 +65,13 @@ const Beneficiaries = () => {
   };
 
   const getRelationshipIcon = (rel) => {
-    switch(rel) {
-      case 'spouse': return Heart;
-      case 'child': return User;
-      case 'lawyer': return Briefcase;
-      default: return Users;
-    }
+    const map = { spouse: Heart, child: User, parent: User, sibling: User, friend: Users, lawyer: Briefcase, other: Shield };
+    return map[rel] || Shield;
   };
 
   const relationshipColors = {
-    spouse: '#ff4d6d',
-    child: '#4f9eff',
-    friend: '#00e5a0',
-    lawyer: '#ffb830',
-    other: '#7c5cfc'
+    spouse: '#ff4d6d', child: '#7c5cfc', parent: '#4f9eff',
+    sibling: '#00e5a0', friend: '#ffb830', lawyer: '#8899bb', other: '#3d5070'
   };
 
   if (isLoading) return (

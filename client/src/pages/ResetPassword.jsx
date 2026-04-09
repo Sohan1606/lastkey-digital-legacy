@@ -84,205 +84,147 @@ const ResetPassword = () => {
     navigate('/login');
   };
 
-  if (tokenStatus === 'loading') {
-    return (
-      <div className="page spatial-bg" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-        <div className="stars" />
-        <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin text-indigo-600 mx-auto mb-4" />
-          <p className="text-gray-600">Validating reset token...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (tokenStatus === 'invalid') {
-    return (
-      <div className="page spatial-bg" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-        <div className="stars" />
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-md"
-        >
-          <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/50 p-8 text-center">
-            <div className="w-16 h-16 mx-auto mb-6 bg-red-100 rounded-full flex items-center justify-center">
-              <XCircle className="w-8 h-8 text-red-600" />
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-4">Invalid Reset Link</h1>
-            <p className="text-gray-600 mb-8 leading-relaxed">
-              This password reset link is invalid or has expired. Please request a new one.
-            </p>
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={handleGoToLogin}
-              className="w-full bg-gradient-to-r from-gray-600 to-gray-700 text-white py-3 px-6 rounded-xl font-semibold hover:from-gray-700 hover:to-gray-800 transition-all duration-200 shadow-lg"
-            >
-              Request New Reset Link
-            </motion.button>
-          </div>
-        </motion.div>
-      </div>
-    );
-  }
-
   return (
-    <div className="page spatial-bg" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+    <div className="page spatial-bg" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
       <div className="stars" />
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="w-full max-w-md"
-      >
-        <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/50 p-8">
-          
-          {/* Icon */}
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.2, duration: 0.5 }}
-            className="w-16 h-16 mx-auto mb-6 bg-indigo-100 rounded-full flex items-center justify-center"
-          >
-            <Lock className="w-8 h-8 text-indigo-600" />
-          </motion.div>
-
-          {/* Title */}
-          <motion.h1
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
-            className="text-2xl font-bold text-gray-900 mb-2 text-center"
-          >
-            Set New Password
-          </motion.h1>
-
-          {/* Description */}
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.4 }}
-            className="text-gray-600 mb-8 text-center leading-relaxed"
-          >
-            Choose a strong password for your LastKey account
-          </motion.p>
-
-          {resetStatus === 'success' ? (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-center py-8"
-            >
-              <div className="w-16 h-16 mx-auto mb-6 bg-emerald-100 rounded-full flex items-center justify-center">
-                <CheckCircle className="w-8 h-8 text-emerald-600" />
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} style={{ width: '100%', maxWidth: 460 }}>
+        <div style={{ background: 'var(--glass-1)', backdropFilter: 'blur(24px)', borderRadius: 28, border: '1px solid var(--glass-border)', padding: 32, boxShadow: '0 24px 80px rgba(0,0,0,0.55)' }}>
+          {tokenStatus === 'loading' ? (
+            <div style={{ textAlign: 'center', padding: '18px 0' }}>
+              <Loader2 style={{ width: 34, height: 34, color: 'var(--ion)', animation: 'spin 0.8s linear infinite', margin: '0 auto 10px', display: 'block' }} />
+              <p style={{ color: 'var(--text-2)', fontSize: 13 }}>Validating reset token...</p>
+            </div>
+          ) : tokenStatus === 'invalid' ? (
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ width: 64, height: 64, margin: '0 auto 18px', borderRadius: 20, background: 'rgba(255,77,109,0.10)', border: '1px solid rgba(255,77,109,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <XCircle style={{ width: 28, height: 28, color: 'var(--danger)' }} />
               </div>
-              <h2 className="text-xl font-semibold text-gray-900 mb-2">Password Reset Successful!</h2>
-              <p className="text-gray-600">Redirecting you to dashboard...</p>
-            </motion.div>
-          ) : (
-            <motion.form
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.5 }}
-              onSubmit={handleSubmit}
-              className="space-y-6"
-            >
-              {/* New Password */}
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                  New Password
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Lock className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    id="password"
-                    name="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-white/50"
-                    placeholder="Enter new password"
-                    required
-                  />
-                  <button
-                    type="button"
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-                    ) : (
-                      <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-                    )}
-                  </button>
-                </div>
-                {password && !validatePassword(password) && (
-                  <p className="mt-2 text-sm text-red-600 flex items-center gap-1">
-                    <AlertTriangle className="w-4 h-4" />
-                    Password must be at least 6 characters long
-                  </p>
-                )}
-              </div>
-
-              {/* Confirm Password */}
-              <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
-                  Confirm New Password
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Lock className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    id="confirmPassword"
-                    name="confirmPassword"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-white/50"
-                    placeholder="Confirm new password"
-                    required
-                  />
-                  <button
-                    type="button"
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  >
-                    {showConfirmPassword ? (
-                      <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-                    ) : (
-                      <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-                    )}
-                  </button>
-                </div>
-                {confirmPassword && password !== confirmPassword && (
-                  <p className="mt-2 text-sm text-red-600 flex items-center gap-1">
-                    <AlertTriangle className="w-4 h-4" />
-                    Passwords do not match
-                  </p>
-                )}
-              </div>
-
-              <motion.button
-                type="submit"
-                disabled={isLoading || !validatePassword(password) || password !== confirmPassword}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 px-6 rounded-xl font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    <span>Resetting...</span>
-                  </>
-                ) : (
-                  <span>Reset Password</span>
-                )}
+              <h1 className="display" style={{ fontSize: 22, marginBottom: 10, textAlign: 'center' }}>Invalid Reset Link</h1>
+              <p style={{ color: 'var(--text-2)', marginBottom: 18, lineHeight: 1.6, fontSize: 13 }}>
+                This password reset link is invalid or has expired. Please request a new one.
+              </p>
+              <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={handleGoToLogin}
+                style={{ width: '100%', padding: '14px 18px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg,#4f9eff,#7c5cfc)', color: 'white', fontWeight: 800, boxShadow: 'var(--glow-ion)' }}>
+                Request New Reset Link
               </motion.button>
-            </motion.form>
+            </div>
+          ) : (
+            <>
+              <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.2, duration: 0.5 }}
+                style={{ width: 64, height: 64, margin: '0 auto 18px', borderRadius: 20, background: 'rgba(79,158,255,0.10)', border: '1px solid rgba(79,158,255,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Lock style={{ width: 28, height: 28, color: 'var(--ion)' }} />
+              </motion.div>
+
+              <motion.h1 initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }} className="display" style={{ fontSize: 22, marginBottom: 8, textAlign: 'center' }}>
+                Set New Password
+              </motion.h1>
+              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }} style={{ color: 'var(--text-2)', marginBottom: 18, textAlign: 'center', lineHeight: 1.6, fontSize: 13 }}>
+                Choose a strong password for your LastKey account
+              </motion.p>
+
+              {resetStatus === 'success' ? (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ textAlign: 'center', padding: '18px 0' }}>
+                  <div style={{ width: 64, height: 64, margin: '0 auto 18px', borderRadius: 20, background: 'rgba(0,229,160,0.10)', border: '1px solid rgba(0,229,160,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <CheckCircle style={{ width: 28, height: 28, color: 'var(--pulse)' }} />
+                  </div>
+                  <h2 className="display" style={{ fontSize: 18, marginBottom: 6 }}>Password Reset Successful!</h2>
+                  <p style={{ color: 'var(--text-2)', fontSize: 13 }}>Redirecting you to dashboard...</p>
+                </motion.div>
+              ) : (
+                <motion.form initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  <div>
+                    <label htmlFor="password">New Password</label>
+                    <div style={{ position: 'relative' }}>
+                      <div style={{ position: 'absolute', top: '50%', left: 12, transform: 'translateY(-50%)', pointerEvents: 'none' }}>
+                        <Lock style={{ width: 16, height: 16, color: 'var(--text-3)' }} />
+                      </div>
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        id="password"
+                        name="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="Enter new password"
+                        required
+                        style={{ paddingLeft: 40, paddingRight: 44 }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        style={{ position: 'absolute', top: '50%', right: 8, transform: 'translateY(-50%)', background: 'transparent', border: 'none', cursor: 'pointer', padding: 8 }}
+                      >
+                        {showPassword ? <EyeOff style={{ width: 16, height: 16, color: 'var(--text-2)' }} /> : <Eye style={{ width: 16, height: 16, color: 'var(--text-2)' }} />}
+                      </button>
+                    </div>
+                    {password && !validatePassword(password) && (
+                      <p style={{ marginTop: 8, fontSize: 12, color: 'var(--danger)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <AlertTriangle style={{ width: 14, height: 14 }} />
+                        Password must be at least 6 characters long
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label htmlFor="confirmPassword">Confirm New Password</label>
+                    <div style={{ position: 'relative' }}>
+                      <div style={{ position: 'absolute', top: '50%', left: 12, transform: 'translateY(-50%)', pointerEvents: 'none' }}>
+                        <Lock style={{ width: 16, height: 16, color: 'var(--text-3)' }} />
+                      </div>
+                      <input
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        id="confirmPassword"
+                        name="confirmPassword"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="Confirm new password"
+                        required
+                        style={{ paddingLeft: 40, paddingRight: 44 }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        style={{ position: 'absolute', top: '50%', right: 8, transform: 'translateY(-50%)', background: 'transparent', border: 'none', cursor: 'pointer', padding: 8 }}
+                      >
+                        {showConfirmPassword ? <EyeOff style={{ width: 16, height: 16, color: 'var(--text-2)' }} /> : <Eye style={{ width: 16, height: 16, color: 'var(--text-2)' }} />}
+                      </button>
+                    </div>
+                    {confirmPassword && password !== confirmPassword && (
+                      <p style={{ marginTop: 8, fontSize: 12, color: 'var(--danger)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <AlertTriangle style={{ width: 14, height: 14 }} />
+                        Passwords do not match
+                      </p>
+                    )}
+                  </div>
+
+                  <motion.button
+                    type="submit"
+                    disabled={isLoading || !validatePassword(password) || password !== confirmPassword}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    style={{ width: '100%', padding: '14px 18px', borderRadius: 14, border: 'none', cursor: isLoading ? 'not-allowed' : 'pointer', background: 'linear-gradient(135deg,#4f9eff,#7c5cfc)', color: 'white', fontWeight: 800, boxShadow: 'var(--glow-ion)', opacity: (isLoading || !validatePassword(password) || password !== confirmPassword) ? 0.6 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 style={{ width: 16, height: 16, animation: 'spin 0.8s linear infinite' }} />
+                        <span>Resetting...</span>
+                      </>
+                    ) : (
+                      <span>Reset Password</span>
+                    )}
+                  </motion.button>
+                </motion.form>
+              )}
+
+              <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--glass-border)' }}>
+                <button
+                  type="button"
+                  onClick={handleGoToLogin}
+                  style={{ width: '100%', padding: '12px 14px', borderRadius: 14, background: 'var(--glass-2)', border: '1px solid var(--glass-border)', color: 'var(--text-1)', cursor: 'pointer', fontWeight: 700 }}
+                >
+                  Back to Login
+                </button>
+              </div>
+            </>
           )}
         </div>
       </motion.div>

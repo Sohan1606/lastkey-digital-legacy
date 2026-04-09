@@ -4,7 +4,7 @@ const CryptoJS = require('crypto-js');
 const ENCRYPTION_KEY = process.env.ASSET_ENCRYPTION_KEY;
 
 if (!ENCRYPTION_KEY) {
-  console.error('⚠️  ASSET_ENCRYPTION_KEY not set — vault encryption uses insecure fallback');
+  console.warn('⚠️  ASSET_ENCRYPTION_KEY not set — vault encryption uses insecure fallback');
 }
 
 const KEY = ENCRYPTION_KEY || 'INSECURE-DEV-KEY-CHANGE-THIS-NOW-32C';

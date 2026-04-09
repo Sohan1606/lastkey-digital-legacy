@@ -247,12 +247,19 @@ label {
 .badge-muted   { background: var(--glass-1);  border: 1px solid var(--glass-border); color: var(--text-2); }
 
 /* Responsive dashboard */
-@media (max-width: 900px) {
+@media (max-width: 768px) {
   .dashboard-grid {
     grid-template-columns: 1fr !important;
   }
   .dashboard-sidebar {
     position: static !important;
+  }
+}
+
+/* This targets the inner 2-col grid in Dashboard */
+@media (max-width: 900px) {
+  .suggestions-feed-grid {
+    grid-template-columns: 1fr !important;
   }
 }
 

@@ -24,6 +24,7 @@ const VoiceMessages = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
 
   useEffect(() => {
     let interval;
@@ -151,9 +152,8 @@ const VoiceMessages = () => {
   };
 
   const handleDeleteMessage = (id) => {
-    if (window.confirm('Delete this voice message?')) {
-      deleteMessageMutation.mutate(id);
-    }
+    deleteMessageMutation.mutate(id);
+    setDeleteConfirm(null);
   };
 
   const voices = [
@@ -339,10 +339,27 @@ const VoiceMessages = () => {
                           style={{ padding: '8px 14px', borderRadius: 9, border: '1px solid rgba(79,158,255,0.2)', background: 'rgba(79,158,255,0.08)', color: 'var(--ion)', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
                           <Download style={{ width: 13, height: 13 }} /> Download
                         </motion.button>
-                        <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => handleDeleteMessage(message._id)}
-                          style={{ padding: '8px 14px', borderRadius: 9, border: '1px solid rgba(255,77,109,0.2)', background: 'rgba(255,77,109,0.08)', color: 'var(--danger)', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
-                          <Trash2 style={{ width: 13, height: 13 }} /> Delete
-                        </motion.button>
+                        {deleteConfirm === message._id ? (
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            <button
+                              onClick={() => handleDeleteMessage(message._id)}
+                              style={{ padding: '8px 14px', borderRadius: 9, background: 'rgba(255,77,109,0.15)', border: '1px solid rgba(255,77,109,0.3)', color: '#ff4d6d', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}
+                            >
+                              <Trash2 style={{ width: 13, height: 13, color: 'var(--danger)' }} /> Delete
+                            </button>
+                            <button
+                              onClick={() => setDeleteConfirm(null)}
+                              style={{ padding: '8px 14px', borderRadius: 9, background: 'var(--glass-1)', border: '1px solid var(--glass-border)', color: 'var(--text-2)', fontSize: 12, cursor: 'pointer' }}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setDeleteConfirm(message._id)}
+                            style={{ padding: '8px 14px', borderRadius: 9, border: '1px solid rgba(255,77,109,0.2)', background: 'rgba(255,77,109,0.08)', color: 'var(--danger)', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+                            <Trash2 style={{ width: 13, height: 13 }} /> Delete
+                          </motion.button>
+                        )}
                       </div>
                     </div>
                   </motion.div>

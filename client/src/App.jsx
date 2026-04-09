@@ -24,6 +24,7 @@ import MemoirAI from './pages/MemoirAI';
 import GamificationPanel from './components/GamificationPanel';
 import Onboarding from './pages/Onboarding';
 import ProtectedRoute from './components/ProtectedRoute';
+import Settings from './pages/Settings';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -49,11 +50,12 @@ function App() {
         <Route path="/terms" element={<TermsOfService />} />
         <Route path="/pricing" element={<Pricing />} />
         <Route path="/emergency" element={<EmergencyAccess />} />
-        <Route path="/voice-messages" element={<VoiceMessages />} />
-        <Route path="/life-timeline" element={<LifeTimeline />} />
-        <Route path="/memoir-ai" element={<MemoirAI />} />
-        <Route path="/gamification" element={<GamificationPanel />} />
-        <Route path="/onboarding" element={<Onboarding />} />
+        <Route path="/voice-messages" element={<ProtectedRoute><VoiceMessages /></ProtectedRoute>} />
+        <Route path="/life-timeline" element={<ProtectedRoute><LifeTimeline /></ProtectedRoute>} />
+        <Route path="/memoir-ai" element={<ProtectedRoute><MemoirAI /></ProtectedRoute>} />
+        <Route path="/gamification" element={<ProtectedRoute><GamificationPanel /></ProtectedRoute>} />
+        <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
 <Route 
           path="/dashboard" 
           element={

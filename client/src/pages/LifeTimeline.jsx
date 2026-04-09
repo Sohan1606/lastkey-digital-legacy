@@ -11,6 +11,7 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api
 const LifeTimeline = () => {
   const { user, token } = useAuth();
   const queryClient = useQueryClient();
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
   
   const [showAddEvent, setShowAddEvent] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
@@ -131,9 +132,8 @@ const LifeTimeline = () => {
   };
 
   const handleDeleteEvent = (id) => {
-    if (window.confirm('Delete this life event?')) {
-      deleteEventMutation.mutate(id);
-    }
+    deleteEventMutation.mutate(id);
+    setDeleteConfirm(null);
   };
 
   const categories = [
@@ -273,10 +273,27 @@ const LifeTimeline = () => {
                           style={{ padding: '7px 14px', borderRadius: 9, border: '1px solid rgba(79,158,255,0.2)', background: 'rgba(79,158,255,0.08)', color: 'var(--ion)', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
                           <Edit style={{ width: 13, height: 13 }} /> Edit
                         </motion.button>
-                        <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={(e) => { e.stopPropagation(); handleDeleteEvent(event._id); }}
-                          style={{ padding: '7px 14px', borderRadius: 9, border: '1px solid rgba(255,77,109,0.2)', background: 'rgba(255,77,109,0.08)', color: 'var(--danger)', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
-                          <Trash2 style={{ width: 13, height: 13 }} /> Delete
-                        </motion.button>
+                        {deleteConfirm === event._id ? (
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDeleteEvent(event._id); }}
+                              style={{ padding: '7px 14px', borderRadius: 9, background: 'rgba(255,77,109,0.15)', border: '1px solid rgba(255,77,109,0.3)', color: '#ff4d6d', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}
+                            >
+                              <Trash2 style={{ width: 13, height: 13, color: 'var(--danger)' }} /> Delete
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setDeleteConfirm(null); }}
+                              style={{ padding: '7px 14px', borderRadius: 9, background: 'var(--glass-1)', border: '1px solid var(--glass-border)', color: 'var(--text-2)', fontSize: 12, cursor: 'pointer' }}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={(e) => { e.stopPropagation(); setDeleteConfirm(event._id); }}
+                            style={{ padding: '7px 14px', borderRadius: 9, border: '1px solid rgba(255,77,109,0.2)', background: 'rgba(255,77,109,0.08)', color: 'var(--danger)', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+                            <Trash2 style={{ width: 13, height: 13 }} /> Delete
+                          </motion.button>
+                        )}
                       </div>
                     </div>
                   </motion.div>

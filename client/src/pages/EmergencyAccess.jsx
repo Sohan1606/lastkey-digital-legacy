@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Shield, Lock, Eye, EyeOff, Mail, User, CheckCircle, Download, X } from 'lucide-react';
+import { Shield, Lock, Eye, EyeOff, Mail, User, CheckCircle, Download, X, Copy } from 'lucide-react';
 import { motion } from 'framer-motion';
 import axios from 'axios';
 import toast from 'react-hot-toast';
@@ -10,7 +10,8 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api
 const EmergencyAccess = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [accessCode, setAccessCode] = useState('');
+  const urlCode = new URLSearchParams(window.location.search).get('code');
+  const [accessCode, setAccessCode] = useState(urlCode || '');
   const [showPassword, setShowPassword] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [legacyData, setLegacyData] = useState(null);
@@ -224,8 +225,38 @@ const EmergencyAccess = () => {
           <form onSubmit={handleAccessRequest} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
             <div>
               <label>Emergency Access Code</label>
+              {urlCode && (
+                <div style={{ marginBottom: 12, background: 'rgba(79,158,255,0.06)', border: '1px solid rgba(79,158,255,0.2)', borderRadius: 16, padding: 14 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--ion)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+                    Code from link
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 22, fontWeight: 800, letterSpacing: '0.18em', color: 'var(--text-1)' }}>
+                      {urlCode.toUpperCase()}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(urlCode.toUpperCase());
+                          toast.success('Code copied');
+                        } catch {
+                          toast.error('Copy failed');
+                        }
+                      }}
+                      style={{ marginLeft: 'auto', padding: '8px 12px', borderRadius: 12, background: 'var(--glass-1)', border: '1px solid var(--glass-border)', color: 'var(--text-2)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}
+                    >
+                      <Copy size={14} />
+                      Copy
+                    </button>
+                  </div>
+                </div>
+              )}
               <input type="text" value={accessCode} onChange={(e) => setAccessCode(e.target.value.toUpperCase())} placeholder="Enter the 8-character access code" required maxLength={8} style={{ fontFamily: 'var(--font-mono)', fontSize: 16, letterSpacing: '0.15em', textAlign: 'center' }} />
               {code && <p style={{ fontSize: 12, color: 'var(--amber)', marginTop: 8 }}>Access code detected in URL</p>}
+              <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 8 }}>
+                Your access code was sent via email by {legacyData?.user?.name || 'the account owner'}'s LastKey account.
+              </p>
             </div>
 
             <motion.button type="submit" disabled={isLoading || !accessCode} whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}

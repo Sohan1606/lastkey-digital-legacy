@@ -157,6 +157,19 @@ const Vault = () => {
           </div>
         </motion.div>
 
+        {assets && assets.length > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, background: 'rgba(0,229,160,0.04)', border: '1px solid rgba(0,229,160,0.15)', borderRadius: 14, padding: '12px 18px', marginBottom: 24 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--pulse)', boxShadow: '0 0 8px var(--pulse)' }} />
+                <span style={{ fontSize: 12, color: 'var(--pulse)', fontWeight: 600 }}>AES-256 Encrypted</span>
+              </div>
+              <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{assets.length} item{assets.length !== 1 ? 's' : ''} secured</span>
+            </div>
+            <span style={{ fontSize: 11, color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>Zero-knowledge vault</span>
+          </div>
+        )}
+
         <AnimatePresence>
           {showForm && (
             <motion.div ref={formRef} initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} style={{ marginBottom: 32, overflow: 'hidden' }}>

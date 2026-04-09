@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, X, FileText, Users, Clock, Mic, Calendar, BookOpen, Trophy } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useTheme } from '../contexts/ThemeContext';
 
 const GlobalSearch = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -12,7 +11,6 @@ const GlobalSearch = () => {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef(null);
   const navigate = useNavigate();
-  const { theme } = useTheme();
 
   const searchCategories = [
     { name: 'Vault Items', icon: FileText, path: '/vault', color: 'blue' },
@@ -90,11 +88,28 @@ const GlobalSearch = () => {
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={() => setIsOpen(true)}
-        className={`p-2 rounded-lg transition-colors ${
-          theme === 'dark' 
-            ? 'bg-gray-800 hover:bg-gray-700 text-gray-300' 
-            : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
-        }`}
+        style={{
+          padding: 8,
+          borderRadius: 10,
+          border: '1px solid var(--glass-border)',
+          background: 'var(--glass-1)',
+          color: 'var(--text-2)',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          transition: 'all 0.18s ease',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = 'var(--glass-2)';
+          e.currentTarget.style.borderColor = 'var(--glass-border-hover)';
+          e.currentTarget.style.color = 'var(--text-1)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = 'var(--glass-1)';
+          e.currentTarget.style.borderColor = 'var(--glass-border)';
+          e.currentTarget.style.color = 'var(--text-2)';
+        }}
       >
         <Search className="w-5 h-5" />
       </motion.button>
@@ -106,7 +121,19 @@ const GlobalSearch = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start justify-center pt-20 px-4"
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(0,0,0,0.5)',
+              backdropFilter: 'blur(10px)',
+              zIndex: 50,
+              display: 'flex',
+              alignItems: 'flex-start',
+              justifyContent: 'center',
+              paddingTop: 80,
+              paddingLeft: 16,
+              paddingRight: 16,
+            }}
             onClick={() => setIsOpen(false)}
           >
             <motion.div
@@ -114,108 +141,109 @@ const GlobalSearch = () => {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: -20 }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className={`w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden ${
-                theme === 'dark' ? 'bg-gray-900' : 'bg-white'
-              }`}
+              style={{
+                width: '100%',
+                maxWidth: 720,
+                borderRadius: 18,
+                overflow: 'hidden',
+                background: 'rgba(7,14,27,0.96)',
+                border: '1px solid rgba(255,255,255,0.09)',
+                boxShadow: '0 20px 80px rgba(0,0,0,0.6)',
+                backdropFilter: 'blur(24px)',
+              }}
               onClick={(e) => e.stopPropagation()}
             >
               {/* Search Input */}
-              <div className={`p-4 border-b ${
-                theme === 'dark' ? 'border-gray-800' : 'border-gray-200'
-              }`}>
-                <div className="flex items-center gap-3">
-                  <Search className={`w-5 h-5 ${
-                    theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-                  }`} />
+              <div style={{ padding: 16, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <Search className="w-5 h-5" style={{ color: 'var(--text-3)' }} />
                   <input
                     ref={inputRef}
                     type="text"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Search features, navigate quickly... (⌘K)"
-                    className={`flex-1 bg-transparent border-none outline-none text-lg ${
-                      theme === 'dark' ? 'text-white placeholder-gray-500' : 'text-gray-900 placeholder-gray-400'
-                    }`}
+                    placeholder="Search features, navigate quickly... (Ctrl+K)"
+                    style={{
+                      flex: 1,
+                      background: 'transparent',
+                      border: 'none',
+                      outline: 'none',
+                      fontSize: 18,
+                      color: 'var(--text-1)',
+                    }}
                   />
                   <motion.button
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
                     onClick={() => setIsOpen(false)}
-                    className={`p-1 rounded-lg transition-colors ${
-                      theme === 'dark' ? 'hover:bg-gray-800' : 'hover:bg-gray-100'
-                    }`}
+                    style={{
+                      padding: 6,
+                      borderRadius: 10,
+                      border: '1px solid var(--glass-border)',
+                      background: 'var(--glass-1)',
+                      cursor: 'pointer',
+                    }}
                   >
-                    <X className={`w-5 h-5 ${
-                      theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-                    }`} />
+                    <X className="w-5 h-5" style={{ color: 'var(--text-2)' }} />
                   </motion.button>
                 </div>
               </div>
 
               {/* Search Results */}
-              <div className="max-h-96 overflow-y-auto">
+              <div style={{ maxHeight: 380, overflowY: 'auto' }}>
                 {isLoading ? (
-                  <div className="p-4 space-y-3">
+                  <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
                     {[1, 2, 3].map((i) => (
-                      <div key={i} className="flex items-center gap-3 p-3 rounded-lg">
-                        <div className={`w-10 h-10 rounded-lg ${
-                          theme === 'dark' ? 'bg-gray-800' : 'bg-gray-200'
-                        }`} />
-                        <div className="flex-1 space-y-2">
-                          <div className={`h-4 rounded ${
-                            theme === 'dark' ? 'bg-gray-800' : 'bg-gray-200'
-                          }`} />
-                          <div className={`h-3 w-3/4 rounded ${
-                            theme === 'dark' ? 'bg-gray-800' : 'bg-gray-200'
-                          }`} />
-                        </div>
-                      </div>
+                      <div key={i} className="skeleton" style={{ height: 56, borderRadius: 12 }} />
                     ))}
                   </div>
                 ) : (
-                  <div className="p-2">
+                  <div style={{ padding: 10 }}>
                     {results.map((category, index) => {
                       const Icon = category.icon;
                       const isSelected = index === selectedIndex;
+                      const gradient =
+                        category.color === 'blue' ? 'linear-gradient(135deg,#4f9eff,#0066cc)' :
+                        category.color === 'green' ? 'linear-gradient(135deg,#00e5a0,#00b87a)' :
+                        category.color === 'purple' ? 'linear-gradient(135deg,#7c5cfc,#a855f7)' :
+                        category.color === 'pink' ? 'linear-gradient(135deg,#ff4d6d,#ff6b8a)' :
+                        category.color === 'orange' ? 'linear-gradient(135deg,#ffb830,#ff8c00)' :
+                        category.color === 'indigo' ? 'linear-gradient(135deg,#7c5cfc,#4f9eff)' :
+                        category.color === 'yellow' ? 'linear-gradient(135deg,#ffb830,#00e5a0)' :
+                        'linear-gradient(135deg,#8899bb,#445577)';
                       return (
                         <motion.button
                           key={category.name}
-                          whileHover={{ backgroundColor: theme === 'dark' ? '#1f2937' : '#f3f4f6' }}
                           onClick={() => handleSelect(category)}
-                          className={`w-full flex items-center gap-3 p-3 rounded-lg text-left transition-colors ${
-                            isSelected 
-                              ? theme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'
-                              : ''
-                          }`}
+                          style={{
+                            width: '100%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 12,
+                            padding: 12,
+                            borderRadius: 14,
+                            textAlign: 'left',
+                            cursor: 'pointer',
+                            border: `1px solid ${isSelected ? 'rgba(79,158,255,0.25)' : 'transparent'}`,
+                            background: isSelected ? 'rgba(79,158,255,0.08)' : 'transparent',
+                            transition: 'background 0.16s ease',
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = isSelected ? 'rgba(79,158,255,0.08)' : 'transparent';
+                          }}
                         >
-                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center bg-gradient-to-r ${
-                            category.color === 'blue' ? 'from-blue-500 to-blue-600' :
-                            category.color === 'green' ? 'from-green-500 to-green-600' :
-                            category.color === 'purple' ? 'from-purple-500 to-purple-600' :
-                            category.color === 'pink' ? 'from-pink-500 to-pink-600' :
-                            category.color === 'orange' ? 'from-orange-500 to-orange-600' :
-                            category.color === 'indigo' ? 'from-indigo-500 to-indigo-600' :
-                            category.color === 'yellow' ? 'from-yellow-500 to-yellow-600' :
-                            'from-gray-500 to-gray-600'
-                          }`}>
-                            <Icon className="w-5 h-5 text-white" />
+                          <div style={{ width: 40, height: 40, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', background: gradient, flexShrink: 0 }}>
+                            <Icon className="w-5 h-5" style={{ color: 'white' }} />
                           </div>
-                          <div className="flex-1">
-                            <div className={`font-medium ${
-                              theme === 'dark' ? 'text-white' : 'text-gray-900'
-                            }`}>
-                              {category.name}
-                            </div>
-                            <div className={`text-sm ${
-                              theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-                            }`}>
-                              Navigate to {category.name.toLowerCase()}
-                            </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 700, color: 'var(--text-1)', fontSize: 14 }}>{category.name}</div>
+                            <div style={{ fontSize: 12, color: 'var(--text-3)' }}>Navigate to {category.name.toLowerCase()}</div>
                           </div>
-                          <div className={`text-xs px-2 py-1 rounded-full ${
-                            theme === 'dark' ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-600'
-                          }`}>
-                            ⌘{index + 1}
+                          <div style={{ fontSize: 11, padding: '4px 8px', borderRadius: 999, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', color: 'var(--text-2)' }}>
+                            Ctrl+{index + 1}
                           </div>
                         </motion.button>
                       );
@@ -225,10 +253,8 @@ const GlobalSearch = () => {
               </div>
 
               {/* Footer */}
-              <div className={`p-3 border-t text-xs ${
-                theme === 'dark' ? 'border-gray-800 text-gray-500' : 'border-gray-200 text-gray-400'
-              }`}>
-                Press ⌘K to open • ESC to close • ↑↓ to navigate • ENTER to select
+              <div style={{ padding: 12, borderTop: '1px solid rgba(255,255,255,0.08)', fontSize: 12, color: 'var(--text-3)' }}>
+                Press Ctrl+K to open • ESC to close • ↑↓ to navigate • ENTER to select
               </div>
             </motion.div>
           </motion.div>

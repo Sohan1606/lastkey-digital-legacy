@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import {
   LayoutDashboard, Lock, Users, Clock, Bot, Mic,
   Calendar, BookOpen, Trophy, Menu, X, LogOut,
-  ChevronDown, Shield, Zap, Heart
+  ChevronDown, Shield, Zap, Heart, Settings
 } from 'lucide-react';
 
 const Navbar = () => {
@@ -38,6 +38,7 @@ const Navbar = () => {
     { name: 'Timeline', path: '/life-timeline', icon: Calendar },
     { name: 'Memoir', path: '/memoir-ai', icon: BookOpen },
     { name: 'Achievements', path: '/gamification', icon: Trophy },
+    { name: 'Settings', path: '/settings', icon: Settings },
     { name: 'Emergency', path: '/emergency', icon: Heart },
     { name: 'Pricing', path: '/pricing', icon: Zap },
   ];

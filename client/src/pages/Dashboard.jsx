@@ -190,7 +190,7 @@ const Dashboard = () => {
           </div>
 
           {/* AI Suggestions + Activity Feed */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: 20 }}>
+          <div className="suggestions-feed-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: 20 }}>
             <div>
               <p style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 14 }}>AI Smart Suggestions</p>
               {suggestionsLoading ? (
