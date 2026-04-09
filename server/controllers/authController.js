@@ -1,7 +1,8 @@
-const User = require('../models/User');
 const jwt = require('jsonwebtoken');
-const { promisify } = require('util');
 const crypto = require('crypto');
+const { promisify } = require('util');
+const User = require('../models/User');
+const { log } = require('../services/auditService');
 const { sendEmail } = require('../utils/email');
 
 // Generate JWT
@@ -148,7 +149,15 @@ exports.login = async (req, res, next) => {
     // Update lastActive
     user.lastActive = Date.now();
     await user.save();
-    console.log('✅ Login successful:', email);
+    console.log('Login successful:', email);
+
+    // Log login event
+    await log('login', { 
+      userId: user._id, 
+      ip: req.ip, 
+      userAgent: req.headers['user-agent'], 
+      details: { email: user.email } 
+    });
 
     // Generate token
     const token = signToken(user._id);

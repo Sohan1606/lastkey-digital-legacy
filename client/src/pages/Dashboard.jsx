@@ -13,7 +13,7 @@ import {
   Loader2, Mic, Calendar, BookOpen, Trophy, Heart
 } from 'lucide-react';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
 const IconDisplay = ({ iconName }) => {
   const icons = {
@@ -35,6 +35,20 @@ const Dashboard = () => {
   const queryClient = useQueryClient();
   const [dmsStatus, setDmsStatus] = useState({ status: 'active', remainingMinutes: 30 });
   const [isPremium, setIsPremium] = useState(false);
+
+  // Derive real DMS status from stats
+  useEffect(() => {
+    if (stats?.data) {
+      const { triggerStatus, inactivityDuration, lastActive, isPremium: premium } = stats.data;
+      const lastActiveDate = new Date(lastActive || Date.now());
+      const inactiveMs = Date.now() - lastActiveDate.getTime();
+      const inactiveMinutes = Math.floor(inactiveMs / (1000 * 60));
+      const remainingMinutes = Math.max(0, inactivityDuration - inactiveMinutes);
+      
+      setDmsStatus({ status: triggerStatus || 'active', remainingMinutes });
+      setIsPremium(premium || false);
+    }
+  }, [stats]);
 
   // Fetch user stats and premium status
   const { data: stats, isLoading: statsLoading } = useQuery({
@@ -65,9 +79,9 @@ const Dashboard = () => {
 
   // Initialize socket and listen for DMS updates
   useEffect(() => {
-    if (!token) return;
+    if (!user || !token) return;
     
-    const socket = initSocket(token);
+    const socket = initSocket(user._id || user.id);
     
     const handleDMS = (data) => {
       setDmsStatus(data);
@@ -80,7 +94,7 @@ const Dashboard = () => {
       socket.off('dms-sync', handleDMS);
       socket.off('dms-update', handleDMS);
     };
-  }, [token]);
+  }, [user, token]);
 
   // Handle ping to reset DMS timer
   const handlePing = async () => {

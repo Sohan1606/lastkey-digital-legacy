@@ -1,4 +1,5 @@
 const Asset = require('../models/Asset');
+const { log } = require('../services/auditService');
 
 exports.createAsset = async (req, res, next) => {
   try {
@@ -22,9 +23,15 @@ exports.createAsset = async (req, res, next) => {
 };
 
 exports.getAssets = async (req, res, next) => {
-  console.log(`🔐 Vault accessed by user ${req.user._id} from IP ${req.ip} at ${new Date().toISOString()}`);
   try {
     const assets = await Asset.find({ userId: req.user._id });
+
+    // Log vault access
+    await log('vault_access', { 
+      userId: req.user._id, 
+      ip: req.ip, 
+      details: { count: assets.length } 
+    });
 
     // Decrypt passwords
     const assetsWithDecryptedPassword = assets.map(asset => ({

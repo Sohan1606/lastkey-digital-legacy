@@ -1,11 +1,42 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Shield, Activity, Clock, AlertTriangle, CheckCircle, Zap } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
 const GuardianProtocolPanel = ({ onPing, dmsStatus, isPremium }) => {
+  const [displayTime, setDisplayTime] = useState('');
+
+  // Real-time countdown
+  useEffect(() => {
+    if (!dmsStatus.remainingMinutes && dmsStatus.remainingMinutes !== 0) return;
+    
+    let remaining = dmsStatus.remainingMinutes * 60; // convert to seconds
+    
+    const tick = () => {
+      if (remaining <= 0) {
+        setDisplayTime('Activating...');
+        return;
+      }
+      const d = Math.floor(remaining / 86400);
+      const h = Math.floor((remaining % 86400) / 3600);
+      const m = Math.floor((remaining % 3600) / 60);
+      const s = remaining % 60;
+      
+      if (d > 0) setDisplayTime(`${d}d ${h}h ${m}m`);
+      else if (h > 0) setDisplayTime(`${h}h ${m}m ${String(s).padStart(2,'0')}s`);
+      else setDisplayTime(`${m}m ${String(s).padStart(2,'0')}s`);
+      
+      remaining--;
+    };
+    
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [dmsStatus.remainingMinutes]);
+
   // Fetch legacy score data
   const { data: scoreData, isLoading: scoreLoading } = useQuery({
     queryKey: ['legacyScore'],
@@ -137,7 +168,7 @@ const GuardianProtocolPanel = ({ onPing, dmsStatus, isPremium }) => {
         {/* Time */}
         <div style={{ marginBottom: 20, position: 'relative', zIndex: 1 }}>
           <div style={{ fontSize: 32, fontFamily: 'var(--font-mono)', fontWeight: 800, color: '#f0f4ff', lineHeight: 1, letterSpacing: '-0.02em' }}>
-            {formatTime(Math.max(0, dmsStatus.remainingMinutes || 0))}
+            {displayTime || formatTime(Math.max(0, dmsStatus.remainingMinutes || 0))}
           </div>
           <p style={{ fontSize: 12, color: 'var(--text-3)', margin: 0 }}>
             {dmsStatus.status === 'active' ? 'until next check-in required' : 'until protocol activates'}

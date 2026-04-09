@@ -23,25 +23,6 @@ try {
   transporter = null;
 }
 
-exports.sendEmail = async ({ to, subject, html }) => {
-  try {
-    if (!transporter) {
-      console.log('⚠️ Email skipped (no transporter)');
-      return { success: false, message: 'Email service disabled' };
-    }
-
-    await transporter.sendMail({
-      from: `"LastKey" <${process.env.EMAIL_USER}>`,
-      to,
-      subject,
-      html,
-    });
-
-    console.log(`📧 Email sent to ${to}`);
-    return { success: true };
-  } catch (error) {
-    console.log(`❌ Failed to send email to ${to}:`, error.message);
-    return { success: false, error: error.message };
-  }
-};
-
+// Re-export from new email service for backwards compatibility
+const { sendEmail } = require('../services/emailService');
+exports.sendEmail = sendEmail;

@@ -49,6 +49,10 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// Add input sanitization middleware
+const { sanitizeBody } = require('./middleware/sanitize');
+app.use(sanitizeBody);
+
 // Add this line after app.use(express.json())
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
@@ -136,150 +140,6 @@ app.use('/api/voice-messages', voiceMessagesRouter);
 const memoirRouter = require('./routes/memoir');
 app.use('/api/memoir', memoirRouter);
 
-// Guardian Protocol CRON - every minute
-const cron = require('node-cron');
-const { sendEmail } = require('./utils/email');
-
-// Time Capsule CRON - every 5 minutes
-cron.schedule('*/5 * * * *', async () => {
-  try {
-    if (mongoose.connection.readyState !== 1) return;
-    
-    console.log('Running Time Capsule check...');
-    const now = new Date();
-    
-    const capsulesToRelease = await Capsule.find({
-      isReleased: false,
-      unlockAt: { $lte: now }
-    });
-
-    for (const capsule of capsulesToRelease) {
-      capsule.isReleased = true;
-      capsule.releasedAt = now;
-      await capsule.save();
-      
-      console.log(`🔓 Released capsule: ${capsule.title}`);
-      
-      // Notify user via socket
-      global.io.to(capsule.userId.toString()).emit('capsule-released', {
-        id: capsule._id,
-        title: capsule.title
-      });
-      
-      // Notify beneficiaries via email
-      const User = require('./models/User');
-      const user = await User.findById(capsule.userId);
-      const beneficiaries = await Beneficiary.find({ userId: capsule.userId });
-      for (const beneficiary of beneficiaries) {
-        await sendEmail({
-          to: beneficiary.email,
-          subject: `🔓 LastKey Alert: Time Capsule Released`,
-          html: `
-            <h2>Important Notice</h2>
-            <p><strong>${user ? user.name : 'A loved one'}</strong> has scheduled a time capsule to be released.</p>
-            <p><strong>Capsule:</strong> ${capsule.title}</p>
-            <p><strong>Released:</strong> ${new Date().toLocaleString()}</p>
-            <p>You can access this capsule through your beneficiary portal.</p>
-            <hr />
-            <p>Access the legacy: <a href="https://lastkey.com/emergency">LastKey Emergency Portal</a></p>
-          `
-        });
-      }
-    }
-  } catch (error) {
-    console.error('Capsule CRON error:', error);
-  }
-});
-
-cron.schedule('* * * * *', async () => {
-  try {
-    if (mongoose.connection.readyState !== 1) {
-      console.log('⏭️ Skipping Guardian Protocol - DB not ready');
-      return;
-    }
-    console.log('Running Guardian Protocol check...');
-    
-    const now = new Date();
-    const users = await User.find({ triggerStatus: { $ne: 'triggered' } });
-    
-    for (const user of users) {
-      const inactiveMinutes = (now - user.lastActive) / (1000 * 60);
-      
-      if (inactiveMinutes > user.inactivityDuration) {
-        const wasTriggered = user.triggerStatus === 'triggered';
-        
-        if (inactiveMinutes > user.inactivityDuration * 2) {
-          user.triggerStatus = 'triggered';
-          console.log(`🚨 GUARDIAN PROTOCOL TRIGGERED for ${user.email}: Legacy protocols activated!`);
-        } else {
-          user.triggerStatus = 'warning';
-          console.log(`⚠️  WARNING for ${user.email}: ${Math.floor(inactiveMinutes)}/${user.inactivityDuration} minutes inactive`);
-        }
-        
-        await user.save();
-
-        // Real-time notification to user-specific room
-        global.io.to(user._id.toString()).emit('dms-update', {
-          userId: user._id.toString(),
-          status: user.triggerStatus,
-          remainingMinutes: user.inactivityDuration - Math.floor(inactiveMinutes),
-          message: user.triggerStatus === 'warning' ? `⚠️ Warning: ${user.inactivityDuration - Math.floor(inactiveMinutes)}min remaining` : `🚨 GUARDIAN PROTOCOL TRIGGERED!`,
-          inactiveMinutes: Math.floor(inactiveMinutes),
-          inactivityDuration: user.inactivityDuration
-        });
-
-        // Send emails ONLY on new trigger (no duplicates)
-        if (user.triggerStatus === 'triggered' && !wasTriggered) {
-          console.log(`📧 Sending Guardian Protocol emails for ${user.email}...`);
-
-          const beneficiaries = await Beneficiary.find({ userId: user._id });
-          
-          for (const beneficiary of beneficiaries) {
-            const result = await sendEmail({
-              to: beneficiary.email,
-              subject: '🚨 LastKey Alert: Guardian Protocol Activated',
-              html: `
-                <h2>Important Notice</h2>
-                <p><strong>${user.name}</strong> has been inactive for an extended period.</p>
-                <p>Their LastKey Digital Legacy has been <strong>automatically activated</strong>.</p>
-                <p>Please check their digital vault and follow their instructions.</p>
-                <p><em>They set inactivity duration to ${user.inactivityDuration} minutes.</em></p>
-                <hr />
-                <p>Access their legacy: <a href="https://lastkey.com/dashboard">LastKey Dashboard</a></p>
-              `
-            });
-            
-            if (result.success) {
-              console.log(`✅ Guardian Protocol email sent to ${beneficiary.email}`);
-            } else {
-              console.error(`❌ Failed email to ${beneficiary.email}:`, result.error);
-            }
-          }
-          
-          // Send WhatsApp alerts if enabled
-          if (user.alertChannels && user.alertChannels.includes('whatsapp') && user.phone) {
-            console.log(`📱 Sending WhatsApp alert to ${user.phone}...`);
-            // TODO: Implement actual WhatsApp API integration
-            // This would require Twilio integration
-          }
-          
-          // Send Telegram alerts if enabled
-          if (user.alertChannels && user.alertChannels.includes('telegram')) {
-            console.log(`📱 Sending Telegram alert...`);
-            // TODO: Implement actual Telegram Bot integration
-            // This would require Telegram Bot API setup
-          }
-        }
-      }
-    }
-  } catch (error) {
-    console.error('Guardian Protocol CRON error:', error);
-  }
-}, {
-  scheduled: true,
-  timezone: "UTC"
-});
-
 // Basic test route (legacy)
 app.get('/api/test', (req, res) => {
   res.json({ message: 'Server test OK' });
@@ -320,8 +180,118 @@ const startServer = async () => {
   }
 };
 
+const startWorkers = async () => {
+  // Check if Redis is available
+  const { redisConnection } = require('./services/queue');
+  const Redis = require('ioredis');
+  
+  try {
+    const redis = new Redis(redisConnection);
+    await redis.ping();
+    redis.disconnect();
+    
+    // Start workers (they will handle null case internally)
+    const guardianWorker = require('./workers/guardianWorker');
+    const capsuleWorker = require('./workers/capsuleWorker');
+    
+    if (guardianWorker && capsuleWorker) {
+      console.log('BullMQ workers started');
+      
+      // Schedule guardian jobs for all existing active users on startup
+      const { scheduleGuardianJobs } = require('./services/guardianScheduler');
+      const users = await User.find({ triggerStatus: { $ne: 'triggered' } });
+      for (const user of users) {
+        await scheduleGuardianJobs(user);
+      }
+      console.log(`Guardian jobs scheduled for ${users.length} users`);
+      
+      // Schedule pending capsules on startup
+      const { scheduleCapsuleRelease } = require('./services/capsuleScheduler');
+      const pendingCapsules = await Capsule.find({ isReleased: false, unlockAt: { $gte: new Date() } });
+      for (const capsule of pendingCapsules) {
+        await scheduleCapsuleRelease(capsule);
+      }
+      console.log(`${pendingCapsules.length} pending capsules scheduled`);
+    }
+    
+  } catch (redisErr) {
+    console.warn('Redis not available \u2014 falling back to node-cron (development mode)');
+    console.warn('   Install Redis for production use: https://redis.io/download');
+    
+    // FALLBACK: keep the original cron for development without Redis
+    const cron = require('node-cron');
+    const { sendEmail } = require('./utils/email');
+    
+    cron.schedule('* * * * *', async () => {
+      try {
+        if (mongoose.connection.readyState !== 1) {
+          console.log('Skipping Guardian Protocol - DB not ready');
+          return;
+        }
+        console.log('Running Guardian Protocol check (fallback mode)...');
+        
+        const now = new Date();
+        const users = await User.find({ triggerStatus: { $ne: 'triggered' } });
+        
+        for (const user of users) {
+          const inactiveMinutes = (now - user.lastActive) / (1000 * 60);
+          
+          if (inactiveMinutes > user.inactivityDuration) {
+            const wasTriggered = user.triggerStatus === 'triggered';
+            
+            if (inactiveMinutes > user.inactivityDuration * 2) {
+              user.triggerStatus = 'triggered';
+              console.log(`GUARDIAN PROTOCOL TRIGGERED for ${user.email}: Legacy protocols activated!`);
+            } else {
+              user.triggerStatus = 'warning';
+              console.log(`WARNING for ${user.email}: ${Math.floor(inactiveMinutes)}/${user.inactivityDuration} minutes inactive`);
+            }
+            
+            await user.save();
+
+            // Real-time notification to user-specific room
+            global.io.to(user._id.toString()).emit('dms-update', {
+              userId: user._id.toString(),
+              status: user.triggerStatus,
+              remainingMinutes: user.inactivityDuration - Math.floor(inactiveMinutes),
+              message: user.triggerStatus === 'warning' ? `Warning: ${user.inactivityDuration - Math.floor(inactiveMinutes)}min remaining` : `GUARDIAN PROTOCOL TRIGGERED!`,
+              inactiveMinutes: Math.floor(inactiveMinutes),
+              inactivityDuration: user.inactivityDuration
+            });
+
+            // Send emails ONLY on new trigger (no duplicates)
+            if (user.triggerStatus === 'triggered' && !wasTriggered) {
+              console.log(`Sending Guardian Protocol emails for ${user.email}...`);
+
+              const beneficiaries = await Beneficiary.find({ userId: user._id });
+              
+              for (const beneficiary of beneficiaries) {
+                await sendEmail({
+                  to: beneficiary.email,
+                  subject: 'LastKey Alert: Guardian Protocol Activated',
+                  html: `
+                    <h2>Important Notice</h2>
+                    <p><strong>${user.name}</strong> has been inactive for an extended period.</p>
+                    <p>Their LastKey Digital Legacy has been <strong>automatically activated</strong>.</p>
+                    <p>Please check their digital vault and follow their instructions.</p>
+                    <p><em>They set inactivity duration to ${user.inactivityDuration} minutes.</em></p>
+                    <hr />
+                    <p>Access their legacy: <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard">LastKey Dashboard</a></p>
+                  `
+                });
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Guardian Protocol fallback error:', error);
+      }
+    });
+  }
+};
+
 // Start the server
-startServer();
+startServer().then(() => startWorkers());
 
 // Graceful shutdown handlers
 const gracefulShutdown = async (signal) => {

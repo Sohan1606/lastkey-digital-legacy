@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const Asset = require('../models/Asset');
+const { scheduleGuardianJobs, cancelGuardianJobs } = require('../services/guardianScheduler');
 
 // Ping - update lastActive
 exports.ping = async (req, res, next) => {
@@ -10,12 +11,16 @@ exports.ping = async (req, res, next) => {
       { new: true }
     );
 
+    // Cancel old jobs and schedule new ones from now
+    await cancelGuardianJobs(user._id.toString());
+    await scheduleGuardianJobs(user);
+
     // Emit status update to user
     global.io.to(user._id.toString()).emit('dms-update', {
       userId: user._id.toString(),
       status: user.triggerStatus,
       remainingMinutes: user.inactivityDuration,
-      message: '✅ Active & Secure',
+      message: 'Active & Secure',
       inactiveMinutes: 0,
       inactivityDuration: user.inactivityDuration
     });

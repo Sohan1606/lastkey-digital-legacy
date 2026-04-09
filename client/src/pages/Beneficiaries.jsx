@@ -7,11 +7,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
 const Beneficiaries = () => {
   const { token } = useAuth();
   const queryClient = useQueryClient();
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -174,10 +175,23 @@ const Beneficiaries = () => {
                         <div style={{ width: 48, height: 48, borderRadius: 14, background: `${color}15`, border: `1px solid ${color}25`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           <Icon style={{ width: 22, height: 22, color }} />
                         </div>
-                        <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={() => { if(window.confirm(`Remove ${beneficiary.name}?`)) deleteMutation.mutate(beneficiary._id); }}
-                          style={{ padding: 8, borderRadius: 10, border: '1px solid rgba(255,77,109,0.2)', background: 'rgba(255,77,109,0.08)', cursor: 'pointer' }}>
-                          <Trash2 style={{ width: 14, height: 14, color: 'var(--danger)' }} />
-                        </motion.button>
+                        {deleteConfirm === beneficiary._id ? (
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            <button onClick={() => { deleteMutation.mutate(beneficiary._id); setDeleteConfirm(null); }}
+                              style={{ padding: '5px 10px', borderRadius: 7, background: 'rgba(255,77,109,0.15)', border: '1px solid rgba(255,77,109,0.3)', color: '#ff4d6d', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
+                              Remove
+                            </button>
+                            <button onClick={() => setDeleteConfirm(null)}
+                              style={{ padding: '5px 10px', borderRadius: 7, background: 'var(--glass-1)', border: '1px solid var(--glass-border)', color: 'var(--text-2)', fontSize: 11, cursor: 'pointer' }}>
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={() => setDeleteConfirm(beneficiary._id)}
+                            style={{ padding: 8, borderRadius: 10, border: '1px solid rgba(255,77,109,0.2)', background: 'rgba(255,77,109,0.08)', cursor: 'pointer' }}>
+                            <Trash2 style={{ width: 14, height: 14, color: 'var(--danger)' }} />
+                          </motion.button>
+                        )}
                       </div>
                       <h4 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-1)', marginBottom: 6 }}>{beneficiary.name}</h4>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-2)', marginBottom: 16 }}>

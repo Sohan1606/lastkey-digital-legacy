@@ -1,4 +1,5 @@
 const Capsule = require('../models/Capsule');
+const { scheduleCapsuleRelease } = require('../services/capsuleScheduler');
 
 // Get user's capsules
 exports.getMyCapsules = async (req, res) => {
@@ -21,6 +22,10 @@ exports.getMyCapsules = async (req, res) => {
 exports.createCapsule = async (req, res) => {
   try {
     const capsule = await Capsule.create({ ...req.body, userId: req.user._id });
+    
+    // Schedule release job
+    await scheduleCapsuleRelease(capsule);
+    
     res.status(201).json({
       status: 'success',
       data: { capsule }

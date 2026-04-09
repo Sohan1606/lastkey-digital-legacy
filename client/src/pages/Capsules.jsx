@@ -9,11 +9,12 @@ import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import confetti from 'canvas-confetti';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
 const Capsules = () => {
   const { token } = useAuth();
   const queryClient = useQueryClient();
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [minDate, setMinDate] = useState('');
   
@@ -171,10 +172,23 @@ const Capsules = () => {
                     <div style={{ width: 44, height: 44, borderRadius: 12, background: capsule.isReleased ? 'rgba(0,229,160,0.15)' : 'var(--glass-2)', border: capsule.isReleased ? '1px solid rgba(0,229,160,0.25)' : '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       {capsule.isReleased ? <Unlock style={{ width: 20, height: 20, color: 'var(--pulse)' }} /> : <Lock style={{ width: 20, height: 20, color: 'var(--text-2)' }} />}
                     </div>
-                    <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={() => { if (window.confirm('Delete this time capsule?')) deleteMutation.mutate(capsule._id); }}
-                      style={{ padding: 8, borderRadius: 10, border: '1px solid rgba(255,77,109,0.2)', background: 'rgba(255,77,109,0.08)', cursor: 'pointer' }}>
-                      <Trash2 style={{ width: 14, height: 14, color: 'var(--danger)' }} />
-                    </motion.button>
+                    {deleteConfirm === capsule._id ? (
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button onClick={() => { deleteMutation.mutate(capsule._id); setDeleteConfirm(null); }}
+                          style={{ padding: '5px 10px', borderRadius: 7, background: 'rgba(255,77,109,0.15)', border: '1px solid rgba(255,77,109,0.3)', color: '#ff4d6d', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
+                          Delete
+                        </button>
+                        <button onClick={() => setDeleteConfirm(null)}
+                          style={{ padding: '5px 10px', borderRadius: 7, background: 'var(--glass-1)', border: '1px solid var(--glass-border)', color: 'var(--text-2)', fontSize: 11, cursor: 'pointer' }}>
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={() => setDeleteConfirm(capsule._id)}
+                        style={{ padding: 8, borderRadius: 10, border: '1px solid rgba(255,77,109,0.2)', background: 'rgba(255,77,109,0.08)', cursor: 'pointer' }}>
+                        <Trash2 style={{ width: 14, height: 14, color: 'var(--danger)' }} />
+                      </motion.button>
+                    )}
                   </div>
 
                   <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-1)', marginBottom: 12 }}>{capsule.title}</h3>

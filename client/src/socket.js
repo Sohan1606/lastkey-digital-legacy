@@ -6,7 +6,7 @@ let socket;
 export const initSocket = (userId) => {
   if (socket?.connected) return socket;
 
-  socket = io(import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:5001');
+  socket = io(import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:5000');
 
   socket.on('connect', () => {
     console.log('⚡ Connected:', socket.id);

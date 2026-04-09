@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
 const VoiceMessages = () => {
   const { user, token } = useAuth();
@@ -25,22 +25,22 @@ const VoiceMessages = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
 
-useEffect(() => {
-  let interval;
-  if (isRecording) {
-    interval = setInterval(() => setRecordingTime(prev => prev + 1), 1000);
-  } else {
-    setRecordingTime(0);
-  }
-  return () => clearInterval(interval);
-}, [isRecording]);
+  useEffect(() => {
+    let interval;
+    if (isRecording) {
+      interval = setInterval(() => setRecordingTime(prev => prev + 1), 1000);
+    } else {
+      setRecordingTime(0);
+    }
+    return () => clearInterval(interval);
+  }, [isRecording]);
 
-const formatRecordingTime = (s) => `${Math.floor(s/60).toString().padStart(2,'0')}:${(s%60).toString().padStart(2,'0')}`;
+  const formatRecordingTime = (s) => `${Math.floor(s/60).toString().padStart(2,'0')}:${(s%60).toString().padStart(2,'0')}`;
 
   const getAudioSrc = (url) => {
     if (!url) return '';
     if (url.startsWith('http')) return url;
-    const base = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api').replace('/api', '');
+    const base = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api').replace('/api', '');
     return `${base}${url}`;
   };
 

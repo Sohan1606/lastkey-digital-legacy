@@ -1,12 +1,12 @@
 import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../contexts/AuthContext';
-import { Pencil, Trash2, Eye, EyeOff, Plus, Shield, Lock, ExternalLink, X } from 'lucide-react';
+import { Pencil, Trash2, Eye, EyeOff, Plus, Shield, Lock, ExternalLink, X, Copy } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
 
 const Vault = () => {
@@ -46,7 +46,7 @@ const Vault = () => {
     onSuccess: () => {
       queryClient.invalidateQueries(['assets']);
       setShowForm(false);
-      setFormData({ platform: '', username: '', url: '', password: '', notes: '', instruction: 'delete' });
+      setFormData({ platform: '', username: '', url: '', password: '', notes: '', instruction: 'delete', assetType: 'general', cryptocurrency: '', walletAddress: '', blockchain: '' });
       setEditingId(null);
       toast.success('Asset secured!');
     },
@@ -60,7 +60,7 @@ const Vault = () => {
     onSuccess: () => {
       queryClient.invalidateQueries(['assets']);
       setShowForm(false);
-      setFormData({ platform: '', username: '', url: '', password: '', notes: '', instruction: 'delete' });
+      setFormData({ platform: '', username: '', url: '', password: '', notes: '', instruction: 'delete', assetType: 'general', cryptocurrency: '', walletAddress: '', blockchain: '' });
       setEditingId(null);
       toast.success('Asset updated!');
     },
@@ -98,7 +98,11 @@ const Vault = () => {
       url: asset.url || '',
       password: asset.password,
       notes: asset.notes || '',
-      instruction: asset.instruction
+      instruction: asset.instruction,
+      assetType: asset.assetType || 'general',
+      cryptocurrency: asset.cryptocurrency || '',
+      walletAddress: asset.walletAddress || '',
+      blockchain: asset.blockchain || '',
     });
     setEditingId(asset._id);
     setShowForm(true);
@@ -183,11 +187,56 @@ const Vault = () => {
                   <div style={{ gridColumn: '1 / -1' }}>
                     <label>Legacy Instruction</label>
                     <select value={formData.instruction} onChange={e => setFormData({...formData, instruction: e.target.value})}>
-                      <option value="delete">🗑️ Delete Account (Privacy)</option>
-                      <option value="share">🤝 Share with Beneficiaries</option>
-                      <option value="transfer">💼 Transfer Ownership</option>
+                      <option value="delete">Delete Account (Privacy)</option>
+                      <option value="share">Share with Beneficiaries</option>
+                      <option value="transfer">Transfer Ownership</option>
                     </select>
                   </div>
+                  {/* Asset Type */}
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <label>Asset Type</label>
+                    <select value={formData.assetType || 'general'} onChange={e => setFormData({...formData, assetType: e.target.value})}>
+                      <option value="general">General Account / Password</option>
+                      <option value="crypto_exchange">Crypto Exchange (Binance, Coinbase...)</option>
+                      <option value="crypto_wallet">Crypto Wallet (MetaMask, Trust Wallet...)</option>
+                      <option value="hardware_wallet">Hardware Wallet (Ledger, Trezor...)</option>
+                      <option value="seed_phrase">Seed Phrase / Recovery Words</option>
+                      <option value="private_key">Private Key</option>
+                    </select>
+                  </div>
+                  {/* Crypto-specific fields */}
+                  {formData.assetType && formData.assetType !== 'general' && (
+                    <>
+                      <div>
+                        <label>Cryptocurrency</label>
+                        <select value={formData.cryptocurrency || ''} onChange={e => setFormData({...formData, cryptocurrency: e.target.value})}>
+                          <option value="">Select crypto...</option>
+                          {['BTC','ETH','USDT','USDC','BNB','SOL','ADA','DOT','MATIC','AVAX','LINK','other'].map(c => (
+                            <option key={c} value={c}>{c}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label>Blockchain Network</label>
+                        <select value={formData.blockchain || ''} onChange={e => setFormData({...formData, blockchain: e.target.value})}>
+                          <option value="">Select blockchain...</option>
+                          {['Bitcoin','Ethereum','BSC','Polygon','Solana','Avalanche','Cardano','Polkadot','other'].map(b => (
+                            <option key={b} value={b}>{b}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div style={{ gridColumn: '1 / -1' }}>
+                        <label>Public Wallet Address (Optional)</label>
+                        <input type="text" value={formData.walletAddress || ''} onChange={e => setFormData({...formData, walletAddress: e.target.value})} placeholder="0x... or bc1... (public address only)" />
+                      </div>
+                      {/* Security tip */}
+                      <div style={{ gridColumn: '1 / -1', background: 'rgba(255,184,48,0.06)', border: '1px solid rgba(255,184,48,0.2)', borderRadius: 10, padding: '12px 14px' }}>
+                        <p style={{ fontSize: 12, color: '#ffb830', margin: 0 }}>
+                          Security: Your seed phrase / private key is encrypted with AES-256 before storage. Never share your private key with anyone other than your designated beneficiaries.
+                        </p>
+                      </div>
+                    </>
+                  )}
                   <div style={{ gridColumn: '1 / -1' }}>
                     <label>Additional Notes</label>
                     <textarea value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} placeholder="Instructions or context..." style={{ height: 80, resize: 'none' }} />
@@ -247,6 +296,24 @@ const Vault = () => {
                   </div>
                 </div>
                 <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-1)', marginBottom: 14 }}>{asset.platform}</h3>
+                {/* Crypto badges */}
+                {asset.assetType && asset.assetType !== 'general' && (
+                  <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 6, background: 'rgba(255,184,48,0.1)', border: '1px solid rgba(255,184,48,0.2)', color: '#ffb830', fontWeight: 600 }}>
+                      {asset.assetType.replace(/_/g, ' ').toUpperCase()}
+                    </span>
+                    {asset.cryptocurrency && (
+                      <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 6, background: 'rgba(79,158,255,0.1)', border: '1px solid rgba(79,158,255,0.2)', color: '#4f9eff', fontWeight: 600 }}>
+                        {asset.cryptocurrency}
+                      </span>
+                    )}
+                    {asset.blockchain && (
+                      <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 6, background: 'rgba(124,92,252,0.1)', border: '1px solid rgba(124,92,252,0.2)', color: '#7c5cfc', fontWeight: 600 }}>
+                        {asset.blockchain}
+                      </span>
+                    )}
+                  </div>
+                )}
                 <div style={{ marginBottom: 10 }}>
                   <span style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Identity</span>
                   <p style={{ fontSize: 14, color: 'var(--text-1)', marginTop: 4 }}>{asset.username}</p>
@@ -259,6 +326,23 @@ const Vault = () => {
                     </span>
                     <button onClick={() => togglePassword(asset._id)} style={{ padding: 6, background: 'none', border: 'none', cursor: 'pointer' }}>
                       {showPasswords[asset._id] ? <EyeOff style={{ width: 16, height: 16, color: 'var(--text-2)' }} /> : <Eye style={{ width: 16, height: 16, color: 'var(--text-2)' }} />}
+                    </button>
+                    <button
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(asset.password);
+                          toast.success('Copied! Auto-clears in 30s', { duration: 2500 });
+                          setTimeout(async () => {
+                            try {
+                              const c = await navigator.clipboard.readText();
+                              if (c === asset.password) await navigator.clipboard.writeText('');
+                            } catch {}
+                          }, 30000);
+                        } catch { toast.error('Copy failed'); }
+                      }}
+                      style={{ padding: 6, background: 'none', border: 'none', cursor: 'pointer' }}
+                    >
+                      <Copy style={{ width: 14, height: 14, color: 'var(--text-3)' }} />
                     </button>
                   </div>
                 </div>
