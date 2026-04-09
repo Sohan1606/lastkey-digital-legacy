@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Mic, Play, Pause, Download, Sparkles, User, Clock, Volume2, Save, Trash2 } from 'lucide-react';
@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api';
 
 const VoiceMessages = () => {
   const { user, token } = useAuth();
@@ -40,7 +40,7 @@ const formatRecordingTime = (s) => `${Math.floor(s/60).toString().padStart(2,'0'
   const getAudioSrc = (url) => {
     if (!url) return '';
     if (url.startsWith('http')) return url;
-    const base = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api').replace('/api', '');
+    const base = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api').replace('/api', '');
     return `${base}${url}`;
   };
 

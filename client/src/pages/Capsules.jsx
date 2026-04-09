@@ -9,7 +9,7 @@ import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import confetti from 'canvas-confetti';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api';
 
 const Capsules = () => {
   const { token } = useAuth();

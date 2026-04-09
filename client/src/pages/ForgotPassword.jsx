@@ -5,7 +5,7 @@ import { Mail, ArrowLeft, Loader2, CheckCircle } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api';
 
 const ForgotPassword = () => {
   const navigate = useNavigate();

@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Shield, Lock, Eye, EyeOff, Mail, User, CheckCircle, Download, X } from 'lucide-react';
+import { motion } from 'framer-motion';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api';
 
 const EmergencyAccess = () => {
   const [searchParams] = useSearchParams();

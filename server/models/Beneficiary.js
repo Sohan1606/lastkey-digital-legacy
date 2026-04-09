@@ -23,6 +23,14 @@ const beneficiarySchema = new mongoose.Schema({
     enum: ['view', 'edit', 'full'],
     default: 'view'
   },
+  emergencyAccessCode: {
+    type: String,
+    select: false // Don't include in queries by default for security
+  },
+  emergencyAccessExpires: {
+    type: Date,
+    select: false
+  },
   userId: {
     type: mongoose.Schema.ObjectId,
     ref: 'User',

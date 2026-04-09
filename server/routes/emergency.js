@@ -52,7 +52,8 @@ router.post('/access', async (req, res) => {
     const beneficiary = await Beneficiary.findOne({
       emergencyAccessCode: code,
       emergencyAccessExpires: { $gt: new Date() }
-    }).populate('userId');
+    }).select('+emergencyAccessCode +emergencyAccessExpires')
+    .populate('userId');
     
     if (!beneficiary) {
       return res.status(400).json({

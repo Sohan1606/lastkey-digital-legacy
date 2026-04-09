@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { Copy, Bot, MessageSquare, Loader2, Sparkles } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { motion } from 'framer-motion';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api';
 
 const emotions = ['love', 'apology', 'gratitude', 'farewell', 'encouragement', 'memories'];
 const recipients = ['family', 'friend', 'partner', 'child', 'parent', 'colleague'];
