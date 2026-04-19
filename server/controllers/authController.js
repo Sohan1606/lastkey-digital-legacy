@@ -6,7 +6,9 @@ const { log } = require('../services/auditService');
 const { sendEmail } = require('../utils/email');
 
 // Generate JWT
-const signToken = id => jwt.sign({ id }, process.env.JWT_SECRET || 'fallback-secret-12345', {
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) throw new Error('JWT_SECRET is not set');
+const signToken = id => jwt.sign({ id }, JWT_SECRET, {
   expiresIn: process.env.JWT_EXPIRES_IN || '90d'
 });
 

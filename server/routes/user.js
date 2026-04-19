@@ -134,4 +134,48 @@ router.get('/activity', async (req, res) => {
 
 router.get('/score', require('../controllers/userController').getLegacyScore);
 
+// Get audit logs for current user with optional type filter
+router.get('/logs', async (req, res) => {
+  try {
+    const AuditLog = require('../models/AuditLog');
+    const { type } = req.query; // optional filter
+    const query = { userId: req.user._id };
+    
+    if (type && type !== 'all') {
+      query.event = type;
+    }
+    
+    const logs = await AuditLog.find(query)
+      .sort({ timestamp: -1 })
+      .limit(100)
+      .lean();
+    
+    res.json({ success: true, data: logs });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// Set recovery passphrase
+router.put('/recovery-passphrase', async (req, res) => {
+  try {
+    const { passphrase } = req.body;
+    if (!passphrase || passphrase.length < 8) {
+      return res.status(400).json({ success: false, message: 'Passphrase must be at least 8 characters' });
+    }
+    
+    const User = require('../models/User');
+    const user = await User.findById(req.user._id);
+    
+    // Store hash for verification (NOT for decryption - decryption uses the raw passphrase)
+    user.recoveryPassphraseHash = passphrase;
+    user.recoveryPassphraseSet = true;
+    await user.save();
+    
+    res.json({ success: true, message: 'Recovery passphrase saved' });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
 module.exports = router;

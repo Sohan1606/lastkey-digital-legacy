@@ -1,13 +1,40 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Shield, Activity, Clock, AlertTriangle, CheckCircle, Zap } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
+import toast from 'react-hot-toast';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
-const GuardianProtocolPanel = ({ onPing, dmsStatus, isPremium }) => {
+// Helper to format time ago
+const formatTimeAgo = (date) => {
+  if (!date) return 'Unknown';
+  const seconds = Math.floor((new Date() - new Date(date)) / 1000);
+  
+  let interval = seconds / 31536000;
+  if (interval > 1) return Math.floor(interval) + ' years ago';
+  
+  interval = seconds / 2592000;
+  if (interval > 1) return Math.floor(interval) + ' months ago';
+  
+  interval = seconds / 86400;
+  if (interval > 1) return Math.floor(interval) + ' days ago';
+  
+  interval = seconds / 3600;
+  if (interval > 1) return Math.floor(interval) + ' hours ago';
+  
+  interval = seconds / 60;
+  if (interval > 1) return Math.floor(interval) + ' minutes ago';
+  
+  return 'Just now';
+};
+
+const GuardianProtocolPanel = ({ onPing, dmsStatus, isPremium, lastActive }) => {
   const [displayTime, setDisplayTime] = useState('');
+  const [lastActiveText, setLastActiveText] = useState('');
+  const [simulating, setSimulating] = useState(false);
+  const [simStep, setSimStep] = useState(0); // 0=idle, 1=warning, 2=triggered, 3=done
 
   // Real-time countdown
   useEffect(() => {
@@ -37,6 +64,17 @@ const GuardianProtocolPanel = ({ onPing, dmsStatus, isPremium }) => {
     return () => clearInterval(interval);
   }, [dmsStatus.remainingMinutes]);
 
+  // Update last active text
+  useEffect(() => {
+    if (lastActive) {
+      setLastActiveText(formatTimeAgo(lastActive));
+      const interval = setInterval(() => {
+        setLastActiveText(formatTimeAgo(lastActive));
+      }, 60000); // Update every minute
+      return () => clearInterval(interval);
+    }
+  }, [lastActive]);
+
   // Fetch legacy score data
   const { data: scoreData, isLoading: scoreLoading } = useQuery({
     queryKey: ['legacyScore'],
@@ -46,6 +84,34 @@ const GuardianProtocolPanel = ({ onPing, dmsStatus, isPremium }) => {
     },
     refetchInterval: 30000, // Refetch every 30 seconds
   });
+
+  // Simulate inactivity demo
+  const simulateInactivity = async () => {
+    setSimulating(true);
+    setSimStep(1);
+    toast('⚠️ SIMULATION: Warning state triggered', { 
+      duration: 3000, 
+      style: { border: '1px solid #ffb830', background: 'rgba(255,184,48,0.1)' } 
+    });
+    
+    await new Promise(r => setTimeout(r, 3000));
+    setSimStep(2);
+    toast('🚨 SIMULATION: Protocol triggered — beneficiaries would be notified', { 
+      duration: 4000, 
+      style: { border: '1px solid #ff4d6d', background: 'rgba(255,77,109,0.1)' } 
+    });
+    
+    await new Promise(r => setTimeout(r, 4000));
+    setSimStep(3);
+    toast('✅ SIMULATION COMPLETE — No real data was changed', { 
+      duration: 3000, 
+      style: { border: '1px solid #00e5a0', background: 'rgba(0,229,160,0.1)' } 
+    });
+    
+    await new Promise(r => setTimeout(r, 2000));
+    setSimulating(false);
+    setSimStep(0);
+  };
 
   // Enhanced ping sound
   const playPingSound = () => {
@@ -130,11 +196,67 @@ const GuardianProtocolPanel = ({ onPing, dmsStatus, isPremium }) => {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       {/* Guardian Protocol Status */}
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-        style={{ background: 'var(--glass-2)', backdropFilter: 'blur(32px)', border: '1px solid var(--glass-border)', borderRadius: 20, padding: 20, position: 'relative', overflow: 'hidden' }}
+        style={{ 
+          background: 'var(--glass-2)', 
+          backdropFilter: 'blur(32px)', 
+          border: simStep === 1 ? '2px solid #ffb830' : simStep === 2 ? '2px solid #ff4d6d' : '1px solid var(--glass-border)', 
+          borderRadius: 20, 
+          padding: 20, 
+          position: 'relative', 
+          overflow: 'hidden',
+          transition: 'border-color 0.3s ease'
+        }}
       >
         {/* Glow effects */}
         <div style={{ position: 'absolute', top: -30, right: -30, width: 120, height: 120, borderRadius: '50%', background: 'radial-gradient(circle,rgba(79,158,255,0.15),transparent)', filter: 'blur(40px)' }} />
         <div style={{ position: 'absolute', bottom: -20, left: -20, width: 80, height: 80, borderRadius: '50%', background: 'radial-gradient(circle,rgba(124,92,252,0.12),transparent)', filter: 'blur(30px)' }} />
+
+        {/* Simulation Overlay */}
+        <AnimatePresence>
+          {simStep > 0 && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              style={{
+                position: 'absolute',
+                inset: 0,
+                background: simStep === 1 ? 'rgba(255,184,48,0.15)' : simStep === 2 ? 'rgba(255,77,109,0.15)' : 'rgba(0,229,160,0.15)',
+                backdropFilter: 'blur(4px)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 10,
+                borderRadius: 20
+              }}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                style={{
+                  textAlign: 'center',
+                  padding: '20px 30px',
+                  background: 'var(--glass-1)',
+                  borderRadius: 16,
+                  border: `2px solid ${simStep === 1 ? '#ffb830' : simStep === 2 ? '#ff4d6d' : '#00e5a0'}`
+                }}
+              >
+                <div style={{ fontSize: 32, marginBottom: 8 }}>
+                  {simStep === 1 ? '⚠️' : simStep === 2 ? '🚨' : '✅'}
+                </div>
+                <p style={{ 
+                  fontSize: 14, 
+                  fontWeight: 700, 
+                  color: simStep === 1 ? '#ffb830' : simStep === 2 ? '#ff4d6d' : '#00e5a0',
+                  margin: 0
+                }}>
+                  {simStep === 1 ? 'Warning: Inactivity detected' : simStep === 2 ? 'Triggered: Beneficiaries being notified...' : 'Simulation complete'}
+                </p>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, position: 'relative', zIndex: 1 }}>
@@ -164,6 +286,11 @@ const GuardianProtocolPanel = ({ onPing, dmsStatus, isPremium }) => {
           <p style={{ fontSize: 12, color: 'var(--text-3)', margin: 0 }}>
             {dmsStatus.status === 'active' ? 'until next check-in required' : 'until protocol activates'}
           </p>
+          {lastActiveText && (
+            <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
+              Last active: {lastActiveText}
+            </p>
+          )}
         </div>
 
         {/* Button */}
@@ -175,6 +302,42 @@ const GuardianProtocolPanel = ({ onPing, dmsStatus, isPremium }) => {
           <Activity size={16} />
           I'm Here — Reset Timer
         </motion.button>
+
+        {/* Simulate Inactivity Button */}
+        <motion.button 
+          onClick={simulateInactivity} 
+          disabled={simulating}
+          whileHover={{ scale: simulating ? 1 : 1.02 }}
+          whileTap={{ scale: simulating ? 1 : 0.98 }}
+          style={{ 
+            width: '100%', 
+            marginTop: 10, 
+            padding: '10px', 
+            borderRadius: 12,
+            border: '1px solid rgba(255,184,48,0.3)', 
+            background: simulating ? 'rgba(255,184,48,0.15)' : 'rgba(255,184,48,0.08)',
+            color: '#ffb830', 
+            fontSize: 13, 
+            fontWeight: 600, 
+            cursor: simulating ? 'not-allowed' : 'pointer',
+            opacity: simulating ? 0.7 : 1,
+            transition: 'all 0.2s ease',
+            position: 'relative',
+            zIndex: 1
+          }}
+        >
+          {simulating ? '⏳ Simulating...' : '🧪 Simulate Inactivity (Demo)'}
+        </motion.button>
+        <p style={{ 
+          fontSize: 10, 
+          color: 'var(--text-3)', 
+          textAlign: 'center', 
+          margin: '8px 0 0 0',
+          position: 'relative',
+          zIndex: 1
+        }}>
+          Demo only — does not affect your real data or notify anyone.
+        </p>
       </motion.div>
 
       {/* Legacy Health Score */}

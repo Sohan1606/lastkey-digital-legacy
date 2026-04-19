@@ -77,6 +77,20 @@ router.post('/access', async (req, res) => {
       Capsule.find({ userId: user._id })
     ]);
     
+    // Process assets - don't decrypt client-encrypted passwords
+    const assetsWithDecryptedPasswords = assets.map(asset => {
+      const assetObj = asset.toObject();
+      // Only decrypt server-side encrypted passwords
+      if (!assetObj.clientEncrypted) {
+        try {
+          assetObj.password = asset.decryptPassword();
+        } catch (err) {
+          // Keep as is if decryption fails
+        }
+      }
+      return assetObj;
+    });
+    
     // Update beneficiary access log
     await Beneficiary.findByIdAndUpdate(beneficiary._id, {
       accessGrantedAt: new Date(),
@@ -97,7 +111,7 @@ router.post('/access', async (req, res) => {
           email: beneficiary.email,
           accessGrantedAt: beneficiary.accessGrantedAt
         },
-        assets: assets,
+        assets: assetsWithDecryptedPasswords,
         capsules: capsules
       }
     });
@@ -111,19 +125,37 @@ router.post('/access', async (req, res) => {
 router.get('/download/:assetId', async (req, res) => {
   try {
     const { assetId } = req.params;
+    const { code } = req.query;
     
-    // In a real implementation, you might want to verify access
-    // For now, we'll just return the encrypted asset data
+    // Verify access code first
+    const beneficiary = await Beneficiary.findOne({
+      emergencyAccessCode: code,
+      emergencyAccessExpires: { $gt: new Date() }
+    });
     
-    const asset = await Asset.findById(assetId);
+    if (!beneficiary) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+    
+    const asset = await Asset.findOne({ _id: assetId, userId: beneficiary.userId });
     if (!asset) {
       return res.status(404).json({ error: 'Asset not found' });
+    }
+    
+    // Get password - don't decrypt if client-encrypted
+    let passwordDisplay = asset.password;
+    if (!asset.clientEncrypted) {
+      try {
+        passwordDisplay = asset.decryptPassword();
+      } catch (err) {
+        // Keep encrypted if decryption fails
+      }
     }
     
     // Create downloadable content
     let content = `${asset.platform} Credentials\n${'='.repeat(30)}\n`;
     content += `Username: ${asset.username}\n`;
-    content += `Password: ${asset.password}\n`;
+    content += `Password: ${passwordDisplay}\n`;
     if (asset.instruction) {
       content += `Instruction: ${asset.instruction}\n`;
     }

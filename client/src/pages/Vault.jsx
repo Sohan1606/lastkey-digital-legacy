@@ -1,13 +1,13 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../contexts/AuthContext';
-import { Pencil, Trash2, Eye, EyeOff, Plus, Shield, Lock, ExternalLink, X, Copy } from 'lucide-react';
+import { Pencil, Trash2, Eye, EyeOff, Plus, Shield, Lock, ExternalLink, X, Copy, ShieldCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import { deriveKey, encryptText, decryptText, isCryptoSupported } from '../utils/crypto';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
-
 
 const Vault = () => {
   const [showForm, setShowForm] = useState(false);
@@ -26,10 +26,22 @@ const Vault = () => {
   });
   const [showPasswords, setShowPasswords] = useState({});
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [cryptoSupported, setCryptoSupported] = useState(true);
+  const [vaultPassword, setVaultPassword] = useState('');
+  const [showUnlockModal, setShowUnlockModal] = useState(false);
+  const [pendingDecryptId, setPendingDecryptId] = useState(null);
   const formRef = useRef(null);
+  
+  // CRITICAL: CryptoKey stored in-memory only (never in localStorage/sessionStorage)
+  const cryptoKeyRef = useRef(null);
+  const [vaultUnlocked, setVaultUnlocked] = useState(false);
 
   const { user } = useAuth();
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    setCryptoSupported(isCryptoSupported());
+  }, []);
 
   const { data: assets, isPending: isLoading } = useQuery({
     queryKey: ['assets'],
@@ -41,22 +53,89 @@ const Vault = () => {
     retry: 1
   });
 
+  // Unlock vault with user password
+  const unlockVault = async (password) => {
+    if (!password || !user?.email) return false;
+    try {
+      cryptoKeyRef.current = await deriveKey(password, user.email);
+      setVaultUnlocked(true);
+      setShowUnlockModal(false);
+      setVaultPassword('');
+      return true;
+    } catch (err) {
+      toast.error('Failed to unlock vault. Please check your password.');
+      return false;
+    }
+  };
+
+  // Show password - decrypt if needed
+  const handleShowPassword = async (assetId, encryptedPassword) => {
+    // If already showing, just hide it
+    if (showPasswords[assetId]) {
+      setShowPasswords(prev => ({ ...prev, [assetId]: null }));
+      return;
+    }
+
+    // If vault not unlocked, show unlock modal
+    if (!cryptoKeyRef.current) {
+      setPendingDecryptId(assetId);
+      setShowUnlockModal(true);
+      return;
+    }
+
+    // Decrypt the password
+    try {
+      const decrypted = await decryptText(encryptedPassword, cryptoKeyRef.current);
+      setShowPasswords(prev => ({ ...prev, [assetId]: decrypted }));
+    } catch (err) {
+      toast.error('Failed to decrypt password. The vault password may be incorrect.');
+    }
+  };
+
   const createMutation = useMutation({
-    mutationFn: (assetData) => axios.post(`${API_BASE}/assets`, assetData),
+    mutationFn: async (assetData) => {
+      // ENFORCEMENT: Encrypt in browser BEFORE sending to backend
+      if (cryptoSupported && assetData.password && assetData.password.trim() !== '') {
+        if (!cryptoKeyRef.current) {
+          // Need to unlock vault first
+          throw new Error('Please unlock your vault first');
+        }
+        try {
+          // Encrypt the password before sending
+          assetData.password = await encryptText(assetData.password, cryptoKeyRef.current);
+          assetData.clientEncrypted = true;
+        } catch (err) {
+          console.error('Encryption failed:', err);
+          throw new Error('Failed to encrypt password');
+        }
+      }
+      return axios.post(`${API_BASE}/assets`, assetData);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries(['assets']);
       setShowForm(false);
       setFormData({ platform: '', username: '', url: '', password: '', notes: '', instruction: 'delete', assetType: 'general', cryptocurrency: '', walletAddress: '', blockchain: '' });
       setEditingId(null);
-      toast.success('Asset secured!');
+      toast.success('Asset secured with client-side encryption!');
     },
-    onError: () => {
-      toast.error('Failed to save asset');
+    onError: (err) => {
+      toast.error(err.message || 'Failed to save asset');
     }
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, assetData }) => axios.put(`${API_BASE}/assets/${id}`, assetData),
+    mutationFn: async ({ id, assetData }) => {
+      // ENFORCEMENT: Encrypt password if provided and vault is unlocked
+      if (cryptoSupported && assetData.password && assetData.password.trim() !== '' && cryptoKeyRef.current) {
+        try {
+          assetData.password = await encryptText(assetData.password, cryptoKeyRef.current);
+          assetData.clientEncrypted = true;
+        } catch (err) {
+          console.error('Encryption failed:', err);
+        }
+      }
+      return axios.put(`${API_BASE}/assets/${id}`, assetData);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries(['assets']);
       setShowForm(false);
@@ -79,6 +158,10 @@ const Vault = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!cryptoKeyRef.current && !editingId) {
+      setShowUnlockModal(true);
+      return;
+    }
     const submitData = { ...formData };
     if (editingId) {
       updateMutation.mutate({ id: editingId, assetData: submitData });
@@ -96,7 +179,7 @@ const Vault = () => {
       platform: asset.platform,
       username: asset.username,
       url: asset.url || '',
-      password: asset.password,
+      password: '', // Don't show encrypted password
       notes: asset.notes || '',
       instruction: asset.instruction,
       assetType: asset.assetType || 'general',
@@ -107,10 +190,6 @@ const Vault = () => {
     setEditingId(asset._id);
     setShowForm(true);
     scrollToForm();
-  };
-
-  const togglePassword = (id) => {
-    setShowPasswords(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
   const getInstructionStyle = (ins) => {
@@ -127,16 +206,115 @@ const Vault = () => {
       <div className="stars" />
       <div style={{ textAlign: 'center' }}>
         <div className="spinner" />
-        <p style={{ color: 'var(--text-2)', marginTop: 16, fontSize: 14 }}>Decrypting your vault...</p>
+        <p style={{ color: 'var(--text-2)', marginTop: 16, fontSize: 14 }}>Loading your vault...</p>
       </div>
     </div>
   );
 
-  
   return (
     <div className="page spatial-bg">
       <div className="stars" />
       <div className="container">
+        {/* Unlock Modal */}
+        <AnimatePresence>
+          {showUnlockModal && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              style={{
+                position: 'fixed', inset: 0, zIndex: 100,
+                background: 'rgba(0,0,0,0.7)',
+                backdropFilter: 'blur(8px)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center'
+              }}
+              onClick={() => setShowUnlockModal(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                style={{
+                  background: 'var(--glass-1)',
+                  backdropFilter: 'blur(24px)',
+                  border: '1px solid var(--glass-border)',
+                  borderRadius: 24,
+                  padding: 32,
+                  maxWidth: 400,
+                  width: '90%'
+                }}
+                onClick={e => e.stopPropagation()}
+              >
+                <div style={{ textAlign: 'center', marginBottom: 24 }}>
+                  <div style={{
+                    width: 56, height: 56, borderRadius: 16,
+                    background: 'linear-gradient(135deg, rgba(0,229,160,0.2), rgba(79,158,255,0.2))',
+                    border: '1px solid rgba(0,229,160,0.3)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    margin: '0 auto 16px'
+                  }}>
+                    <Lock style={{ width: 26, height: 26, color: '#00e5a0' }} />
+                  </div>
+                  <h3 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-1)', marginBottom: 8 }}>
+                    Unlock Your Vault
+                  </h3>
+                  <p style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.5 }}>
+                    Enter your vault password to encrypt/decrypt your assets.
+                    <br /><strong>This is never sent to our servers.</strong>
+                  </p>
+                </div>
+                <input
+                  type="password"
+                  placeholder="Enter vault password..."
+                  value={vaultPassword}
+                  onChange={e => setVaultPassword(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      unlockVault(vaultPassword).then(success => {
+                        if (success && pendingDecryptId) {
+                          // Retry the decrypt after unlock
+                          const asset = assets.find(a => a._id === pendingDecryptId);
+                          if (asset) {
+                            handleShowPassword(pendingDecryptId, asset.password);
+                          }
+                          setPendingDecryptId(null);
+                        }
+                      });
+                    }
+                  }}
+                  style={{
+                    width: '100%', padding: '14px 16px', borderRadius: 12,
+                    border: '1px solid var(--glass-border)', background: 'var(--glass-2)',
+                    color: 'var(--text-1)', fontSize: 14, marginBottom: 16
+                  }}
+                />
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => {
+                    unlockVault(vaultPassword).then(success => {
+                      if (success && pendingDecryptId) {
+                        const asset = assets.find(a => a._id === pendingDecryptId);
+                        if (asset) {
+                          handleShowPassword(pendingDecryptId, asset.password);
+                        }
+                        setPendingDecryptId(null);
+                      }
+                    });
+                  }}
+                  style={{
+                    width: '100%', padding: '14px', borderRadius: 12,
+                    border: 'none', background: 'linear-gradient(135deg, #00e5a0, #4f9eff)',
+                    color: '#001a12', fontWeight: 700, fontSize: 14, cursor: 'pointer'
+                  }}
+                >
+                  Unlock Vault
+                </motion.button>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 32 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -145,11 +323,25 @@ const Vault = () => {
               </div>
               <div>
                 <h1 className="display" style={{ fontSize: 28 }}>Digital Vault</h1>
-                <p style={{ fontSize: 13, color: 'var(--text-2)' }}>AES-256 encrypted legacy assets</p>
+                {/* Trust Indicator */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#00e5a0', marginTop: 4 }}>
+                  <ShieldCheck size={13} />
+                  <span>Encrypted in your browser — we cannot read this</span>
+                </div>
               </div>
             </div>
             {!showForm && (
-              <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} onClick={() => { setShowForm(false); setEditingId(null); setFormData({ platform: '', username: '', url: '', password: '', notes: '', instruction: 'delete' }); setShowForm(true); scrollToForm(); }}
+              <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} onClick={() => { 
+                if (!cryptoKeyRef.current) {
+                  setShowUnlockModal(true);
+                  return; // Don't open form if vault is locked
+                }
+                setShowForm(false); 
+                setEditingId(null); 
+                setFormData({ platform: '', username: '', url: '', password: '', notes: '', instruction: 'delete' }); 
+                setShowForm(true); 
+                scrollToForm(); 
+              }}
                 style={{ padding: '12px 20px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg, #00e5a0, #4f9eff)', color: '#001a12', fontWeight: 700, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
                 <Plus style={{ width: 16, height: 16 }} /> Add Asset
               </motion.button>
@@ -194,8 +386,32 @@ const Vault = () => {
                     <input type="text" value={formData.url} onChange={e => setFormData({...formData, url: e.target.value})} placeholder="https://..." />
                   </div>
                   <div>
-                    <label>Secret Password / Key</label>
-                    <input type="password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} placeholder="Enter the secure key" required />
+                    <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span>Secret Password / Key</span>
+                      {cryptoSupported && formData.password && cryptoKeyRef.current && (
+                        <span style={{ fontSize: 10, color: 'var(--pulse)', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
+                          <Lock size={10} /> Will be encrypted
+                        </span>
+                      )}
+                    </label>
+                    <input 
+                      type="password" 
+                      value={formData.password} 
+                      onChange={e => setFormData({...formData, password: e.target.value})}
+                      placeholder={cryptoKeyRef.current ? "Enter the secure key" : "Unlock vault first to add assets"} 
+                      required 
+                      disabled={!cryptoKeyRef.current && !editingId}
+                    />
+                    {!cryptoKeyRef.current && !editingId && (
+                      <p style={{ fontSize: 11, color: '#ffb830', marginTop: 6, marginBottom: 0 }}>
+                        ⚠️ Please unlock your vault using the button above to enable encryption.
+                      </p>
+                    )}
+                    {cryptoKeyRef.current && (
+                      <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 6, marginBottom: 0 }}>
+                        This password will be encrypted in your browser before being sent to our servers.
+                      </p>
+                    )}
                   </div>
                   <div style={{ gridColumn: '1 / -1' }}>
                     <label>Legacy Instruction</label>
@@ -205,7 +421,6 @@ const Vault = () => {
                       <option value="transfer">Transfer Ownership</option>
                     </select>
                   </div>
-                  {/* Asset Type */}
                   <div style={{ gridColumn: '1 / -1' }}>
                     <label>Asset Type</label>
                     <select value={formData.assetType || 'general'} onChange={e => setFormData({...formData, assetType: e.target.value})}>
@@ -217,7 +432,6 @@ const Vault = () => {
                       <option value="private_key">Private Key</option>
                     </select>
                   </div>
-                  {/* Crypto-specific fields */}
                   {formData.assetType && formData.assetType !== 'general' && (
                     <>
                       <div>
@@ -242,7 +456,6 @@ const Vault = () => {
                         <label>Public Wallet Address (Optional)</label>
                         <input type="text" value={formData.walletAddress || ''} onChange={e => setFormData({...formData, walletAddress: e.target.value})} placeholder="0x... or bc1... (public address only)" />
                       </div>
-                      {/* Security tip */}
                       <div style={{ gridColumn: '1 / -1', background: 'rgba(255,184,48,0.06)', border: '1px solid rgba(255,184,48,0.2)', borderRadius: 10, padding: '12px 14px' }}>
                         <p style={{ fontSize: 12, color: '#ffb830', margin: 0 }}>
                           Security: Your seed phrase / private key is encrypted with AES-256 before storage. Never share your private key with anyone other than your designated beneficiaries.
@@ -255,8 +468,8 @@ const Vault = () => {
                     <textarea value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} placeholder="Instructions or context..." style={{ height: 80, resize: 'none' }} />
                   </div>
                   <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 12 }}>
-                    <motion.button type="submit" whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }} disabled={createMutation.isPending || updateMutation.isPending}
-                      style={{ flex: 1, padding: '14px 24px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg, #4f9eff, #00e5a0)', color: '#001a12', fontWeight: 700, fontSize: 14, cursor: createMutation.isPending || updateMutation.isPending ? 'not-allowed' : 'pointer', opacity: createMutation.isPending || updateMutation.isPending ? 0.6 : 1 }}>
+                    <motion.button type="submit" whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }} disabled={createMutation.isPending || updateMutation.isPending || (!cryptoKeyRef.current && !editingId)}
+                      style={{ flex: 1, padding: '14px 24px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg, #4f9eff, #00e5a0)', color: '#001a12', fontWeight: 700, fontSize: 14, cursor: (createMutation.isPending || updateMutation.isPending || (!cryptoKeyRef.current && !editingId)) ? 'not-allowed' : 'pointer', opacity: (createMutation.isPending || updateMutation.isPending || (!cryptoKeyRef.current && !editingId)) ? 0.6 : 1 }}>
                       {createMutation.isPending || updateMutation.isPending ? 'Processing...' : editingId ? 'Update Asset' : 'Secure Asset'}
                     </motion.button>
                     <motion.button type="button" whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }} onClick={() => { setShowForm(false); setEditingId(null); }}
@@ -273,6 +486,7 @@ const Vault = () => {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 20 }}>
           {assets && assets.map((asset, idx) => {
             const insStyle = getInstructionStyle(asset.instruction);
+            const decryptedPassword = showPasswords[asset._id];
             return (
               <motion.div key={asset._id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }}
                 style={{ background: 'var(--glass-1)', backdropFilter: 'blur(20px)', border: '1px solid var(--glass-border)', borderRadius: 20, padding: 24, transition: 'all 0.22s' }}
@@ -309,7 +523,6 @@ const Vault = () => {
                   </div>
                 </div>
                 <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-1)', marginBottom: 14 }}>{asset.platform}</h3>
-                {/* Crypto badges */}
                 {asset.assetType && asset.assetType !== 'general' && (
                   <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
                     <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 6, background: 'rgba(255,184,48,0.1)', border: '1px solid rgba(255,184,48,0.2)', color: '#ffb830', fontWeight: 600 }}>
@@ -332,33 +545,40 @@ const Vault = () => {
                   <p style={{ fontSize: 14, color: 'var(--text-1)', marginTop: 4 }}>{asset.username}</p>
                 </div>
                 <div style={{ marginBottom: 14 }}>
-                  <span style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Secure Key</span>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Secure Key</span>
+                    {asset.clientEncrypted && (
+                      <span style={{ fontSize: 9, color: 'var(--pulse)', display: 'flex', alignItems: 'center', gap: 3, fontWeight: 600, background: 'rgba(0,229,160,0.1)', padding: '2px 6px', borderRadius: 4, border: '1px solid rgba(0,229,160,0.2)' }}>
+                        <Lock size={8} /> Client Encrypted
+                      </span>
+                    )}
+                  </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
                     <span style={{ fontFamily: 'var(--font-mono)', fontSize: 14, color: 'var(--text-1)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {showPasswords[asset._id] ? asset.password : '•••••••••••'}
+                      {decryptedPassword || '•••••••••••'}
                     </span>
-                    <button onClick={() => togglePassword(asset._id)} style={{ padding: 6, background: 'none', border: 'none', cursor: 'pointer' }}>
-                      {showPasswords[asset._id] ? <EyeOff style={{ width: 16, height: 16, color: 'var(--text-2)' }} /> : <Eye style={{ width: 16, height: 16, color: 'var(--text-2)' }} />}
+                    <button onClick={() => handleShowPassword(asset._id, asset.password)} style={{ padding: 6, background: 'none', border: 'none', cursor: 'pointer' }}>
+                      {decryptedPassword ? <EyeOff style={{ width: 16, height: 16, color: 'var(--text-2)' }} /> : <Eye style={{ width: 16, height: 16, color: 'var(--text-2)' }} />}
                     </button>
-                    <button
-                      onClick={async () => {
-                        try {
-                          await navigator.clipboard.writeText(asset.password);
-                          toast.success('Copied! Auto-clears in 30s', { duration: 2500 });
-                          setTimeout(async () => {
-                            try {
-                              const c = await navigator.clipboard.readText();
-                              if (c === asset.password) await navigator.clipboard.writeText('');
-                            } catch {
-                              return;
-                            }
-                          }, 30000);
-                        } catch { toast.error('Copy failed'); }
-                      }}
-                      style={{ padding: 6, background: 'none', border: 'none', cursor: 'pointer' }}
-                    >
-                      <Copy style={{ width: 14, height: 14, color: 'var(--text-3)' }} />
-                    </button>
+                    {decryptedPassword && (
+                      <button
+                        onClick={async () => {
+                          try {
+                            await navigator.clipboard.writeText(decryptedPassword);
+                            toast.success('Copied! Auto-clears in 30s', { duration: 2500 });
+                            setTimeout(async () => {
+                              try {
+                                const c = await navigator.clipboard.readText();
+                                if (c === decryptedPassword) await navigator.clipboard.writeText('');
+                              } catch { return; }
+                            }, 30000);
+                          } catch { toast.error('Copy failed'); }
+                        }}
+                        style={{ padding: 6, background: 'none', border: 'none', cursor: 'pointer' }}
+                      >
+                        <Copy style={{ width: 14, height: 14, color: 'var(--text-3)' }} />
+                      </button>
+                    )}
                   </div>
                 </div>
                 <div style={{ paddingTop: 14, borderTop: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -382,7 +602,14 @@ const Vault = () => {
             <Shield style={{ width: 64, height: 64, color: 'var(--text-3)', margin: '0 auto 20px' }} />
             <h3 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-1)', marginBottom: 10 }}>Your Vault is Empty</h3>
             <p style={{ fontSize: 14, color: 'var(--text-2)', marginBottom: 28, maxWidth: 400, margin: '0 auto 28px' }}>Secure your digital legacy. Add accounts, keys, and sensitive information.</p>
-            <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => { setShowForm(true); scrollToForm(); }}
+            <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => { 
+              if (!cryptoKeyRef.current) {
+                setShowUnlockModal(true);
+                return; // Don't open form if vault is locked
+              }
+              setShowForm(true); 
+              scrollToForm(); 
+            }}
               style={{ padding: '14px 32px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg, #4f9eff, #00e5a0)', color: '#001a12', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
               <Plus style={{ width: 16, height: 16, display: 'inline', marginRight: 8 }} /> Secure First Asset
             </motion.button>

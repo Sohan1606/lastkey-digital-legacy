@@ -33,11 +33,20 @@ exports.getAssets = async (req, res, next) => {
       details: { count: assets.length } 
     });
 
-    // Decrypt passwords
-    const assetsWithDecryptedPassword = assets.map(asset => ({
-      ...asset._doc,
-      password: asset.decryptPassword()
-    }));
+    // Decrypt passwords (only for server-side encrypted assets)
+    const assetsWithDecryptedPassword = assets.map(asset => {
+      const assetObj = asset.toObject();
+      // Only decrypt if not client-encrypted
+      if (!assetObj.clientEncrypted) {
+        try {
+          assetObj.password = asset.decryptPassword();
+        } catch (err) {
+          // If decryption fails, keep as is (might be client-encrypted)
+          assetObj.password = assetObj.password;
+        }
+      }
+      return assetObj;
+    });
 
     res.status(200).json({
       status: 'success',

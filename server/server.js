@@ -65,7 +65,7 @@ app.use('/api/', limiter);
 
 const io = new Server(server, {
   cors: {
-    origin: ["http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://localhost:5176", "http://localhost:5177"],
+    origin: allowedOrigins,
     methods: ["GET", "POST"]
   }
 });
@@ -139,6 +139,10 @@ app.use('/api/voice-messages', voiceMessagesRouter);
 // Memoir routes
 const memoirRouter = require('./routes/memoir');
 app.use('/api/memoir', memoirRouter);
+
+// Final Message routes
+const finalMessageRouter = require('./routes/finalMessage');
+app.use('/api/final-message', finalMessageRouter);
 
 // Basic test route (legacy)
 app.get('/api/test', (req, res) => {
@@ -257,23 +261,38 @@ const startWorkers = async () => {
             
             if (inactiveMinutes > user.inactivityDuration * 2) {
               user.triggerStatus = 'triggered';
+              user.warningEmailSent = false;
               console.log(`GUARDIAN PROTOCOL TRIGGERED for ${user.email}: Legacy protocols activated!`);
-            } else {
+            } else if (user.triggerStatus !== 'warning') {
               user.triggerStatus = 'warning';
+              user.warningEmailSent = false;
               console.log(`WARNING for ${user.email}: ${Math.floor(inactiveMinutes)}/${user.inactivityDuration} minutes inactive`);
             }
             
             await user.save();
 
-            // Real-time notification to user-specific room
-            global.io.to(user._id.toString()).emit('dms-update', {
-              userId: user._id.toString(),
-              status: user.triggerStatus,
-              remainingMinutes: user.inactivityDuration - Math.floor(inactiveMinutes),
-              message: user.triggerStatus === 'warning' ? `Warning: ${user.inactivityDuration - Math.floor(inactiveMinutes)}min remaining` : `GUARDIAN PROTOCOL TRIGGERED!`,
-              inactiveMinutes: Math.floor(inactiveMinutes),
-              inactivityDuration: user.inactivityDuration
-            });
+            // Real-time notification to user-specific room (only send once per state change)
+            if (user.triggerStatus === 'warning' && !user.warningEmailSent) {
+              global.io.to(user._id.toString()).emit('dms-update', {
+                userId: user._id.toString(),
+                status: user.triggerStatus,
+                remainingMinutes: user.inactivityDuration - Math.floor(inactiveMinutes),
+                message: `Warning: ${user.inactivityDuration - Math.floor(inactiveMinutes)}min remaining`,
+                inactiveMinutes: Math.floor(inactiveMinutes),
+                inactivityDuration: user.inactivityDuration
+              });
+              user.warningEmailSent = true;
+              await user.save();
+            } else if (user.triggerStatus === 'triggered') {
+              global.io.to(user._id.toString()).emit('dms-update', {
+                userId: user._id.toString(),
+                status: user.triggerStatus,
+                remainingMinutes: 0,
+                message: `GUARDIAN PROTOCOL TRIGGERED!`,
+                inactiveMinutes: Math.floor(inactiveMinutes),
+                inactivityDuration: user.inactivityDuration
+              });
+            }
 
             // Send emails ONLY on new trigger (no duplicates)
             if (user.triggerStatus === 'triggered' && !wasTriggered) {

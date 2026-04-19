@@ -8,6 +8,7 @@ import toast from 'react-hot-toast';
 import { initSocket } from '../socket';
 import GuardianProtocolPanel from '../components/GuardianProtocolPanel';
 import ActivityFeed from '../components/ActivityFeed';
+import LegacyTimeline from '../components/LegacyTimeline';
 import { 
   Users, Lock, Clock, Sparkles, Zap, Award, BarChart3,
   Loader2, Mic, Calendar, BookOpen, Trophy, Heart
@@ -49,10 +50,13 @@ const Dashboard = () => {
   });
 
   // Derive real DMS status from stats
+  const [lastActive, setLastActive] = useState(null);
+  
   useEffect(() => {
     if (stats?.data) {
-      const { triggerStatus, inactivityDuration, lastActive, isPremium: premium } = stats.data;
-      const lastActiveDate = new Date(lastActive || Date.now());
+      const { triggerStatus, inactivityDuration, lastActive: lastActiveRaw, isPremium: premium } = stats.data;
+      const lastActiveDate = new Date(lastActiveRaw || Date.now());
+      setLastActive(lastActiveRaw);
       const inactiveMs = Date.now() - lastActiveDate.getTime();
       const inactiveMinutes = Math.floor(inactiveMs / (1000 * 60));
       const remainingMinutes = Math.max(0, inactivityDuration - inactiveMinutes);
@@ -147,7 +151,7 @@ const Dashboard = () => {
 
         {/* ── SIDEBAR ── */}
         <div className="dashboard-sidebar" style={{ position: 'sticky', top: 96, display: 'flex', flexDirection: 'column', gap: 18 }}>
-          <GuardianProtocolPanel dmsStatus={dmsStatus} onPing={handlePing} isPremium={isPremium} />
+          <GuardianProtocolPanel dmsStatus={dmsStatus} onPing={handlePing} isPremium={isPremium} lastActive={lastActive} />
         </div>
 
         {/* ── MAIN ── */}
@@ -162,6 +166,40 @@ const Dashboard = () => {
             </h1>
           </motion.div>
 
+          {/* PRIMARY CTA — Send Final Message */}
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            style={{
+              background: 'linear-gradient(135deg, rgba(255,77,109,0.12), rgba(124,92,252,0.12))',
+              border: '1px solid rgba(255,77,109,0.25)',
+              borderRadius: 20,
+              padding: '20px 24px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              cursor: 'pointer'
+            }}
+            onClick={() => navigate('/final-message')}
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <div>
+              <p style={{ fontSize: 11, color: 'rgba(255,77,109,0.8)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>
+                Your most important action
+              </p>
+              <h2 style={{ fontSize: 18, fontWeight: 800, color: '#f0f4ff', margin: 0 }}>
+                💌 Send Your Final Message
+              </h2>
+              <p style={{ fontSize: 13, color: 'var(--text-2)', margin: '4px 0 0' }}>
+                Write to your loved ones. Choose when they receive it.
+              </p>
+            </div>
+            <div style={{ flexShrink: 0, background: 'rgba(255,77,109,0.15)', border: '1px solid rgba(255,77,109,0.3)', borderRadius: 12, padding: '10px 16px', fontSize: 13, fontWeight: 700, color: '#ff4d6d' }}>
+              Start →
+            </div>
+          </motion.div>
+
           {/* Quick Access */}
           <div>
             <p style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 14 }}>Quick Access</p>
@@ -170,9 +208,9 @@ const Dashboard = () => {
                 { label: 'Voice Messages', sub: 'AI-narrated farewell', path: '/voice-messages', color: '#7c5cfc', icon: '🎤' },
                 { label: 'Life Timeline', sub: 'Your visual story', path: '/life-timeline', color: '#4f9eff', icon: '📅' },
                 { label: 'Memoir AI', sub: 'Write your chapters', path: '/memoir-ai', color: '#00e5a0', icon: '📖' },
-                { label: 'Achievements', sub: 'Legacy score', path: '/gamification', color: '#ffb830', icon: '🏆' },
                 { label: 'Emergency Access', sub: 'Beneficiary portal', path: '/emergency', color: '#ff4d6d', icon: '🛡️' },
                 { label: 'Setup Guide', sub: 'Complete onboarding', path: '/onboarding', color: '#a78bfa', icon: '⚡' },
+                { label: 'Activity Logs', sub: 'View your activity', path: '/activity-logs', color: '#4f9eff', icon: '📋' },
               ].map((item, i) => (
                 <motion.button key={item.path} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
                   whileHover={{ y: -4, scale: 1.02 }} whileTap={{ scale: 0.97 }}
@@ -187,6 +225,14 @@ const Dashboard = () => {
                 </motion.button>
               ))}
             </div>
+          </div>
+
+          {/* What happens if I'm gone */}
+          <div>
+            <p style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 14 }}>
+              What happens when you're gone
+            </p>
+            <LegacyTimeline dmsStatus={dmsStatus} />
           </div>
 
           {/* AI Suggestions + Activity Feed */}

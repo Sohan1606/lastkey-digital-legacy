@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import toast from 'react-hot-toast';
-import { Shield, Bell, User, LogOut, Save } from 'lucide-react';
+import { Shield, Bell, User, LogOut, Save, Key, CheckCircle } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
@@ -17,6 +17,8 @@ const Settings = () => {
     phone: user?.phone || '',
     alertChannels: user?.alertChannels || ['email'],
   });
+  const [recoveryPassphrase, setRecoveryPassphrase] = useState('');
+  const [recoverySet, setRecoverySet] = useState(user?.recoveryPassphraseSet || false);
 
   useEffect(() => {
     if (user) {
@@ -25,6 +27,7 @@ const Settings = () => {
         phone: user.phone || '',
         alertChannels: user.alertChannels || ['email'],
       });
+      setRecoverySet(user.recoveryPassphraseSet || false);
     }
   }, [user]);
 
@@ -36,6 +39,17 @@ const Settings = () => {
       queryClient.invalidateQueries({ queryKey: ['user-stats'] });
     },
     onError: () => toast.error('Failed to save settings'),
+  });
+
+  const recoveryMutation = useMutation({
+    mutationFn: (passphrase) => axios.put(`${API_BASE}/user/recovery-passphrase`, { passphrase }, { headers: { Authorization: `Bearer ${token}` } }),
+    onSuccess: () => {
+      toast.success('Recovery passphrase saved!');
+      setRecoveryPassphrase('');
+      setRecoverySet(true);
+      queryClient.invalidateQueries({ queryKey: ['user'] });
+    },
+    onError: () => toast.error('Failed to save recovery passphrase'),
   });
 
   const toggleChannel = (channel) => {
@@ -92,6 +106,59 @@ const Settings = () => {
                 Your beneficiaries are notified after {settings.inactivityDuration} minutes of inactivity. Recommended: 1440 (1 day) or 43200 (30 days).
               </p>
             </div>
+          </div>
+
+          {/* Emergency Recovery Passphrase */}
+          <div style={{ background: 'var(--glass-1)', border: '1px solid var(--glass-border)', borderRadius: 20, padding: 28, marginBottom: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+              <Key size={16} color="var(--ion)" />
+              <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-1)', margin: 0 }}>
+                Emergency Recovery Passphrase
+                {recoverySet && <CheckCircle size={14} color="#00e5a0" style={{ marginLeft: 8, verticalAlign: 'middle' }} />}
+              </h2>
+            </div>
+            <p style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 16 }}>
+              Set a passphrase your beneficiaries can use to decrypt your vault in an emergency.
+              This is <strong>different from your account password</strong>. Write it down and share it safely.
+            </p>
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+              <input 
+                type="password" 
+                placeholder={recoverySet ? "Update recovery passphrase..." : "Set recovery passphrase..."}
+                value={recoveryPassphrase}
+                onChange={e => setRecoveryPassphrase(e.target.value)}
+                style={{ flex: 1, minWidth: 200 }}
+              />
+              <motion.button 
+                whileHover={{ scale: 1.02 }} 
+                whileTap={{ scale: 0.98 }}
+                onClick={() => {
+                  if (recoveryPassphrase.length < 8) {
+                    toast.error('Passphrase must be at least 8 characters');
+                    return;
+                  }
+                  recoveryMutation.mutate(recoveryPassphrase);
+                }}
+                disabled={recoveryMutation.isPending || !recoveryPassphrase}
+                style={{ 
+                  padding: '12px 24px', 
+                  borderRadius: 12, 
+                  border: 'none', 
+                  background: recoverySet ? 'linear-gradient(135deg, #00e5a0, #4f9eff)' : 'linear-gradient(135deg, #4f9eff, #7c5cfc)', 
+                  color: '#001a12', 
+                  fontWeight: 700, 
+                  fontSize: 14, 
+                  cursor: (recoveryMutation.isPending || !recoveryPassphrase) ? 'not-allowed' : 'pointer',
+                  opacity: (recoveryMutation.isPending || !recoveryPassphrase) ? 0.6 : 1
+                }}
+              >
+                {recoveryMutation.isPending ? 'Saving...' : (recoverySet ? 'Update Passphrase' : 'Save Passphrase')}
+              </motion.button>
+            </div>
+            <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 12 }}>
+              <span style={{ color: '#ffb830' }}>⚠️</span> We do not store this passphrase. If you lose it, your beneficiaries cannot decrypt your vault.
+              {recoverySet && <span style={{ color: '#00e5a0', marginLeft: 8 }}>✓ Recovery passphrase is set</span>}
+            </p>
           </div>
 
           {/* Notifications */}

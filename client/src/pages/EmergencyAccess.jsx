@@ -1,27 +1,34 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Shield, Lock, Eye, EyeOff, Mail, User, CheckCircle, Download, X, Copy } from 'lucide-react';
+import { Shield, Lock, Eye, EyeOff, Mail, User, CheckCircle, Download, X, Copy, Key } from 'lucide-react';
 import { motion } from 'framer-motion';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import { deriveKey, decryptText } from '../utils/crypto';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
 const EmergencyAccess = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const urlCode = new URLSearchParams(window.location.search).get('code');
-  const [accessCode, setAccessCode] = useState(urlCode || '');
+  const code = searchParams.get('code');
+  const [accessCode, setAccessCode] = useState(code || '');
   const [showPassword, setShowPassword] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [legacyData, setLegacyData] = useState(null);
   const [beneficiary, setBeneficiary] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  
+  // Recovery passphrase state
+  const [recoveryPassphrase, setRecoveryPassphrase] = useState('');
+  const [recoveryKey, setRecoveryKey] = useState(null);
+  const [decryptedAssets, setDecryptedAssets] = useState([]);
+  
+  // Session expiry
+  const sessionExpiryRef = useRef(null);
 
-  const code = searchParams.get('code');
-
-  const handleAccessRequest = async (e) => {
-    e.preventDefault();
+  const handleAccessRequest = useCallback(async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
     
     if (!accessCode) {
       toast.error('Please enter the access code');
@@ -37,18 +44,86 @@ const EmergencyAccess = () => {
         setLegacyData(response.data.data);
         setBeneficiary(response.data.data.beneficiary);
         setIsAuthenticated(true);
+        
+        // Initialize decrypted assets with locked state
+        setDecryptedAssets(response.data.data.assets.map(asset => ({
+          ...asset,
+          decryptedPassword: null,
+          isLocked: asset.clientEncrypted
+        })));
+        
         toast.success('Access granted!');
+        
+        // Start session expiry timer (30 minutes)
+        sessionExpiryRef.current = setTimeout(() => {
+          setIsAuthenticated(false);
+          setLegacyData(null);
+          setRecoveryKey(null);
+          toast('Session expired for security', { style: { border: '1px solid #ffb830' } });
+        }, 30 * 60 * 1000);
       }
     } catch (error) {
       toast.error(error.response?.data?.message || 'Invalid access code');
     } finally {
       setIsLoading(false);
     }
+  }, [accessCode]);
+
+  // Auto-submit when code from URL is valid
+  useEffect(() => {
+    if (code && code.length === 8) {
+      const timer = setTimeout(() => {
+        handleAccessRequest({ preventDefault: () => {} });
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [code, handleAccessRequest]);
+  
+  // Cleanup session timer on unmount
+  useEffect(() => {
+    return () => {
+      if (sessionExpiryRef.current) {
+        clearTimeout(sessionExpiryRef.current);
+      }
+    };
+  }, []);
+  
+  // Unlock vault with recovery passphrase
+  const unlockVault = async () => {
+    if (!recoveryPassphrase || !legacyData?.user?.email) {
+      toast.error('Please enter the recovery passphrase');
+      return;
+    }
+    
+    try {
+      const key = await deriveKey(recoveryPassphrase, legacyData.user.email);
+      setRecoveryKey(key);
+      
+      // Decrypt all assets
+      const decrypted = await Promise.all(
+        legacyData.assets.map(async (asset) => {
+          if (asset.clientEncrypted) {
+            try {
+              const decryptedPw = await decryptText(asset.password, key);
+              return { ...asset, decryptedPassword: decryptedPw, isLocked: false };
+            } catch (err) {
+              return { ...asset, decryptedPassword: '(Decryption failed)', isLocked: true };
+            }
+          }
+          return { ...asset, decryptedPassword: asset.password, isLocked: false };
+        })
+      );
+      
+      setDecryptedAssets(decrypted);
+      toast.success('Vault unlocked successfully!');
+    } catch (err) {
+      toast.error('Failed to unlock vault. Please check your recovery passphrase.');
+    }
   };
 
   const handleDownloadAsset = async (asset) => {
     try {
-      const response = await axios.get(`${API_BASE}/emergency/download/${asset._id}`, { responseType: 'blob' });
+      const response = await axios.get(`${API_BASE}/emergency/download/${asset._id}?code=${accessCode}`, { responseType: 'blob' });
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
@@ -134,15 +209,58 @@ const EmergencyAccess = () => {
               </div>
             </motion.div>
           </div>
+          
+          {/* Recovery Passphrase Unlock Section */}
+          {!recoveryKey && (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
+              style={{ background: 'rgba(255,184,48,0.06)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,184,48,0.25)', borderRadius: 20, padding: 24, marginBottom: 24 }}>
+              <h2 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-1)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Key style={{ width: 18, height: 18, color: '#ffb830' }} /> Unlock Vault
+              </h2>
+              <p style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 16 }}>
+                The account owner should have shared a recovery passphrase with you for emergency access.
+                Enter it below to decrypt the vault passwords.
+              </p>
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                <input
+                  type="password"
+                  placeholder="Enter recovery passphrase..."
+                  value={recoveryPassphrase}
+                  onChange={e => setRecoveryPassphrase(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') unlockVault(); }}
+                  style={{ flex: 1, minWidth: 200 }}
+                />
+                <motion.button 
+                  whileHover={{ scale: 1.02 }} 
+                  whileTap={{ scale: 0.98 }}
+                  onClick={unlockVault}
+                  disabled={!recoveryPassphrase}
+                  style={{ 
+                    padding: '12px 24px', 
+                    borderRadius: 12, 
+                    border: 'none', 
+                    background: recoveryPassphrase ? 'linear-gradient(135deg, #ffb830, #ff4d6d)' : 'var(--glass-2)', 
+                    color: '#001a12', 
+                    fontWeight: 700, 
+                    fontSize: 14, 
+                    cursor: recoveryPassphrase ? 'pointer' : 'not-allowed',
+                    opacity: recoveryPassphrase ? 1 : 0.6
+                  }}
+                >
+                  Unlock Vault
+                </motion.button>
+              </div>
+            </motion.div>
+          )}
 
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
             style={{ background: 'var(--glass-1)', backdropFilter: 'blur(20px)', border: '1px solid var(--glass-border)', borderRadius: 20, padding: 24, marginBottom: 24 }}>
             <h2 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-1)', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Lock style={{ width: 18, height: 18, color: 'var(--amber)' }} /> Digital Assets ({legacyData.assets.length})
+              <Lock style={{ width: 18, height: 18, color: 'var(--amber)' }} /> Digital Assets ({decryptedAssets.length})
             </h2>
             
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 14 }}>
-              {legacyData.assets.map((asset, index) => (
+              {decryptedAssets.map((asset, index) => (
                 <motion.div key={asset._id} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.4 + index * 0.1 }}
                   style={{ background: 'var(--glass-2)', border: '1px solid var(--glass-border)', borderRadius: 16, padding: 18 }}>
                   <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-1)', marginBottom: 6 }}>{asset.platform}</h3>
@@ -152,11 +270,25 @@ const EmergencyAccess = () => {
                       <span style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 600 }}>Password:</span>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1 }}>
                         <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-1)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {showPassword[asset._id] ? asset.password : '••••••••••'}
+                          {asset.isLocked ? '(Locked - unlock vault to view)' : (showPassword[asset._id] ? (asset.decryptedPassword || asset.password) : '••••••••••')}
                         </span>
-                        <button onClick={() => setShowPassword(prev => ({ ...prev, [asset._id]: !prev[asset._id] }))} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
-                          {showPassword[asset._id] ? <EyeOff style={{ width: 14, height: 14, color: 'var(--text-2)' }} /> : <Eye style={{ width: 14, height: 14, color: 'var(--text-2)' }} />}
-                        </button>
+                        {!asset.isLocked && (
+                          <button onClick={() => setShowPassword(prev => ({ ...prev, [asset._id]: !prev[asset._id] }))} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+                            {showPassword[asset._id] ? <EyeOff style={{ width: 14, height: 14, color: 'var(--text-2)' }} /> : <Eye style={{ width: 14, height: 14, color: 'var(--text-2)' }} />}
+                          </button>
+                        )}
+                        {!asset.isLocked && showPassword[asset._id] && (
+                          <button 
+                            onClick={() => { 
+                              const pw = asset.decryptedPassword || asset.password;
+                              navigator.clipboard.writeText(pw); 
+                              toast.success('Password copied!'); 
+                            }}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}
+                          >
+                            <Copy style={{ width: 13, height: 13, color: 'var(--text-2)' }} />
+                          </button>
+                        )}
                       </div>
                     </div>
                     {asset.instruction && (
@@ -225,20 +357,20 @@ const EmergencyAccess = () => {
           <form onSubmit={handleAccessRequest} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
             <div>
               <label>Emergency Access Code</label>
-              {urlCode && (
+              {code && (
                 <div style={{ marginBottom: 12, background: 'rgba(79,158,255,0.06)', border: '1px solid rgba(79,158,255,0.2)', borderRadius: 16, padding: 14 }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--ion)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
                     Code from link
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                     <div style={{ fontFamily: 'var(--font-mono)', fontSize: 22, fontWeight: 800, letterSpacing: '0.18em', color: 'var(--text-1)' }}>
-                      {urlCode.toUpperCase()}
+                      {code.toUpperCase()}
                     </div>
                     <button
                       type="button"
                       onClick={async () => {
                         try {
-                          await navigator.clipboard.writeText(urlCode.toUpperCase());
+                          await navigator.clipboard.writeText(code.toUpperCase());
                           toast.success('Code copied');
                         } catch {
                           toast.error('Copy failed');
@@ -255,7 +387,7 @@ const EmergencyAccess = () => {
               <input type="text" value={accessCode} onChange={(e) => setAccessCode(e.target.value.toUpperCase())} placeholder="Enter the 8-character access code" required maxLength={8} style={{ fontFamily: 'var(--font-mono)', fontSize: 16, letterSpacing: '0.15em', textAlign: 'center' }} />
               {code && <p style={{ fontSize: 12, color: 'var(--amber)', marginTop: 8 }}>Access code detected in URL</p>}
               <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 8 }}>
-                Your access code was sent via email by {legacyData?.user?.name || 'the account owner'}'s LastKey account.
+                Your access code was sent via email by the account owner's LastKey account.
               </p>
             </div>
 

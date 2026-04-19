@@ -117,8 +117,13 @@ const Pricing = () => {
 
   const getPrice = (plan) => {
     if (plan.monthlyPrice === 0) return { display: '$0', sub: 'forever free' };
-    const price = annual ? (plan.monthlyPrice * 10 / 12).toFixed(2) : plan.monthlyPrice;
-    return { display: `$${price}`, sub: annual ? '/mo, billed annually' : '/month' };
+    // Annual: 10 months price (2 months free) = 17% savings
+    const monthlyPrice = annual ? (plan.monthlyPrice * 10 / 12).toFixed(2) : plan.monthlyPrice;
+    const annualTotal = (plan.monthlyPrice * 10).toFixed(0);
+    return { 
+      display: `$${monthlyPrice}`, 
+      sub: annual ? `/mo ($${annualTotal}/year, save 17%)` : '/month' 
+    };
   };
 
   const faqs = [
@@ -159,8 +164,12 @@ const Pricing = () => {
           <h1 className="display" style={{ fontSize: 'clamp(2rem,4vw,3rem)', marginBottom: 14, background: 'linear-gradient(135deg,#f0f4ff,#a78bfa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
             Choose Your Legacy Plan
           </h1>
-          <p style={{ fontSize: 16, color: 'var(--text-2)', maxWidth: 520, margin: '0 auto 32px', lineHeight: 1.6 }}>
+          <p style={{ fontSize: 16, color: 'var(--text-2)', maxWidth: 520, margin: '0 auto 16px', lineHeight: 1.6 }}>
             Start free. Your love deserves to be preserved perfectly — upgrade when you're ready.
+          </p>
+          <p style={{ fontSize: 16, color: 'var(--text-2)', maxWidth: 500, margin: '0 auto 32px', textAlign: 'center', lineHeight: 1.6 }}>
+            Ensure your family never loses access to what matters most.<br/>
+            <span style={{ color: 'var(--text-3)', fontSize: 13 }}>One decision today. Priceless peace of mind forever.</span>
           </p>
 
           {/* Billing Toggle */}
@@ -172,7 +181,7 @@ const Pricing = () => {
                 style={{ width: 20, height: 20, borderRadius: '50%', background: 'white', position: 'absolute', top: 2 }} />
             </button>
             <span style={{ fontSize: 13, color: annual ? 'var(--text-1)' : 'var(--text-3)', fontWeight: annual ? 600 : 400 }}>
-              Annual <span style={{ background: 'rgba(0,229,160,0.15)', border: '1px solid rgba(0,229,160,0.3)', color: 'var(--pulse)', fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 6, marginLeft: 4 }}>Save 20%</span>
+              Annual <span style={{ background: 'rgba(0,229,160,0.15)', border: '1px solid rgba(0,229,160,0.3)', color: 'var(--pulse)', fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 6, marginLeft: 4 }}>Save 17%</span>
             </span>
           </div>
         </motion.div>
@@ -200,7 +209,7 @@ const Pricing = () => {
               >
                 {(plan.popular || plan.featured) && (
                   <div style={{ position: 'absolute', top: -12, left: '50%', transform: 'translateX(-50%)', background: plan.featured ? 'linear-gradient(135deg,#7c5cfc,#4f9eff)' : 'linear-gradient(135deg,#4f9eff,#00e5a0)', color: 'white', fontSize: 11, fontWeight: 700, padding: '4px 14px', borderRadius: 10, whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 5 }}>
-                    <Star size={10} /> {plan.featured ? 'Best Value' : 'Most Popular'}
+                    <Star size={10} /> {plan.featured ? '⭐ Best Value' : '⭐ Most Popular'}
                   </div>
                 )}
 

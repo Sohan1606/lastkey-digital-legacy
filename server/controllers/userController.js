@@ -19,7 +19,7 @@ exports.ping = async (req, res, next) => {
   try {
     const user = await User.findByIdAndUpdate(
       req.user._id,
-      { lastActive: new Date(), triggerStatus: 'active' },
+      { lastActive: new Date(), triggerStatus: 'active', warningEmailSent: false },
       { new: true }
     );
 

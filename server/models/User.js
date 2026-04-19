@@ -33,6 +33,10 @@ const userSchema = new mongoose.Schema({
     enum: ['active', 'warning', 'triggered'],
     default: 'active'
   },
+  warningEmailSent: {
+    type: Boolean,
+    default: false
+  },
   isPremium: {
     type: Boolean,
     default: false
@@ -93,8 +97,24 @@ const userSchema = new mongoose.Schema({
   onboardingComplete: {
     type: Boolean,
     default: false
+  },
+  // Emergency Recovery Passphrase (for beneficiary vault decryption)
+  recoveryPassphraseHash: {
+    type: String,
+    select: false // Never return by default
+  },
+  recoveryPassphraseSet: {
+    type: Boolean,
+    default: false
   }
 }, { timestamps: true });
+
+// Hash recovery passphrase before save
+userSchema.pre('save', async function() {
+  if (this.isModified('recoveryPassphraseHash') && this.recoveryPassphraseHash) {
+    this.recoveryPassphraseHash = await bcrypt.hash(this.recoveryPassphraseHash, 12);
+  }
+});
 
 // Hash password before save
 userSchema.pre('save', async function() {

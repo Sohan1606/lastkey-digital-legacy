@@ -12,6 +12,10 @@ const capsuleSchema = new mongoose.Schema({
     required: [true, 'Message is required'],
     maxLength: 5000
   },
+  content: {
+    type: String,
+    maxLength: 10000
+  },
   unlockAt: {
     type: Date,
     required: [true, 'Unlock date is required']
@@ -27,6 +31,28 @@ const capsuleSchema = new mongoose.Schema({
     type: mongoose.Schema.ObjectId,
     ref: 'User',
     required: true
+  },
+  // Final Message specific fields
+  isFinalMessage: {
+    type: Boolean,
+    default: false
+  },
+  recipient: {
+    type: mongoose.Schema.ObjectId,
+    ref: 'Beneficiary'
+  },
+  attachedAssets: [{
+    type: mongoose.Schema.ObjectId,
+    ref: 'Asset'
+  }],
+  attachedCapsules: [{
+    type: mongoose.Schema.ObjectId,
+    ref: 'Capsule'
+  }],
+  triggerType: {
+    type: String,
+    enum: ['inactivity', 'date'],
+    default: 'inactivity'
   }
 }, {
   timestamps: true
