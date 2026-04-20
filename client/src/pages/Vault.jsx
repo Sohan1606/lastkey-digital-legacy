@@ -7,8 +7,8 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 import { 
   deriveKey, encryptText, decryptText, isCryptoSupported,
-  generateMasterDEK, encryptDEKWithPassword, decryptDEKWithPassword,
-  setMasterDEK, getMasterDEK, hasDEK, clearMasterDEK
+  generateMasterDEK, setMasterDEK, getMasterDEK, hasDEK, clearMasterDEK,
+  wrapDEKWithKEK, unwrapDEKWithKEK, generateSalt
 } from '../utils/crypto';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
@@ -48,11 +48,11 @@ const Vault = () => {
     setCryptoSupported(isCryptoSupported());
   }, []);
 
-  // Check DEK status on mount
+  // Check DEK status on mount (using new vault-key API)
   const { data: dekStatus } = useQuery({
-    queryKey: ['dek-status'],
+    queryKey: ['vault-key-status'],
     queryFn: async () => {
-      const { data } = await axios.get(`${API_BASE}/dek/status`);
+      const { data } = await axios.get(`${API_BASE}/vault-key/status`);
       return data.data;
     },
     enabled: !!user
@@ -82,21 +82,21 @@ const Vault = () => {
       // Generate new master DEK
       const dek = await generateMasterDEK();
       
-      // Encrypt DEK with password
-      const encryptedData = await encryptDEKWithPassword(dek, password, user.email);
+      // Derive KEK from password with random salt
+      const salt = generateSalt();
+      const kek = await deriveKey(password, salt);
+      
+      // Wrap DEK with KEK
+      const wrapped = await wrapDEKWithKEK(dek, kek);
       
       // Send to server
-      await axios.post(`${API_BASE}/dek/initialize`, {
-        encryptedMasterKey: {
-          ciphertext: encryptedData.ciphertext,
-          iv: encryptedData.iv,
-          salt: encryptedData.salt,
+      await axios.post(`${API_BASE}/vault-key/initialize`, {
+        wrappedDek: {
+          saltB64: salt,
           iterations: 100000,
+          ivB64: wrapped.ivB64,
+          ciphertextB64: wrapped.ciphertextB64,
           version: '1'
-        },
-        keyVerification: {
-          hash: encryptedData.ciphertext.slice(0, 64), // First 64 chars as verification hash
-          salt: encryptedData.salt
         }
       });
       
@@ -124,15 +124,18 @@ const Vault = () => {
         return await initializeDEK(password);
       }
       
-      // Fetch encrypted DEK from server
-      const { data } = await axios.get(`${API_BASE}/dek/my-dek`);
-      const encryptedMasterKey = data.data.encryptedMasterKey;
+      // Fetch wrapped DEK from server
+      const { data } = await axios.get(`${API_BASE}/vault-key/wrapped-dek`);
+      const wrappedDek = data.data.wrappedDek;
       
-      // Decrypt DEK with password
-      const dek = await decryptDEKWithPassword(
-        encryptedMasterKey.ciphertext,
-        password,
-        user.email
+      // Derive KEK from password
+      const kek = await deriveKey(password, wrappedDek.saltB64);
+      
+      // Unwrap DEK with KEK
+      const dek = await unwrapDEKWithKEK(
+        wrappedDek.ciphertextB64,
+        wrappedDek.ivB64,
+        kek
       );
       
       setMasterDEK(dek);
@@ -504,7 +507,7 @@ const Vault = () => {
                         ⚠️ Please unlock your vault using the button above to enable encryption.
                       </p>
                     )}
-                    {cryptoKeyRef.current && (
+                    {hasDEK() && (
                       <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 6, marginBottom: 0 }}>
                         This password will be encrypted in your browser before being sent to our servers.
                       </p>

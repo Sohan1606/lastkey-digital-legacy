@@ -318,3 +318,155 @@ export async function decryptDEKAsBeneficiary(encryptedDEK, beneficiaryPrivateKe
   );
   return importDEK(decrypted);
 }
+
+// ============================================
+// Additional DEK utilities for file encryption
+// ============================================
+
+/**
+ * Encrypt file data with DEK
+ * @param {ArrayBuffer} fileData - Raw file bytes
+ * @param {CryptoKey} dek - Data Encryption Key
+ * @returns {Promise<{ciphertextB64: string, ivB64: string}>}
+ */
+export async function encryptFileWithDEK(fileData, dek) {
+  const iv = window.crypto.getRandomValues(new Uint8Array(12));
+  
+  const encrypted = await window.crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv },
+    dek,
+    fileData
+  );
+  
+  return {
+    ciphertextB64: btoa(String.fromCharCode(...new Uint8Array(encrypted))),
+    ivB64: btoa(String.fromCharCode(...iv))
+  };
+}
+
+/**
+ * Decrypt file data with DEK
+ * @param {string} ciphertextB64 - Base64 encrypted file
+ * @param {string} ivB64 - Base64 IV
+ * @param {CryptoKey} dek - Data Encryption Key
+ * @returns {Promise<ArrayBuffer>}
+ */
+export async function decryptFileWithDEK(ciphertextB64, ivB64, dek) {
+  const ciphertext = Uint8Array.from(atob(ciphertextB64), c => c.charCodeAt(0));
+  const iv = Uint8Array.from(atob(ivB64), c => c.charCodeAt(0));
+  
+  return window.crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv },
+    dek,
+    ciphertext
+  );
+}
+
+/**
+ * Encrypt text with DEK (for vault secrets)
+ * @param {string} text - Plaintext to encrypt
+ * @param {CryptoKey} dek - Data Encryption Key
+ * @returns {Promise<string>} - Base64 encrypted data (IV + ciphertext)
+ */
+export async function encryptTextWithDEK(text, dek) {
+  const iv = window.crypto.getRandomValues(new Uint8Array(12));
+  const enc = new TextEncoder();
+  
+  const encrypted = await window.crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv },
+    dek,
+    enc.encode(text)
+  );
+  
+  // Combine IV + ciphertext
+  const combined = new Uint8Array(iv.length + encrypted.byteLength);
+  combined.set(iv);
+  combined.set(new Uint8Array(encrypted), iv.length);
+  
+  return btoa(String.fromCharCode(...combined));
+}
+
+/**
+ * Decrypt text with DEK (for vault secrets)
+ * @param {string} ciphertextB64 - Base64 encrypted data (IV + ciphertext)
+ * @param {CryptoKey} dek - Data Encryption Key
+ * @returns {Promise<string>} - Decrypted plaintext
+ */
+export async function decryptTextWithDEK(ciphertextB64, dek) {
+  const combined = Uint8Array.from(atob(ciphertextB64), c => c.charCodeAt(0));
+  const iv = combined.slice(0, 12);
+  const ciphertext = combined.slice(12);
+  
+  const decrypted = await window.crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv },
+    dek,
+    ciphertext
+  );
+  
+  return new TextDecoder().decode(decrypted);
+}
+
+/**
+ * Wrap DEK with KEK (Key Encryption Key)
+ * @param {CryptoKey} dek - Data Encryption Key to wrap
+ * @param {CryptoKey} kek - Key Encryption Key (derived from password)
+ * @returns {Promise<{ciphertextB64: string, ivB64: string}>}
+ */
+export async function wrapDEKWithKEK(dek, kek) {
+  const rawDEK = await exportDEK(dek);
+  const iv = window.crypto.getRandomValues(new Uint8Array(12));
+  
+  const encrypted = await window.crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv },
+    kek,
+    rawDEK
+  );
+  
+  return {
+    ciphertextB64: btoa(String.fromCharCode(...new Uint8Array(encrypted))),
+    ivB64: btoa(String.fromCharCode(...iv))
+  };
+}
+
+/**
+ * Unwrap DEK with KEK
+ * @param {string} ciphertextB64 - Wrapped DEK
+ * @param {string} ivB64 - IV for wrapping
+ * @param {CryptoKey} kek - Key Encryption Key
+ * @returns {Promise<CryptoKey>}
+ */
+export async function unwrapDEKWithKEK(ciphertextB64, ivB64, kek) {
+  const ciphertext = Uint8Array.from(atob(ciphertextB64), c => c.charCodeAt(0));
+  const iv = Uint8Array.from(atob(ivB64), c => c.charCodeAt(0));
+  
+  const decrypted = await window.crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv },
+    kek,
+    ciphertext
+  );
+  
+  const dek = await importDEK(decrypted);
+  masterDEK = dek; // Cache in memory
+  return dek;
+}
+
+/**
+ * Generate a random salt for PBKDF2
+ * @param {number} length - Salt length in bytes (default 16)
+ * @returns {string} - Base64 encoded salt
+ */
+export function generateSalt(length = 16) {
+  const salt = window.crypto.getRandomValues(new Uint8Array(length));
+  return btoa(String.fromCharCode(...salt));
+}
+
+/**
+ * Compute SHA-256 hash of data
+ * @param {ArrayBuffer} data - Data to hash
+ * @returns {Promise<string>} - Hex encoded hash
+ */
+export async function computeSHA256(data) {
+  const hashBuffer = await window.crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}

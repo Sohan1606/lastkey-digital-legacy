@@ -3,7 +3,7 @@ const Asset = require('../models/Asset');
 const Capsule = require('../models/Capsule');
 const User = require('../models/User');
 const LegalDocument = require('../models/LegalDocument');
-const DataEncryptionKey = require('../models/DataEncryptionKey');
+const Beneficiary = require('../models/Beneficiary');
 const EmergencySession = require('../models/EmergencySession');
 const { log } = require('../services/auditService');
 
@@ -204,22 +204,14 @@ router.get('/vault-share', (req, res, next) => getProtectBeneficiary()(req, res,
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
 
-    // Get DEK with beneficiary share
-    const dek = await DataEncryptionKey.findOne({ ownerId: owner._id });
+    // Get beneficiary with vault share
+    const beneficiaryWithShare = await Beneficiary.findById(beneficiary._id)
+      .select('vaultShare encryptionKeys.encryptedPrivateKeyBlob');
     
-    if (!dek) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Vault encryption not initialized' 
-      });
-    }
-
-    const share = dek.getActiveShare(beneficiary._id);
-    
-    if (!share) {
+    if (!beneficiaryWithShare?.vaultShare?.encryptedDekB64) {
       return res.status(404).json({
         success: false,
-        message: 'No vault share found. Owner must grant access first.'
+        message: 'No vault share found. Owner must create DEK share first.'
       });
     }
 
@@ -227,9 +219,9 @@ router.get('/vault-share', (req, res, next) => getProtectBeneficiary()(req, res,
     res.status(200).json({
       success: true,
       data: {
-        encryptedShare: share.encryptedShare,
-        encryptedPrivateKeyBlob: beneficiary.encryptionKeys?.encryptedPrivateKeyBlob,
-        grantedAt: share.grantedAt
+        encryptedDekB64: beneficiaryWithShare.vaultShare.encryptedDekB64,
+        encryptedPrivateKeyBlob: beneficiaryWithShare.encryptionKeys?.encryptedPrivateKeyBlob,
+        grantedAt: beneficiaryWithShare.vaultShare.dekShareCreatedAt
       }
     });
   } catch (err) {
