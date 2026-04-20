@@ -1,12 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, Mail, Lock, CheckCircle, AlertCircle, Clock, Eye, EyeOff, ArrowRight, Key } from 'lucide-react';
+import { Shield, Mail, Lock, CheckCircle, AlertCircle, Clock, Eye, EyeOff, ArrowRight, Key, Download, FileText, Unlock } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { 
   generateRSAKeypair, 
   exportRSAPublicKey, 
   exportRSAPrivateKey,
+  importRSAPrivateKey,
+  decryptDEKAsBeneficiary,
+  decryptTextWithDEK,
   deriveKey,
   encryptText
 } from '../utils/crypto';
@@ -25,6 +28,14 @@ const BeneficiaryPortal = () => {
   const [sessionToken, setSessionToken] = useState(null);
   const [authToken, setAuthToken] = useState(null);
   const [grantId, setGrantId] = useState(null);
+  
+  // Vault access state
+  const [assets, setAssets] = useState([]);
+  const [capsules, setCapsules] = useState([]);
+  const [documents, setDocuments] = useState([]);
+  const [dek, setDek] = useState(null);
+  const [activeTab, setActiveTab] = useState('assets');
+  const [decryptedPasswords, setDecryptedPasswords] = useState({});
 
   // Check enrollment status
   const checkStatus = async (e) => {
@@ -180,6 +191,10 @@ const BeneficiaryPortal = () => {
         );
         
         setSessionToken(sessionRes.data.data.sessionToken);
+        
+        // Load vault data and decrypt DEK
+        await loadVaultData(unlockSecret, sessionRes.data.data.sessionToken);
+        
         setStep('access');
         toast.success('Access granted!');
       } else {
@@ -189,6 +204,85 @@ const BeneficiaryPortal = () => {
       toast.error(err.response?.data?.message || 'Access denied');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Load vault data and decrypt DEK
+  const loadVaultData = async (secret, token) => {
+    try {
+      const headers = { 
+        Authorization: `Bearer ${authToken}`,
+        'X-Session-Token': token
+      };
+
+      // Fetch vault share (encrypted DEK)
+      const shareRes = await axios.get(`${API_BASE}/beneficiary/portal/vault-share`, { headers });
+      const { encryptedDekB64, encryptedPrivateKeyBlob } = shareRes.data.data;
+
+      // Decrypt private key with unlock secret
+      const kek = await deriveKey(secret, email);
+      const privateKeyJson = await decryptPrivateKey(encryptedPrivateKeyBlob, kek);
+      const privateKey = await importRSAPrivateKey(JSON.parse(privateKeyJson));
+
+      // Decrypt DEK with private key
+      const dekKey = await decryptDEKAsBeneficiary(encryptedDekB64, privateKey);
+      setDek(dekKey);
+
+      // Fetch assets, capsules, documents in parallel
+      const [assetsRes, capsulesRes, docsRes] = await Promise.all([
+        axios.get(`${API_BASE}/beneficiary/portal/assets`, { headers }),
+        axios.get(`${API_BASE}/beneficiary/portal/capsules`, { headers }),
+        axios.get(`${API_BASE}/beneficiary/portal/legal-documents`, { headers }).catch(() => ({ data: { data: [] } }))
+      ]);
+
+      setAssets(assetsRes.data.data || []);
+      setCapsules(capsulesRes.data.data || []);
+      setDocuments(docsRes.data.data || []);
+
+    } catch (err) {
+      console.error('Vault loading error:', err);
+      toast.error('Failed to load vault data');
+      throw err;
+    }
+  };
+
+  // Decrypt private key blob
+  const decryptPrivateKey = async (blob, kek) => {
+    // Parse the encrypted blob
+    const combined = Uint8Array.from(atob(blob.ciphertext), c => c.charCodeAt(0));
+    const iv = combined.slice(0, 12);
+    const ciphertext = combined.slice(12);
+    
+    const decrypted = await window.crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv },
+      kek,
+      ciphertext
+    );
+    
+    return new TextDecoder().decode(decrypted);
+  };
+
+  // Decrypt asset password
+  const decryptAssetPassword = async (assetId, encryptedPassword) => {
+    if (!dek) {
+      toast.error('DEK not available');
+      return;
+    }
+    
+    try {
+      const decrypted = await decryptTextWithDEK(encryptedPassword, dek);
+      setDecryptedPasswords(prev => ({ ...prev, [assetId]: decrypted }));
+      
+      // Auto-hide after 30 seconds
+      setTimeout(() => {
+        setDecryptedPasswords(prev => {
+          const next = { ...prev };
+          delete next[assetId];
+          return next;
+        });
+      }, 30000);
+    } catch (err) {
+      toast.error('Failed to decrypt password');
     }
   };
 
@@ -606,81 +700,263 @@ const BeneficiaryPortal = () => {
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-      style={{ textAlign: 'center' }}
+      style={{ width: '100%' }}
     >
-      <div style={{
-        width: 80,
-        height: 80,
-        borderRadius: 24,
-        background: 'linear-gradient(135deg, rgba(0,229,160,0.2), rgba(79,158,255,0.2))',
-        border: '1px solid rgba(0,229,160,0.3)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        margin: '0 auto 24px'
-      }}>
-        <Shield size={36} style={{ color: '#00e5a0' }} />
-      </div>
-      
-      <h2 style={{ fontSize: 28, fontWeight: 800, marginBottom: 12 }}>
-        Access Granted
-      </h2>
-      <p style={{ fontSize: 15, color: 'var(--text-2)', marginBottom: 32, maxWidth: 400, margin: '0 auto 32px' }}>
-        You now have access to the legacy. Your session is active for 30 minutes.
-      </p>
-      
-      <div style={{
-        background: 'var(--glass-1)',
-        border: '1px solid var(--glass-border)',
-        borderRadius: 16,
-        padding: 24,
-        maxWidth: 500,
-        margin: '0 auto'
-      }}>
-        <p style={{ fontSize: 14, color: 'var(--text-2)', marginBottom: 16 }}>
-          Available Resources:
-        </p>
-        <div style={{ display: 'grid', gap: 12 }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 12,
-            padding: '12px 16px',
-            background: 'var(--glass-2)',
-            borderRadius: 10
-          }}>
-            <Lock size={18} style={{ color: '#4f9eff' }} />
-            <span style={{ fontSize: 14 }}>Digital Assets & Credentials</span>
-          </div>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 12,
-            padding: '12px 16px',
-            background: 'var(--glass-2)',
-            borderRadius: 10
-          }}>
-            <Clock size={18} style={{ color: '#7c5cfc' }} />
-            <span style={{ fontSize: 14 }}>Time Capsules & Messages</span>
-          </div>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 12,
-            padding: '12px 16px',
-            background: 'var(--glass-2)',
-            borderRadius: 10
-          }}>
-            <Shield size={18} style={{ color: '#00e5a0' }} />
-            <span style={{ fontSize: 14 }}>Legal Documents & Property Records</span>
-          </div>
+      {/* Header */}
+      <div style={{ textAlign: 'center', marginBottom: 24 }}>
+        <div style={{
+          width: 64,
+          height: 64,
+          borderRadius: 20,
+          background: 'linear-gradient(135deg, rgba(0,229,160,0.2), rgba(79,158,255,0.2))',
+          border: '1px solid rgba(0,229,160,0.3)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          margin: '0 auto 16px'
+        }}>
+          <Shield size={28} style={{ color: '#00e5a0' }} />
         </div>
+        <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 8 }}>
+          Legacy Access Portal
+        </h2>
+        <p style={{ fontSize: 13, color: 'var(--text-2)' }}>
+          Session active • {assets.length} assets • {capsules.length} capsules
+        </p>
       </div>
-      
-      <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 24 }}>
-        Session Token: {sessionToken?.substring(0, 16)}...
-      </p>
+
+      {/* Tabs */}
+      <div style={{ 
+        display: 'flex', 
+        gap: 8, 
+        marginBottom: 20,
+        borderBottom: '1px solid var(--glass-border)',
+        paddingBottom: 12
+      }}>
+        {[
+          { id: 'assets', label: 'Assets', icon: Lock, count: assets.length },
+          { id: 'capsules', label: 'Capsules', icon: Clock, count: capsules.length },
+          { id: 'documents', label: 'Documents', icon: FileText, count: documents.length }
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            style={{
+              flex: 1,
+              padding: '10px 16px',
+              borderRadius: 10,
+              border: 'none',
+              background: activeTab === tab.id ? 'rgba(0,229,160,0.15)' : 'transparent',
+              color: activeTab === tab.id ? '#00e5a0' : 'var(--text-2)',
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 6
+            }}
+          >
+            <tab.icon size={14} />
+            {tab.label}
+            {tab.count > 0 && (
+              <span style={{ 
+                background: activeTab === tab.id ? '#00e5a0' : 'var(--glass-2)',
+                color: activeTab === tab.id ? '#001a12' : 'var(--text-2)',
+                padding: '2px 6px',
+                borderRadius: 10,
+                fontSize: 10
+              }}>
+                {tab.count}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Content */}
+      <div style={{ maxHeight: 400, overflowY: 'auto' }}>
+        {activeTab === 'assets' && renderAssetsTab()}
+        {activeTab === 'capsules' && renderCapsulesTab()}
+        {activeTab === 'documents' && renderDocumentsTab()}
+      </div>
     </motion.div>
+  );
+
+  const renderAssetsTab = () => (
+    <div style={{ display: 'grid', gap: 12 }}>
+      {assets.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-3)' }}>
+          <Lock size={32} style={{ marginBottom: 12, opacity: 0.5 }} />
+          <p>No assets available</p>
+        </div>
+      ) : (
+        assets.map(asset => (
+          <div
+            key={asset._id}
+            style={{
+              background: 'var(--glass-2)',
+              border: '1px solid var(--glass-border)',
+              borderRadius: 12,
+              padding: 16
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+              <div>
+                <h4 style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>{asset.platform}</h4>
+                <p style={{ fontSize: 12, color: 'var(--text-3)' }}>{asset.username}</p>
+              </div>
+              <span style={{
+                fontSize: 10,
+                padding: '4px 8px',
+                borderRadius: 6,
+                background: asset.instruction === 'share' ? 'rgba(0,229,160,0.15)' : 'rgba(255,77,109,0.15)',
+                color: asset.instruction === 'share' ? '#00e5a0' : '#ff4d6d',
+                textTransform: 'uppercase',
+                fontWeight: 600
+              }}>
+                {asset.instruction}
+              </span>
+            </div>
+            
+            {asset.password && (
+              <div style={{ 
+                background: 'rgba(0,0,0,0.2)', 
+                borderRadius: 8, 
+                padding: 12,
+                marginBottom: 12
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontFamily: 'monospace', fontSize: 13 }}>
+                    {decryptedPasswords[asset._id] || '••••••••••••••••'}
+                  </span>
+                  <button
+                    onClick={() => {
+                      if (decryptedPasswords[asset._id]) {
+                        setDecryptedPasswords(prev => {
+                          const next = { ...prev };
+                          delete next[asset._id];
+                          return next;
+                        });
+                      } else {
+                        decryptAssetPassword(asset._id, asset.password);
+                      }
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#00e5a0',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      fontSize: 12
+                    }}
+                  >
+                    {decryptedPasswords[asset._id] ? <EyeOff size={14} /> : <Unlock size={14} />}
+                    {decryptedPasswords[asset._id] ? 'Hide' : 'Decrypt'}
+                  </button>
+                </div>
+              </div>
+            )}
+            
+            {asset.notes && (
+              <p style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 8 }}>{asset.notes}</p>
+            )}
+          </div>
+        ))
+      )}
+    </div>
+  );
+
+  const renderCapsulesTab = () => (
+    <div style={{ display: 'grid', gap: 12 }}>
+      {capsules.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-3)' }}>
+          <Clock size={32} style={{ marginBottom: 12, opacity: 0.5 }} />
+          <p>No capsules available</p>
+        </div>
+      ) : (
+        capsules.map(capsule => (
+          <div
+            key={capsule._id}
+            style={{
+              background: 'var(--glass-2)',
+              border: '1px solid var(--glass-border)',
+              borderRadius: 12,
+              padding: 16
+            }}
+          >
+            <h4 style={{ fontSize: 15, fontWeight: 600, marginBottom: 8 }}>{capsule.title}</h4>
+            <p style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 12, lineHeight: 1.5 }}>
+              {capsule.content}
+            </p>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {capsule.attachments?.map((att, idx) => (
+                <span
+                  key={idx}
+                  style={{
+                    fontSize: 11,
+                    padding: '4px 8px',
+                    background: 'rgba(79,158,255,0.15)',
+                    borderRadius: 6,
+                    color: '#4f9eff'
+                  }}
+                >
+                  {att.filename}
+                </span>
+              ))}
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  );
+
+  const renderDocumentsTab = () => (
+    <div style={{ display: 'grid', gap: 12 }}>
+      {documents.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-3)' }}>
+          <FileText size={32} style={{ marginBottom: 12, opacity: 0.5 }} />
+          <p>No documents available</p>
+        </div>
+      ) : (
+        documents.map(doc => (
+          <div
+            key={doc._id}
+            style={{
+              background: 'var(--glass-2)',
+              border: '1px solid var(--glass-border)',
+              borderRadius: 12,
+              padding: 16
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h4 style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>{doc.title}</h4>
+                <p style={{ fontSize: 12, color: 'var(--text-3)' }}>{doc.documentType}</p>
+              </div>
+              <button
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: 8,
+                  border: 'none',
+                  background: 'rgba(0,229,160,0.15)',
+                  color: '#00e5a0',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4
+                }}
+              >
+                <Download size={14} />
+                Download
+              </button>
+            </div>
+          </div>
+        ))
+      )}
+    </div>
   );
 
   return (
