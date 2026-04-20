@@ -6,6 +6,7 @@ const {
   updateCapsule, 
   deleteCapsule 
 } = require('../controllers/capsuleController');
+const { validate, createCapsuleSchema } = require('../validators');
 
 const router = express.Router();
 
@@ -14,7 +15,7 @@ router.use(protect);
 router
   .route('/')
   .get(getMyCapsules)
-  .post(createCapsule);
+  .post(validate(createCapsuleSchema), createCapsule);
 
 router
   .route('/:id')

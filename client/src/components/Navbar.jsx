@@ -45,6 +45,7 @@ const Navbar = () => {
 
   const more = [
     { name: 'Beneficiaries', path: '/beneficiaries', icon: Users },
+    { name: 'Legal Binder', path: '/legal-documents', icon: Shield },
     { name: 'Voice', path: '/voice-messages', icon: Mic },
     { name: 'Timeline', path: '/life-timeline', icon: Calendar },
     { name: 'Memoir', path: '/memoir-ai', icon: BookOpen },

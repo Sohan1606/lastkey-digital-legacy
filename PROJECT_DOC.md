@@ -70,7 +70,16 @@ This document explains **what every major part of the project is**, **why it exi
 ### Beneficiaries
 - A beneficiary is someone who should receive access to the legacy.
 - Relationship icons/colors help UX clarity.
-- Emergency access codes allow beneficiaries to access the portal (public route).
+- **Enrollment Flow**: Beneficiaries must enroll via secure token and set an unlock secret.
+- **No Emergency Codes**: Access requires login + unlock secret after owner is triggered.
+
+### Property & Legal Documents
+Physical documents (deeds, titles, wills) are stored as:
+- **Encrypted attachments** - PDF/image files
+- **Official reference metadata** - Instrument numbers, book/page, parcel IDs
+- **Original location instructions** - Where physical documents are stored, contact info
+
+This allows beneficiaries to locate original documents while maintaining a digital reference.
 
 ### Time Capsules
 - Messages stored with an `unlockAt`.
@@ -271,7 +280,46 @@ From `client/`:
 
 ---
 
-## 14) Debugging checklist (common issues)
+## 14) Sudden Death Readiness Policy
+
+### The Problem
+
+If an owner suddenly passes away without proper preparation:
+- Beneficiaries may not know they are beneficiaries
+- No unlock secrets have been set
+- The legacy becomes inaccessible
+
+### Mitigation Measures
+
+1. **Enrollment Requirement**
+   - Owner cannot enable Guardian Protocol auto-release until at least one beneficiary is enrolled
+   - Enrolled = beneficiary has set their unlock secret
+
+2. **Readiness Score**
+   - Dashboard shows "Legacy Readiness Score" (0-100)
+   - Factors: vault items, enrolled beneficiaries, time capsules, legal documents
+   - Encourages owners to complete setup
+
+3. **Onboarding Wizard**
+   - Guides new owners through: security → vault → beneficiaries → guardian settings
+   - Ensures minimum viable legacy is configured
+
+4. **Regular Reminders**
+   - Prompts to add more beneficiaries if only one exists
+   - Suggests updating unlock secrets periodically
+
+### Implementation
+
+```javascript
+// In user settings update
+if (inactivityDuration < 30 && enrolledBeneficiaryCount === 0) {
+  return error("Cannot enable short inactivity period without enrolled beneficiaries");
+}
+```
+
+---
+
+## 15) Debugging checklist (common issues)
 
 ### Server boots but DB is down
 - The server should still listen; it will retry MongoDB in the background.

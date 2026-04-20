@@ -12,9 +12,20 @@ const signToken = id => jwt.sign({ id }, JWT_SECRET, {
   expiresIn: process.env.JWT_EXPIRES_IN || '90d'
 });
 
+// Helper to redact sensitive fields from logs
+const redactSensitive = (obj) => {
+  const sensitive = ['password', 'passphrase', 'token', 'secret', 'seed', 'authorization'];
+  const redacted = { ...obj };
+  sensitive.forEach(key => {
+    if (redacted[key]) redacted[key] = '[REDACTED]';
+  });
+  return redacted;
+};
+
 exports.register = async (req, res, next) => {
   try {
-    console.log('📝 Registration request received:', req.body);
+    // Log without sensitive data (S3)
+    console.log('📝 Registration request received:', redactSensitive(req.body));
     const { name, email, password } = req.body;
 
     // Validation
@@ -108,7 +119,7 @@ exports.register = async (req, res, next) => {
       message: 'Registration successful! Please check your email to verify your account.'
     });
   } catch (error) {
-    console.error('❌ Registration error:', error);
+    console.error('❌ Registration error:', error.message);
     res.status(400).json({
       status: 'fail',
       message: error.message
@@ -132,7 +143,7 @@ exports.login = async (req, res, next) => {
     // Find user and select password
     const user = await User.findOne({ email }).select('+password');
     if (!user) {
-      console.log('❌ Login failed: User not found');
+      console.log('❌ Login failed: Invalid credentials');
       return res.status(401).json({
         status: 'fail',
         message: 'Invalid credentials'
@@ -141,7 +152,7 @@ exports.login = async (req, res, next) => {
 
     const isPasswordCorrect = await user.comparePassword(password);
     if (!isPasswordCorrect) {
-      console.log('❌ Login failed: Incorrect password');
+      console.log('❌ Login failed: Invalid credentials');
       return res.status(401).json({
         status: 'fail',
         message: 'Invalid credentials'
@@ -179,7 +190,7 @@ exports.login = async (req, res, next) => {
       }
     });
   } catch (error) {
-    console.error('❌ Login error:', error);
+    console.error('❌ Login error:', error.message);
     res.status(400).json({
       status: 'fail',
       message: error.message

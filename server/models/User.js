@@ -106,7 +106,15 @@ const userSchema = new mongoose.Schema({
   recoveryPassphraseSet: {
     type: Boolean,
     default: false
-  }
+  },
+  // WebAuthn/Passkey credentials
+  webauthnCredentials: [{
+    credentialId: { type: String, required: true },
+    publicKey: { type: String, required: true },
+    counter: { type: Number, default: 0 },
+    deviceName: { type: String },
+    createdAt: { type: Date, default: Date.now }
+  }]
 }, { timestamps: true });
 
 // Hash recovery passphrase before save

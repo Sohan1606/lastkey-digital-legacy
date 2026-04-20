@@ -6,6 +6,7 @@ const {
   updateBeneficiary, 
   deleteBeneficiary 
 } = require('../controllers/beneficiaryController');
+const { validate, createBeneficiarySchema, updateBeneficiarySchema } = require('../validators');
 
 const router = express.Router();
 
@@ -14,11 +15,11 @@ router.use(protect);
 router
   .route('/')
   .get(getAllBeneficiaries)
-  .post(createBeneficiary);
+  .post(validate(createBeneficiarySchema), createBeneficiary);
 
 router
   .route('/:id')
-  .patch(updateBeneficiary)
+  .patch(validate(updateBeneficiarySchema), updateBeneficiary)
   .delete(deleteBeneficiary);
 
 module.exports = router;

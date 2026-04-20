@@ -35,10 +35,10 @@ if (guardianQueue) {
 
     // Emit socket event
     if (global.io) {
-      global.io.to(userId.toString()).emit('dms-update', {
+      global.io.to(`user:${userId.toString()}`).emit('dms-update', {
         userId,
         status: 'warning',
-        message: 'Inactivity warning \u2014 please check in',
+        message: 'Inactivity warning — please check in',
         remainingMinutes: user.inactivityDuration - Math.floor(inactiveMinutes),
       });
     }
@@ -63,7 +63,7 @@ if (guardianQueue) {
     }
 
     if (global.io) {
-      global.io.to(userId.toString()).emit('dms-update', {
+      global.io.to(`user:${userId.toString()}`).emit('dms-update', {
         userId,
         status: 'triggered',
         message: 'Guardian Protocol has been activated',

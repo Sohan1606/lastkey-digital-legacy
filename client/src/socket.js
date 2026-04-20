@@ -3,14 +3,26 @@ import { toast } from 'react-hot-toast';
 
 let socket;
 
-export const initSocket = (userId) => {
+export const initSocket = (token) => {
   if (socket?.connected) return socket;
 
-  socket = io(import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:5000');
+  // Socket.IO now requires JWT authentication
+  socket = io(import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:5000', {
+    auth: { token },
+    withCredentials: true
+  });
 
   socket.on('connect', () => {
     if (import.meta.env.DEV) console.log('⚡ Connected:', socket.id);
-    socket.emit('join-room', userId);
+    // Room joining is now automatic on server-side based on JWT
+    // No need to emit 'join-room' anymore
+  });
+
+  socket.on('connect_error', (err) => {
+    console.error('Socket connection error:', err.message);
+    if (err.message.includes('auth')) {
+      toast.error('Authentication failed. Please log in again.');
+    }
   });
 
   socket.on('dms-sync', handleDMSUpdate);
@@ -21,6 +33,13 @@ export const initSocket = (userId) => {
   });
 
   return socket;
+};
+
+export const disconnectSocket = () => {
+  if (socket) {
+    socket.disconnect();
+    socket = null;
+  }
 };
 
 const handleDMSUpdate = (data) => {

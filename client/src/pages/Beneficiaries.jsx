@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Users, UserPlus, Mail, Shield, Trash2, ArrowLeft, Heart, Briefcase, User } from 'lucide-react';
+import { Users, UserPlus, Mail, Shield, Trash2, ArrowLeft, Heart, Briefcase, User, CheckCircle, Clock, AlertCircle, Send } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import toast from 'react-hot-toast';
@@ -74,6 +74,35 @@ const Beneficiaries = () => {
     sibling: '#00e5a0', friend: '#ffb830', lawyer: '#8899bb', other: '#3d5070'
   };
 
+  const getEnrollmentStatusIcon = (status) => {
+    switch (status) {
+      case 'enrolled': return <CheckCircle size={14} style={{ color: '#00e5a0' }} />;
+      case 'invited': return <Clock size={14} style={{ color: '#ffb830' }} />;
+      default: return <AlertCircle size={14} style={{ color: '#ff4d6d' }} />;
+    }
+  };
+
+  const getEnrollmentStatusText = (status) => {
+    switch (status) {
+      case 'enrolled': return 'Enrolled';
+      case 'invited': return 'Pending Enrollment';
+      default: return 'Not Invited';
+    }
+  };
+
+  const getEnrollmentStatusColor = (status) => {
+    switch (status) {
+      case 'enrolled': return '#00e5a0';
+      case 'invited': return '#ffb830';
+      default: return '#ff4d6d';
+    }
+  };
+
+  // Calculate enrollment stats
+  const enrolledCount = beneficiaries?.filter(b => b.enrollmentStatus === 'enrolled').length || 0;
+  const totalCount = beneficiaries?.length || 0;
+  const enrollmentComplete = enrolledCount === totalCount && totalCount > 0;
+
   if (isLoading) return (
     <div className="page spatial-bg" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div className="stars" />
@@ -102,6 +131,44 @@ const Beneficiaries = () => {
               <p style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 2 }}>Trusted individuals to manage your legacy</p>
             </div>
           </div>
+          
+          {/* Enrollment Status Summary */}
+          {totalCount > 0 && (
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }} 
+              animate={{ opacity: 1, y: 0 }}
+              style={{ 
+                marginTop: 16, 
+                padding: '12px 16px', 
+                background: enrollmentComplete ? 'rgba(0,229,160,0.1)' : 'rgba(255,184,48,0.1)', 
+                border: `1px solid ${enrollmentComplete ? 'rgba(0,229,160,0.3)' : 'rgba(255,184,48,0.3)'}`,
+                borderRadius: 12,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12
+              }}
+            >
+              {enrollmentComplete ? (
+                <CheckCircle size={20} style={{ color: '#00e5a0' }} />
+              ) : (
+                <Clock size={20} style={{ color: '#ffb830' }} />
+              )}
+              <div>
+                <p style={{ fontSize: 13, fontWeight: 600, color: enrollmentComplete ? '#00e5a0' : '#ffb830' }}>
+                  {enrollmentComplete 
+                    ? 'All beneficiaries enrolled ✓' 
+                    : `${enrolledCount} of ${totalCount} beneficiaries enrolled`
+                  }
+                </p>
+                <p style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 2 }}>
+                  {enrollmentComplete 
+                    ? 'Your legacy is ready for transfer when needed'
+                    : 'Beneficiaries must complete enrollment to access your legacy'
+                  }
+                </p>
+              </div>
+            </motion.div>
+          )}
         </motion.div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 24, marginTop: 28 }}>
@@ -190,11 +257,20 @@ const Beneficiaries = () => {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-2)', marginBottom: 16 }}>
                         <Mail style={{ width: 14, height: 14 }} /> {beneficiary.email}
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 14, borderTop: '1px solid var(--glass-border)' }}>
-                        <span style={{ fontSize: 12, color: 'var(--text-2)', textTransform: 'capitalize' }}>{beneficiary.relationship}</span>
-                        <span style={{ fontSize: 12, fontWeight: 600, color: '#00e5a0', background: 'rgba(0,229,160,0.1)', border: '1px solid rgba(0,229,160,0.2)', padding: '4px 10px', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 5 }}>
-                          <Shield style={{ width: 12, height: 12 }} /> {beneficiary.accessLevel.toUpperCase()}
-                        </span>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingTop: 14, borderTop: '1px solid var(--glass-border)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: 12, color: 'var(--text-2)', textTransform: 'capitalize' }}>{beneficiary.relationship}</span>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: '#00e5a0', background: 'rgba(0,229,160,0.1)', border: '1px solid rgba(0,229,160,0.2)', padding: '4px 10px', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 5 }}>
+                            <Shield style={{ width: 12, height: 12 }} /> {beneficiary.accessLevel.toUpperCase()}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Enrollment Status</span>
+                          <span style={{ fontSize: 11, fontWeight: 600, color: getEnrollmentStatusColor(beneficiary.enrollmentStatus), display: 'flex', alignItems: 'center', gap: 4 }}>
+                            {getEnrollmentStatusIcon(beneficiary.enrollmentStatus)}
+                            {getEnrollmentStatusText(beneficiary.enrollmentStatus)}
+                          </span>
+                        </div>
                       </div>
                     </motion.div>
                   );

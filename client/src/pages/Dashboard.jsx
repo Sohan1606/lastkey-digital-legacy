@@ -9,6 +9,7 @@ import { initSocket } from '../socket';
 import GuardianProtocolPanel from '../components/GuardianProtocolPanel';
 import ActivityFeed from '../components/ActivityFeed';
 import LegacyTimeline from '../components/LegacyTimeline';
+import LegacyReadinessScore from '../components/LegacyReadinessScore';
 import { 
   Users, Lock, Clock, Sparkles, Zap, Award, BarChart3,
   Loader2, Mic, Calendar, BookOpen, Trophy, Heart
@@ -71,6 +72,54 @@ const Dashboard = () => {
     queryKey: ['ai-suggestions'],
     queryFn: async () => {
       const res = await axios.get(`${API_BASE}/ai/suggestions`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      return res.data;
+    },
+    enabled: !!token,
+  });
+
+  // Fetch assets count
+  const { data: assetsData } = useQuery({
+    queryKey: ['assets-count'],
+    queryFn: async () => {
+      const res = await axios.get(`${API_BASE}/assets`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      return res.data;
+    },
+    enabled: !!token,
+  });
+
+  // Fetch beneficiaries
+  const { data: beneficiariesData } = useQuery({
+    queryKey: ['beneficiaries-count'],
+    queryFn: async () => {
+      const res = await axios.get(`${API_BASE}/beneficiaries`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      return res.data;
+    },
+    enabled: !!token,
+  });
+
+  // Fetch capsules count
+  const { data: capsulesData } = useQuery({
+    queryKey: ['capsules-count'],
+    queryFn: async () => {
+      const res = await axios.get(`${API_BASE}/capsules`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      return res.data;
+    },
+    enabled: !!token,
+  });
+
+  // Fetch documents count
+  const { data: documentsData } = useQuery({
+    queryKey: ['documents-count'],
+    queryFn: async () => {
+      const res = await axios.get(`${API_BASE}/legal-documents`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       return res.data;
@@ -165,6 +214,16 @@ const Dashboard = () => {
               {(user?.streak >= 3) && <span style={{ fontSize: 20, animation: 'float 3s ease-in-out infinite' }}>🔥</span>}
             </h1>
           </motion.div>
+
+          {/* Legacy Readiness Score */}
+          <LegacyReadinessScore 
+            assetCount={assetsData?.data?.length || 0}
+            beneficiaryCount={beneficiariesData?.data?.beneficiaries?.length || 0}
+            enrolledBeneficiaryCount={beneficiariesData?.data?.beneficiaries?.filter(b => b.enrollmentStatus === 'enrolled').length || 0}
+            capsuleCount={capsulesData?.data?.capsules?.length || 0}
+            documentCount={documentsData?.data?.length || 0}
+            vaultUnlocked={false}
+          />
 
           {/* PRIMARY CTA — Send Final Message */}
           <motion.div

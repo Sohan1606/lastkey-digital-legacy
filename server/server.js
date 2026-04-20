@@ -6,17 +6,20 @@ const mongoose = require('mongoose');
 const path = require('path');
 require('dotenv').config();
 
-// Validate required environment variables
-if (!process.env.JWT_SECRET && process.env.NODE_ENV === 'production') {
-  console.error('❌ JWT_SECRET environment variable is required in production');
-  process.exit(1);
-}
+// Validate environment variables
+const { env, getSanitizedEnv } = require('./config/env');
+
+console.log('✅ Environment validated');
+console.log('📋 Configuration:', JSON.stringify(getSanitizedEnv(), null, 2));
 
 // Import models
 const User = require('./models/User');
 const Asset = require('./models/Asset');
 const Beneficiary = require('./models/Beneficiary');
 const Capsule = require('./models/Capsule');
+const LegalDocument = require('./models/LegalDocument');
+const EmergencyAccessGrant = require('./models/EmergencyAccessGrant');
+const EmergencySession = require('./models/EmergencySession');
 
 const app = express();
 
@@ -53,33 +56,95 @@ app.use(express.json());
 const { sanitizeBody } = require('./middleware/sanitize');
 app.use(sanitizeBody);
 
-// Add this line after app.use(express.json())
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// REMOVED: Public uploads exposure (S2)
+// All file access must go through authorized endpoints
+// app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Rate limiting
-const limiter = rateLimit({
+// Rate limiting - stricter for auth and sensitive endpoints
+const standardLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: { message: 'Too many requests, please try again later' }
 });
-app.use('/api/', limiter);
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // stricter limit for auth endpoints
+  skipSuccessfulRequests: true, // don't count successful logins
+  message: { message: 'Too many login attempts, please try again later' }
+});
+
+const beneficiaryAccessLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 10, // limit access requests
+  message: { message: 'Too many access requests, please try again later' }
+});
+
+app.use('/api/', standardLimiter);
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
+
+const jwt = require('jsonwebtoken');
 
 const io = new Server(server, {
   cors: {
     origin: allowedOrigins,
-    methods: ["GET", "POST"]
+    methods: ["GET", "POST"],
+    credentials: true
   }
 });
 
 global.io = io;
 
-io.on('connection', (socket) => {
-  console.log('⚡ Client connected:', socket.id);
-  
-  socket.on('join-room', (userId) => {
-    socket.join(userId);
-    console.log(`👤 User ${userId} joined their private room`);
-  });
+// Socket.IO JWT authentication middleware
+io.use(async (socket, next) => {
+  try {
+    const token = socket.handshake.auth.token || socket.handshake.query.token;
+    
+    if (!token) {
+      return next(new Error('Authentication error: No token provided'));
+    }
+    
+    const JWT_SECRET = process.env.JWT_SECRET;
+    if (!JWT_SECRET) {
+      console.error('❌ JWT_SECRET not configured');
+      return next(new Error('Server configuration error'));
+    }
+    
+    const decoded = jwt.verify(token, JWT_SECRET);
+    
+    // Verify user exists and is active
+    const user = await User.findById(decoded.id).select('+triggerStatus');
+    if (!user) {
+      return next(new Error('Authentication error: User not found'));
+    }
+    
+    // Attach user data to socket
+    socket.userId = user._id.toString();
+    socket.user = {
+      id: user._id.toString(),
+      email: user.email,
+      triggerStatus: user.triggerStatus
+    };
+    
+    next();
+  } catch (err) {
+    console.error('Socket auth error:', err.message);
+    next(new Error('Authentication error: Invalid token'));
+  }
+});
 
+io.on('connection', (socket) => {
+  console.log('⚡ Authenticated client connected:', socket.id, 'User:', socket.userId);
+  
+  // Auto-join user to their private room based on JWT-derived userId
+  const userRoom = `user:${socket.userId}`;
+  socket.join(userRoom);
+  console.log(`👤 User ${socket.userId} auto-joined room ${userRoom}`);
+  
+  // Remove insecure join-room that accepts userId from client
+  // Clients cannot join arbitrary rooms anymore
+  
   socket.on('disconnect', () => {
     console.log('❌ Client disconnected:', socket.id);
   });
@@ -124,9 +189,20 @@ app.use('/api/beneficiaries', beneficiaryRouter);
 const capsuleRouter = require('./routes/capsules');
 app.use('/api/capsules', capsuleRouter);
 
-// Emergency access routes
-const emergencyRouter = require('./routes/emergency');
-app.use('/api/emergency', emergencyRouter);
+// Beneficiary Portal routes (new secure flow)
+const beneficiaryAuthRouter = require('./routes/beneficiaryAuth');
+app.use('/api/beneficiary/auth', beneficiaryAuthRouter);
+
+const beneficiaryPortalRouter = require('./routes/beneficiaryPortal');
+app.use('/api/beneficiary/portal', beneficiaryPortalRouter);
+
+// WebAuthn/Passkey routes
+const webauthnRouter = require('./routes/webauthn');
+app.use('/api/webauthn', webauthnRouter);
+
+// Migration routes (for legacy asset migration)
+const migrationRouter = require('./routes/migration');
+app.use('/api/migration', migrationRouter);
 
 // Timeline routes
 const timelineRouter = require('./routes/timeline');
@@ -135,6 +211,10 @@ app.use('/api/timeline', timelineRouter);
 // Voice messages routes
 const voiceMessagesRouter = require('./routes/voice-messages');
 app.use('/api/voice-messages', voiceMessagesRouter);
+
+// Legal Documents routes (Property & Legal Binder)
+const legalDocumentsRouter = require('./routes/legalDocuments');
+app.use('/api/legal-documents', legalDocumentsRouter);
 
 // Memoir routes
 const memoirRouter = require('./routes/memoir');
@@ -179,6 +259,9 @@ const startServer = async () => {
         await Asset.createIndexes();
         await Beneficiary.createIndexes();
         await Capsule.createIndexes();
+        await LegalDocument.createIndexes();
+        await EmergencyAccessGrant.createIndexes();
+        await EmergencySession.createIndexes();
         console.log('✅ Database indexes created');
       } catch (error) {
         console.warn('⚠️  MongoDB connection failed (server still running).');
@@ -273,7 +356,7 @@ const startWorkers = async () => {
 
             // Real-time notification to user-specific room (only send once per state change)
             if (user.triggerStatus === 'warning' && !user.warningEmailSent) {
-              global.io.to(user._id.toString()).emit('dms-update', {
+              global.io.to(`user:${user._id.toString()}`).emit('dms-update', {
                 userId: user._id.toString(),
                 status: user.triggerStatus,
                 remainingMinutes: user.inactivityDuration - Math.floor(inactiveMinutes),
@@ -284,7 +367,7 @@ const startWorkers = async () => {
               user.warningEmailSent = true;
               await user.save();
             } else if (user.triggerStatus === 'triggered') {
-              global.io.to(user._id.toString()).emit('dms-update', {
+              global.io.to(`user:${user._id.toString()}`).emit('dms-update', {
                 userId: user._id.toString(),
                 status: user.triggerStatus,
                 remainingMinutes: 0,
@@ -368,10 +451,35 @@ process.on('uncaughtException', (error) => {
   gracefulShutdown('uncaughtException');
 });
 
-// Error handling
+// Centralized error handler (S4) - no stack traces in production
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ message: 'Server error' });
+  // Log error with request context (but redact sensitive data)
+  const logEntry = {
+    message: err.message,
+    path: req.path,
+    method: req.method,
+    ip: req.ip,
+    timestamp: new Date().toISOString()
+  };
+  
+  // In production, don't expose stack traces
+  const isDev = process.env.NODE_ENV !== 'production';
+  
+  if (isDev) {
+    console.error('Error:', err);
+  } else {
+    console.error('Error:', logEntry);
+  }
+  
+  // Send safe error response
+  const statusCode = err.statusCode || err.status || 500;
+  const message = isDev ? err.message : 'An error occurred. Please try again later.';
+  
+  res.status(statusCode).json({ 
+    success: false,
+    message: message,
+    ...(isDev && { stack: err.stack })
+  });
 });
 
 // Start server - listen already called in startServer()

@@ -35,7 +35,7 @@ exports.ping = async (req, res, next) => {
     }
 
     // Emit status update to user
-    global.io.to(user._id.toString()).emit('dms-update', {
+    global.io.to(`user:${user._id.toString()}`).emit('dms-update', {
       userId: user._id.toString(),
       status: user.triggerStatus,
       remainingMinutes: user.inactivityDuration,
@@ -66,9 +66,27 @@ exports.updateSettings = async (req, res, next) => {
   try {
     const { inactivityDuration, phone, alertChannels } = req.body;
     const updateData = {};
-    if (inactivityDuration != null) updateData.inactivityDuration = inactivityDuration;
     if (phone !== undefined) updateData.phone = phone;
     if (alertChannels) updateData.alertChannels = alertChannels;
+
+    // Sudden Death Mitigation: Check enrolled beneficiaries before allowing short inactivity
+    if (inactivityDuration != null) {
+      const Beneficiary = require('../models/Beneficiary');
+      const enrolledCount = await Beneficiary.countDocuments({
+        userId: req.user._id,
+        enrollmentStatus: 'enrolled'
+      });
+
+      // If trying to set short inactivity period without enrolled beneficiaries
+      if (inactivityDuration < 30 && enrolledCount === 0) {
+        return res.status(400).json({
+          status: 'fail',
+          message: 'Cannot enable short inactivity period without at least one enrolled beneficiary. This prevents sudden death scenarios where your legacy becomes inaccessible. Please invite and enroll a beneficiary first.'
+        });
+      }
+
+      updateData.inactivityDuration = inactivityDuration;
+    }
 
     const user = await User.findByIdAndUpdate(
       req.user._id,

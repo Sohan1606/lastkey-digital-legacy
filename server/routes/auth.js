@@ -2,6 +2,7 @@ const express = require('express');
 const { register, login, verifyEmail, forgotPassword, resetPassword } = require('../controllers/authController');
 const User = require('../models/User');
 const { protect } = require('../middleware/auth');
+const { validate, registerSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema } = require('../validators');
 
 const router = express.Router();
 
@@ -13,11 +14,11 @@ const authLimiter = rateLimit({
   message: 'Too many auth attempts, please try again later.'
 });
 
-router.post('/register', authLimiter, register);
-router.post('/login', authLimiter, login);
+router.post('/register', authLimiter, validate(registerSchema), register);
+router.post('/login', authLimiter, validate(loginSchema), login);
 router.get('/verify-email', verifyEmail);
-router.post('/forgot-password', authLimiter, forgotPassword);
-router.post('/reset-password', authLimiter, resetPassword);
+router.post('/forgot-password', authLimiter, validate(forgotPasswordSchema), forgotPassword);
+router.post('/reset-password', authLimiter, validate(resetPasswordSchema), resetPassword);
 router.post('/verify-password', protect, async (req, res) => {
   try {
     const { password } = req.body;

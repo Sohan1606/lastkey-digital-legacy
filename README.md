@@ -6,9 +6,11 @@
 
 ### **Core Security**
 - **Guardian Protocol** - Advanced inactivity monitoring with multi-channel alerts
-- **Zero-Knowledge Encryption** - Client-side AES-256 encryption for maximum privacy
-- **Emergency Access Portal** - Secure beneficiary access with time-limited codes
-- **Real-time Monitoring** - Live status updates via Socket.IO
+- **Zero-Knowledge Encryption** - Client-side AES-256 encryption; server never sees plaintext
+- **Emergency Access Portal** - Secure beneficiary access via enrollment + unlock secret (NO email codes)
+- **WebAuthn/Passkeys** - Modern phishing-resistant authentication
+- **Real-time Monitoring** - Live status updates via authenticated Socket.IO
+- **Scoped Access Control** - Granular permissions for beneficiary access (view, download, etc.)
 
 ### **AI-Powered Features**
 - **AI Voice Messages** - Transform text to realistic voice with OpenAI TTS
@@ -142,10 +144,52 @@ VITE_STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key
 
 ## **Architecture**
 
+### **Dual-Portal Design**
+
+LastKey uses a unique dual-portal architecture for maximum security:
+
+```
+┌─────────────────────┐     ┌─────────────────────┐
+│   OWNER PORTAL      │     │ BENEFICIARY PORTAL  │
+│   /dashboard        │     │ /beneficiary-portal │
+├─────────────────────┤     ├─────────────────────┤
+│ • Manage vault      │     │ • View legacy       │
+│ • Add beneficiaries │     │ • Download files    │
+│ • Set unlock secrets│     │ • Access time       │
+│ • Configure trigger │     │   capsules          │
+│ • Upload documents  │     │ • Read final msgs   │
+└─────────────────────┘     └─────────────────────┘
+         │                              │
+         └──────────┬───────────────────┘
+                    │
+         ┌──────────▼──────────┐
+         │   ACCESS CONTROL    │
+         │ • Owner JWT auth    │
+         │ • Beneficiary JWT   │
+         │ • Trigger gating    │
+         │ • Scoped grants     │
+         └─────────────────────┘
+```
+
+**Why No Emergency Codes in Email?**
+
+Traditional digital legacy services send emergency access codes via email. This is insecure because:
+- Email can be intercepted or hacked
+- Codes can be forwarded accidentally
+- No verification that the recipient is the actual beneficiary
+
+LastKey's approach:
+1. Owner invites beneficiary with enrollment token
+2. Beneficiary enrolls and sets their own unlock secret
+3. Beneficiary must log in to the Beneficiary Portal
+4. Access only granted after owner is "triggered"
+5. Beneficiary must provide unlock secret to create session
+
 ### **Technology Stack**
-- **Frontend**: React 19, Vite, TailwindCSS, Framer Motion
+- **Frontend**: React 19, Vite, TailwindCSS, Framer Motion, WebAuthn
 - **Backend**: Node.js, Express, MongoDB, Socket.IO
-- **Authentication**: JWT with bcryptjs
+- **Authentication**: JWT with bcryptjs, WebAuthn/Passkeys
+- **Encryption**: WebCrypto API (AES-GCM, PBKDF2) - client-side only
 - **Payments**: Stripe with webhooks
 - **AI**: OpenAI GPT-4 & TTS
 - **Analytics**: PostHog

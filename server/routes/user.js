@@ -1,13 +1,14 @@
 const express = require('express');
 const { protect } = require('../middleware/auth.js');
 const { ping, updateSettings, getLegacyScore } = require('../controllers/userController.js');
+const { validate, updateSettingsSchema } = require('../validators');
 
 const router = express.Router();
 
 router.use(protect);
 
 router.post('/ping', ping);
-router.put('/settings', updateSettings);
+router.put('/settings', validate(updateSettingsSchema), updateSettings);
 router.get('/stats', async (req, res) => {
   try {
     const userId = req.user._id;

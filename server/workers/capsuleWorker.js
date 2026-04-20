@@ -48,7 +48,7 @@ if (capsuleQueue) {
   }
 
   if (global.io) {
-    global.io.to(capsule.userId.toString()).emit('capsule-released', {
+    global.io.to(`user:${capsule.userId.toString()}`).emit('capsule-released', {
       id: capsule._id,
       title: capsule.title,
     });

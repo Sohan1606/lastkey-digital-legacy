@@ -1,13 +1,8 @@
 const mongoose = require('mongoose');
-const CryptoJS = require('crypto-js');
 
-const ENCRYPTION_KEY = process.env.ASSET_ENCRYPTION_KEY;
-
-if (!ENCRYPTION_KEY) {
-  console.warn('⚠️  ASSET_ENCRYPTION_KEY not set — vault encryption uses insecure fallback');
-}
-
-const KEY = ENCRYPTION_KEY || 'INSECURE-DEV-KEY-CHANGE-THIS-NOW-32C';
+// NOTE: Server-side encryption removed (P2)
+// All encryption is now client-side using WebCrypto API
+// Server only stores ciphertext - never has access to plaintext passwords
 
 const assetSchema = new mongoose.Schema({
   platform: {
@@ -68,17 +63,13 @@ const assetSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
-// Encrypt password before saving
-assetSchema.pre('save', function() {
-  if (this.isModified('password')) {
-    this.password = CryptoJS.AES.encrypt(this.password, KEY).toString();
-  }
-});
+// NOTE: Server-side encryption hooks removed (P2)
+// Passwords are encrypted client-side before reaching the server
+// The 'password' field stores AES-GCM ciphertext from the client's WebCrypto API
 
-// Decrypt password method
-assetSchema.methods.decryptPassword = function() {
-  const bytes = CryptoJS.AES.decrypt(this.password, KEY);
-  return bytes.toString(CryptoJS.enc.Utf8);
+// Method to check if password is client-encrypted (for validation)
+assetSchema.methods.isClientEncrypted = function() {
+  return this.clientEncrypted === true;
 };
 
 module.exports = mongoose.model('Asset', assetSchema);

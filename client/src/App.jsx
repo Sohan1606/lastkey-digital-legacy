@@ -31,6 +31,8 @@ const Settings = lazy(() => import('./pages/Settings'));
 const FinalMessage = lazy(() => import('./pages/FinalMessage'));
 const ActivityLogs = lazy(() => import('./pages/ActivityLogs'));
 const Trust = lazy(() => import('./pages/Trust'));
+const LegalDocuments = lazy(() => import('./pages/LegalDocuments'));
+const BeneficiaryPortal = lazy(() => import('./pages/BeneficiaryPortal'));
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -62,6 +64,7 @@ function App() {
           <Route path="/trust" element={<Trust />} />
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/emergency" element={<EmergencyAccess />} />
+          <Route path="/beneficiary-portal" element={<BeneficiaryPortal />} />
           <Route path="/voice-messages" element={<ProtectedRoute><VoiceMessages /></ProtectedRoute>} />
           <Route path="/life-timeline" element={<ProtectedRoute><LifeTimeline /></ProtectedRoute>} />
           <Route path="/memoir-ai" element={<ProtectedRoute><MemoirAI /></ProtectedRoute>} />
@@ -114,6 +117,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <FinalMessage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/legal-documents" 
+            element={
+              <ProtectedRoute>
+                <LegalDocuments />
               </ProtectedRoute>
             } 
           />

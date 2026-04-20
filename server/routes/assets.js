@@ -7,6 +7,7 @@ const {
   updateAsset, 
   deleteAsset 
 } = require('../controllers/assetController');
+const { validate, createAssetSchema, updateAssetSchema } = require('../validators');
 
 const router = express.Router();
 
@@ -24,12 +25,12 @@ router.use(vaultLimiter);
 
 router
   .route('/')
-  .post(createAsset)
+  .post(validate(createAssetSchema), createAsset)
   .get(getAssets);
 
 router
   .route('/:id')
-  .put(updateAsset)
+  .put(validate(updateAssetSchema), updateAsset)
   .delete(deleteAsset);
 
 module.exports = router;

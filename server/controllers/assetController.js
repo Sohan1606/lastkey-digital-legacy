@@ -1,6 +1,9 @@
 const Asset = require('../models/Asset');
 const { log } = require('../services/auditService');
 
+// NOTE: Server-side decryption removed (P2)
+// Passwords are client-encrypted; server never sees plaintext
+
 exports.createAsset = async (req, res, next) => {
   try {
     const assetData = {
@@ -33,17 +36,15 @@ exports.getAssets = async (req, res, next) => {
       details: { count: assets.length } 
     });
 
-    // Decrypt passwords (only for server-side encrypted assets)
-    const assetsWithDecryptedPassword = assets.map(asset => {
+    // Return assets with encrypted passwords (client will decrypt)
+    // Server never decrypts - we only store ciphertext
+    const assetsWithEncryptedPassword = assets.map(asset => {
       const assetObj = asset.toObject();
-      // Only decrypt if not client-encrypted
+      // Always return encrypted password (or placeholder if not encrypted)
       if (!assetObj.clientEncrypted) {
-        try {
-          assetObj.password = asset.decryptPassword();
-        } catch (err) {
-          // If decryption fails, keep as is (might be client-encrypted)
-          assetObj.password = assetObj.password;
-        }
+        // Legacy asset without client encryption - mark for migration
+        assetObj.password = '[MIGRATION_REQUIRED]';
+        assetObj.needsMigration = true;
       }
       return assetObj;
     });
@@ -51,7 +52,7 @@ exports.getAssets = async (req, res, next) => {
     res.status(200).json({
       status: 'success',
       results: assets.length,
-      data: assetsWithDecryptedPassword
+      data: assetsWithEncryptedPassword
     });
   } catch (error) {
     res.status(400).json({

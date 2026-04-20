@@ -77,16 +77,14 @@ router.post('/access', async (req, res) => {
       Capsule.find({ userId: user._id })
     ]);
     
-    // Process assets - don't decrypt client-encrypted passwords
-    const assetsWithDecryptedPasswords = assets.map(asset => {
+    // Return assets with encrypted passwords (client-side encrypted)
+    // Server never decrypts - beneficiaries use their unlock secret
+    const assetsForBeneficiary = assets.map(asset => {
       const assetObj = asset.toObject();
-      // Only decrypt server-side encrypted passwords
+      // Mark legacy assets
       if (!assetObj.clientEncrypted) {
-        try {
-          assetObj.password = asset.decryptPassword();
-        } catch (err) {
-          // Keep as is if decryption fails
-        }
+        assetObj.password = '[ENCRYPTED]';
+        assetObj.needsDecryption = true;
       }
       return assetObj;
     });
@@ -111,7 +109,7 @@ router.post('/access', async (req, res) => {
           email: beneficiary.email,
           accessGrantedAt: beneficiary.accessGrantedAt
         },
-        assets: assetsWithDecryptedPasswords,
+        assets: assetsForBeneficiary,
         capsules: capsules
       }
     });
@@ -142,15 +140,9 @@ router.get('/download/:assetId', async (req, res) => {
       return res.status(404).json({ error: 'Asset not found' });
     }
     
-    // Get password - don't decrypt if client-encrypted
-    let passwordDisplay = asset.password;
-    if (!asset.clientEncrypted) {
-      try {
-        passwordDisplay = asset.decryptPassword();
-      } catch (err) {
-        // Keep encrypted if decryption fails
-      }
-    }
+    // Password is client-encrypted; return as-is
+    // Beneficiary must decrypt with their unlock secret
+    const passwordDisplay = asset.clientEncrypted ? asset.password : '[ENCRYPTED]'
     
     // Create downloadable content
     let content = `${asset.platform} Credentials\n${'='.repeat(30)}\n`;
