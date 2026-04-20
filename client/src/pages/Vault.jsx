@@ -5,7 +5,11 @@ import { Pencil, Trash2, Eye, EyeOff, Plus, Shield, Lock, ExternalLink, X, Copy,
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import toast from 'react-hot-toast';
-import { deriveKey, encryptText, decryptText, isCryptoSupported } from '../utils/crypto';
+import { 
+  deriveKey, encryptText, decryptText, isCryptoSupported,
+  generateMasterDEK, encryptDEKWithPassword, decryptDEKWithPassword,
+  setMasterDEK, getMasterDEK, hasDEK, clearMasterDEK
+} from '../utils/crypto';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
@@ -30,11 +34,12 @@ const Vault = () => {
   const [vaultPassword, setVaultPassword] = useState('');
   const [showUnlockModal, setShowUnlockModal] = useState(false);
   const [pendingDecryptId, setPendingDecryptId] = useState(null);
+  const [dekInitialized, setDekInitialized] = useState(false);
+  const [isInitializingDEK, setIsInitializingDEK] = useState(false);
   const formRef = useRef(null);
   
-  // CRITICAL: CryptoKey stored in-memory only (never in localStorage/sessionStorage)
-  const cryptoKeyRef = useRef(null);
-  const [vaultUnlocked, setVaultUnlocked] = useState(false);
+  // CRITICAL: Master DEK stored in-memory only (never in localStorage/sessionStorage)
+  // The DEK is the Data Encryption Key used for all vault encryption
 
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -42,6 +47,22 @@ const Vault = () => {
   useEffect(() => {
     setCryptoSupported(isCryptoSupported());
   }, []);
+
+  // Check DEK status on mount
+  const { data: dekStatus } = useQuery({
+    queryKey: ['dek-status'],
+    queryFn: async () => {
+      const { data } = await axios.get(`${API_BASE}/dek/status`);
+      return data.data;
+    },
+    enabled: !!user
+  });
+
+  useEffect(() => {
+    if (dekStatus) {
+      setDekInitialized(dekStatus.initialized);
+    }
+  }, [dekStatus]);
 
   const { data: assets, isPending: isLoading } = useQuery({
     queryKey: ['assets'],
@@ -53,16 +74,77 @@ const Vault = () => {
     retry: 1
   });
 
-  // Unlock vault with user password
+  // Initialize DEK for new users
+  const initializeDEK = async (password) => {
+    if (!password || !user?.email) return false;
+    setIsInitializingDEK(true);
+    try {
+      // Generate new master DEK
+      const dek = await generateMasterDEK();
+      
+      // Encrypt DEK with password
+      const encryptedData = await encryptDEKWithPassword(dek, password, user.email);
+      
+      // Send to server
+      await axios.post(`${API_BASE}/dek/initialize`, {
+        encryptedMasterKey: {
+          ciphertext: encryptedData.ciphertext,
+          iv: encryptedData.iv,
+          salt: encryptedData.salt,
+          iterations: 100000,
+          version: '1'
+        },
+        keyVerification: {
+          hash: encryptedData.ciphertext.slice(0, 64), // First 64 chars as verification hash
+          salt: encryptedData.salt
+        }
+      });
+      
+      setMasterDEK(dek);
+      setDekInitialized(true);
+      setShowUnlockModal(false);
+      setVaultPassword('');
+      toast.success('Vault initialized successfully!');
+      return true;
+    } catch (err) {
+      console.error('DEK initialization error:', err);
+      toast.error(err.response?.data?.message || 'Failed to initialize vault');
+      return false;
+    } finally {
+      setIsInitializingDEK(false);
+    }
+  };
+
+  // Unlock vault with user password (retrieve and decrypt DEK)
   const unlockVault = async (password) => {
     if (!password || !user?.email) return false;
     try {
-      cryptoKeyRef.current = await deriveKey(password, user.email);
-      setVaultUnlocked(true);
+      // If DEK not initialized, initialize it first
+      if (!dekInitialized) {
+        return await initializeDEK(password);
+      }
+      
+      // Fetch encrypted DEK from server
+      const { data } = await axios.get(`${API_BASE}/dek/my-dek`);
+      const encryptedMasterKey = data.data.encryptedMasterKey;
+      
+      // Decrypt DEK with password
+      const dek = await decryptDEKWithPassword(
+        encryptedMasterKey.ciphertext,
+        password,
+        user.email
+      );
+      
+      setMasterDEK(dek);
       setShowUnlockModal(false);
       setVaultPassword('');
       return true;
     } catch (err) {
+      console.error('Vault unlock error:', err);
+      if (err.response?.status === 404) {
+        // DEK not found, need to initialize
+        return await initializeDEK(password);
+      }
       toast.error('Failed to unlock vault. Please check your password.');
       return false;
     }
@@ -77,15 +159,16 @@ const Vault = () => {
     }
 
     // If vault not unlocked, show unlock modal
-    if (!cryptoKeyRef.current) {
+    if (!hasDEK()) {
       setPendingDecryptId(assetId);
       setShowUnlockModal(true);
       return;
     }
 
-    // Decrypt the password
+    // Decrypt the password using DEK
     try {
-      const decrypted = await decryptText(encryptedPassword, cryptoKeyRef.current);
+      const dek = getMasterDEK();
+      const decrypted = await decryptText(encryptedPassword, dek);
       setShowPasswords(prev => ({ ...prev, [assetId]: decrypted }));
     } catch (err) {
       toast.error('Failed to decrypt password. The vault password may be incorrect.');
@@ -94,15 +177,16 @@ const Vault = () => {
 
   const createMutation = useMutation({
     mutationFn: async (assetData) => {
-      // ENFORCEMENT: Encrypt in browser BEFORE sending to backend
+      // ENFORCEMENT: Encrypt in browser BEFORE sending to backend using DEK
       if (cryptoSupported && assetData.password && assetData.password.trim() !== '') {
-        if (!cryptoKeyRef.current) {
+        if (!hasDEK()) {
           // Need to unlock vault first
           throw new Error('Please unlock your vault first');
         }
         try {
-          // Encrypt the password before sending
-          assetData.password = await encryptText(assetData.password, cryptoKeyRef.current);
+          const dek = getMasterDEK();
+          // Encrypt the password before sending using DEK
+          assetData.password = await encryptText(assetData.password, dek);
           assetData.clientEncrypted = true;
         } catch (err) {
           console.error('Encryption failed:', err);
@@ -125,10 +209,11 @@ const Vault = () => {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, assetData }) => {
-      // ENFORCEMENT: Encrypt password if provided and vault is unlocked
-      if (cryptoSupported && assetData.password && assetData.password.trim() !== '' && cryptoKeyRef.current) {
+      // ENFORCEMENT: Encrypt password if provided and vault is unlocked using DEK
+      if (cryptoSupported && assetData.password && assetData.password.trim() !== '' && hasDEK()) {
         try {
-          assetData.password = await encryptText(assetData.password, cryptoKeyRef.current);
+          const dek = getMasterDEK();
+          assetData.password = await encryptText(assetData.password, dek);
           assetData.clientEncrypted = true;
         } catch (err) {
           console.error('Encryption failed:', err);
@@ -158,7 +243,7 @@ const Vault = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!cryptoKeyRef.current && !editingId) {
+    if (!hasDEK() && !editingId) {
       setShowUnlockModal(true);
       return;
     }
@@ -256,12 +341,22 @@ const Vault = () => {
                     <Lock style={{ width: 26, height: 26, color: '#00e5a0' }} />
                   </div>
                   <h3 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-1)', marginBottom: 8 }}>
-                    Unlock Your Vault
+                    {dekInitialized ? 'Unlock Your Vault' : 'Initialize Your Vault'}
                   </h3>
                   <p style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.5 }}>
-                    Enter your vault password to encrypt/decrypt your assets.
-                    <br /><strong>This is never sent to our servers.</strong>
+                    {dekInitialized 
+                      ? 'Enter your vault password to decrypt your DEK and access your assets.'
+                      : 'Create a vault password to generate your Data Encryption Key (DEK).'
+                    }
+                    <br /><strong>Your password never leaves this device.</strong>
                   </p>
+                  {!dekInitialized && (
+                    <div style={{ marginTop: 12, padding: 10, background: 'rgba(255,184,48,0.1)', border: '1px solid rgba(255,184,48,0.2)', borderRadius: 8 }}>
+                      <p style={{ fontSize: 11, color: '#ffb830', margin: 0 }}>
+                        This password will encrypt your DEK. Store it safely - it cannot be recovered!
+                      </p>
+                    </div>
+                  )}
                 </div>
                 <input
                   type="password"
@@ -291,6 +386,7 @@ const Vault = () => {
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
+                  disabled={isInitializingDEK}
                   onClick={() => {
                     unlockVault(vaultPassword).then(success => {
                       if (success && pendingDecryptId) {
@@ -305,10 +401,11 @@ const Vault = () => {
                   style={{
                     width: '100%', padding: '14px', borderRadius: 12,
                     border: 'none', background: 'linear-gradient(135deg, #00e5a0, #4f9eff)',
-                    color: '#001a12', fontWeight: 700, fontSize: 14, cursor: 'pointer'
+                    color: '#001a12', fontWeight: 700, fontSize: 14, cursor: isInitializingDEK ? 'not-allowed' : 'pointer',
+                    opacity: isInitializingDEK ? 0.7 : 1
                   }}
                 >
-                  Unlock Vault
+                  {isInitializingDEK ? 'Initializing...' : dekInitialized ? 'Unlock Vault' : 'Initialize Vault'}
                 </motion.button>
               </motion.div>
             </motion.div>
@@ -332,7 +429,7 @@ const Vault = () => {
             </div>
             {!showForm && (
               <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} onClick={() => { 
-                if (!cryptoKeyRef.current) {
+                if (!hasDEK()) {
                   setShowUnlockModal(true);
                   return; // Don't open form if vault is locked
                 }
@@ -388,9 +485,9 @@ const Vault = () => {
                   <div>
                     <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <span>Secret Password / Key</span>
-                      {cryptoSupported && formData.password && cryptoKeyRef.current && (
+                      {cryptoSupported && formData.password && hasDEK() && (
                         <span style={{ fontSize: 10, color: 'var(--pulse)', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
-                          <Lock size={10} /> Will be encrypted
+                          <Lock size={10} /> DEK Encrypted
                         </span>
                       )}
                     </label>
@@ -398,11 +495,11 @@ const Vault = () => {
                       type="password" 
                       value={formData.password} 
                       onChange={e => setFormData({...formData, password: e.target.value})}
-                      placeholder={cryptoKeyRef.current ? "Enter the secure key" : "Unlock vault first to add assets"} 
+                      placeholder={hasDEK() ? "Enter the secure key" : "Unlock vault first to add assets"} 
                       required 
-                      disabled={!cryptoKeyRef.current && !editingId}
+                      disabled={!hasDEK() && !editingId}
                     />
-                    {!cryptoKeyRef.current && !editingId && (
+                    {!hasDEK() && !editingId && (
                       <p style={{ fontSize: 11, color: '#ffb830', marginTop: 6, marginBottom: 0 }}>
                         ⚠️ Please unlock your vault using the button above to enable encryption.
                       </p>
@@ -468,8 +565,8 @@ const Vault = () => {
                     <textarea value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} placeholder="Instructions or context..." style={{ height: 80, resize: 'none' }} />
                   </div>
                   <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 12 }}>
-                    <motion.button type="submit" whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }} disabled={createMutation.isPending || updateMutation.isPending || (!cryptoKeyRef.current && !editingId)}
-                      style={{ flex: 1, padding: '14px 24px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg, #4f9eff, #00e5a0)', color: '#001a12', fontWeight: 700, fontSize: 14, cursor: (createMutation.isPending || updateMutation.isPending || (!cryptoKeyRef.current && !editingId)) ? 'not-allowed' : 'pointer', opacity: (createMutation.isPending || updateMutation.isPending || (!cryptoKeyRef.current && !editingId)) ? 0.6 : 1 }}>
+                    <motion.button type="submit" whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }} disabled={createMutation.isPending || updateMutation.isPending || (!hasDEK() && !editingId)}
+                      style={{ flex: 1, padding: '14px 24px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg, #4f9eff, #00e5a0)', color: '#001a12', fontWeight: 700, fontSize: 14, cursor: (createMutation.isPending || updateMutation.isPending || (!hasDEK() && !editingId)) ? 'not-allowed' : 'pointer', opacity: (createMutation.isPending || updateMutation.isPending || (!hasDEK() && !editingId)) ? 0.6 : 1 }}>
                       {createMutation.isPending || updateMutation.isPending ? 'Processing...' : editingId ? 'Update Asset' : 'Secure Asset'}
                     </motion.button>
                     <motion.button type="button" whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }} onClick={() => { setShowForm(false); setEditingId(null); }}
@@ -603,7 +700,7 @@ const Vault = () => {
             <h3 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-1)', marginBottom: 10 }}>Your Vault is Empty</h3>
             <p style={{ fontSize: 14, color: 'var(--text-2)', marginBottom: 28, maxWidth: 400, margin: '0 auto 28px' }}>Secure your digital legacy. Add accounts, keys, and sensitive information.</p>
             <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => { 
-              if (!cryptoKeyRef.current) {
+              if (!hasDEK()) {
                 setShowUnlockModal(true);
                 return; // Don't open form if vault is locked
               }

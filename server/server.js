@@ -221,6 +221,10 @@ app.use('/api/voice-messages', voiceMessagesRouter);
 const legalDocumentsRouter = require('./routes/legalDocuments');
 app.use('/api/legal-documents', legalDocumentsRouter);
 
+// DEK (Data Encryption Key) routes
+const dekRouter = require('./routes/dek');
+app.use('/api/dek', dekRouter);
+
 // Memoir routes
 const memoirRouter = require('./routes/memoir');
 app.use('/api/memoir', memoirRouter);
