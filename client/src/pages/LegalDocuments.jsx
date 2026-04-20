@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { FileText, Plus, ArrowLeft, Upload, Shield, Home, Car, FileCheck, Building, Trash2, Download, AlertCircle } from 'lucide-react';
+import { FileText, Plus, ArrowLeft, Upload, Shield, Home, Car, FileCheck, Building, Trash2, Download, AlertCircle, Lock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import { getMasterDEK, hasDEK, encryptText, isCryptoSupported } from '../utils/crypto';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
@@ -37,6 +38,8 @@ const LegalDocuments = () => {
   const [showForm, setShowForm] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [cryptoSupported, setCryptoSupported] = useState(true);
+  const [showEncryptInfo, setShowEncryptInfo] = useState(false);
   
   const [formData, setFormData] = useState({
     type: 'deed',
@@ -49,6 +52,10 @@ const LegalDocuments = () => {
     notarized: false
   });
   const [files, setFiles] = useState([]);
+
+  useEffect(() => {
+    setCryptoSupported(isCryptoSupported());
+  }, []);
 
   const { data: documents, isPending: isLoading } = useQuery({
     queryKey: ['legal-documents'],
@@ -101,28 +108,86 @@ const LegalDocuments = () => {
     }
   });
 
+  // Encrypt file using DEK
+  const encryptFile = async (file) => {
+    if (!hasDEK()) {
+      throw new Error('Vault not unlocked. Please unlock your vault first.');
+    }
+    
+    const dek = getMasterDEK();
+    const arrayBuffer = await file.arrayBuffer();
+    
+    // Generate IV
+    const iv = window.crypto.getRandomValues(new Uint8Array(12));
+    
+    // Encrypt file content
+    const encrypted = await window.crypto.subtle.encrypt(
+      { name: 'AES-GCM', iv },
+      dek,
+      arrayBuffer
+    );
+    
+    // Combine IV and encrypted data
+    const combined = new Uint8Array(iv.length + encrypted.byteLength);
+    combined.set(iv);
+    combined.set(new Uint8Array(encrypted), iv.length);
+    
+    // Return as Blob
+    return {
+      blob: new Blob([combined]),
+      iv: btoa(String.fromCharCode(...iv))
+    };
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setUploading(true);
     
-    const data = new FormData();
-    data.append('type', formData.type);
-    data.append('title', formData.title);
-    data.append('propertyAddress', formData.propertyAddress);
-    data.append('parcelId', formData.parcelId);
-    data.append('originalLocation', JSON.stringify({
-      type: formData.originalLocationType,
-      details: formData.originalLocationDetails
-    }));
-    data.append('instructionsForBeneficiary', formData.instructionsForBeneficiary);
-    data.append('notarized', formData.notarized);
+    // Check if vault is unlocked for encryption
+    if (!hasDEK()) {
+      toast.error('Please unlock your vault first to enable encryption');
+      setUploading(false);
+      setShowEncryptInfo(true);
+      return;
+    }
     
-    files.forEach(file => {
-      data.append('attachments', file);
-    });
-
     try {
+      const data = new FormData();
+      data.append('type', formData.type);
+      data.append('title', formData.title);
+      data.append('propertyAddress', formData.propertyAddress);
+      data.append('parcelId', formData.parcelId);
+      data.append('originalLocation', JSON.stringify({
+        type: formData.originalLocationType,
+        details: formData.originalLocationDetails
+      }));
+      
+      // Encrypt instructions if provided
+      if (formData.instructionsForBeneficiary) {
+        const dek = getMasterDEK();
+        const encryptedInstructions = await encryptText(formData.instructionsForBeneficiary, dek);
+        data.append('instructionsForBeneficiary', encryptedInstructions);
+        data.append('instructionsEncrypted', 'true');
+      } else {
+        data.append('instructionsForBeneficiary', '');
+      }
+      
+      data.append('notarized', formData.notarized);
+      data.append('clientEncrypted', 'true');
+      
+      // Encrypt and append files
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const { blob, iv } = await encryptFile(file);
+        data.append('attachments', blob, file.name);
+        data.append(`attachmentIv_${i}`, iv);
+      }
+      data.append('attachmentCount', files.length.toString());
+
       await createMutation.mutateAsync(data);
+    } catch (err) {
+      console.error('Upload error:', err);
+      toast.error(err.message || 'Failed to upload document');
     } finally {
       setUploading(false);
     }
@@ -183,12 +248,39 @@ const LegalDocuments = () => {
           </div>
         </motion.div>
 
-        {/* Disclaimer */}
+        {/* Encryption Status */}
         <motion.div 
           initial={{ opacity: 0 }} 
           animate={{ opacity: 1 }}
           style={{ 
             marginTop: 16, 
+            padding: '12px 16px', 
+            background: hasDEK() ? 'rgba(0,229,160,0.1)' : 'rgba(255,184,48,0.1)', 
+            border: `1px solid ${hasDEK() ? 'rgba(0,229,160,0.3)' : 'rgba(255,184,48,0.3)'}`,
+            borderRadius: 12,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12
+          }}
+        >
+          <Lock size={18} style={{ color: hasDEK() ? '#00e5a0' : '#ffb830', flexShrink: 0 }} />
+          <div style={{ flex: 1 }}>
+            <p style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.5 }}>
+              {hasDEK() ? (
+                <><strong style={{ color: '#00e5a0' }}>DEK Encryption Active:</strong> Documents will be encrypted with your Data Encryption Key before upload.</>
+              ) : (
+                <><strong style={{ color: '#ffb830' }}>Vault Locked:</strong> Please unlock your vault in the Vault page first to enable DEK encryption for documents.</>
+              )}
+            </p>
+          </div>
+        </motion.div>
+
+        {/* Disclaimer */}
+        <motion.div 
+          initial={{ opacity: 0 }} 
+          animate={{ opacity: 1 }}
+          style={{ 
+            marginTop: 12, 
             padding: '12px 16px', 
             background: 'rgba(255,184,48,0.1)', 
             border: '1px solid rgba(255,184,48,0.3)',
@@ -348,22 +440,22 @@ const LegalDocuments = () => {
 
                   <motion.button 
                     type="submit" 
-                    whileHover={{ scale: 1.01 }} 
-                    whileTap={{ scale: 0.98 }} 
-                    disabled={uploading || createMutation.isPending}
+                    whileHover={{ scale: hasDEK() ? 1.01 : 1 }} 
+                    whileTap={{ scale: hasDEK() ? 0.98 : 1 }} 
+                    disabled={uploading || createMutation.isPending || !hasDEK()}
                     style={{ 
                       padding: '14px 24px', 
                       borderRadius: 12, 
                       border: 'none', 
-                      background: uploading ? 'var(--glass-2)' : 'linear-gradient(135deg, #4f9eff, #00e5a0)', 
+                      background: !hasDEK() ? 'var(--glass-2)' : uploading ? 'var(--glass-2)' : 'linear-gradient(135deg, #4f9eff, #00e5a0)', 
                       color: '#001a12', 
                       fontWeight: 700, 
                       fontSize: 14, 
-                      cursor: uploading ? 'not-allowed' : 'pointer', 
-                      opacity: uploading ? 0.6 : 1 
+                      cursor: (uploading || !hasDEK()) ? 'not-allowed' : 'pointer', 
+                      opacity: (uploading || !hasDEK()) ? 0.6 : 1 
                     }}
                   >
-                    {uploading ? 'Uploading...' : 'Add to Legal Binder'}
+                    {!hasDEK() ? 'Unlock Vault First' : uploading ? 'Encrypting & Uploading...' : 'Add to Legal Binder'}
                   </motion.button>
                 </form>
               </div>
@@ -462,22 +554,38 @@ const LegalDocuments = () => {
                         </p>
                       )}
 
-                      {doc.notarized && (
-                        <span style={{ 
-                          fontSize: 11, 
-                          color: '#00e5a0', 
-                          background: 'rgba(0,229,160,0.1)', 
-                          border: '1px solid rgba(0,229,160,0.2)', 
-                          padding: '3px 8px', 
-                          borderRadius: 6,
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: 4,
-                          marginBottom: 12
-                        }}>
-                          <FileCheck size={12} /> Notarized
-                        </span>
-                      )}
+                      <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+                        {doc.clientEncrypted && (
+                          <span style={{ 
+                            fontSize: 11, 
+                            color: '#4f9eff', 
+                            background: 'rgba(79,158,255,0.1)', 
+                            border: '1px solid rgba(79,158,255,0.2)', 
+                            padding: '3px 8px', 
+                            borderRadius: 6,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 4
+                          }}>
+                            <Lock size={12} /> DEK Encrypted
+                          </span>
+                        )}
+                        {doc.notarized && (
+                          <span style={{ 
+                            fontSize: 11, 
+                            color: '#00e5a0', 
+                            background: 'rgba(0,229,160,0.1)', 
+                            border: '1px solid rgba(0,229,160,0.2)', 
+                            padding: '3px 8px', 
+                            borderRadius: 6,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 4
+                          }}>
+                            <FileCheck size={12} /> Notarized
+                          </span>
+                        )}
+                      </div>
 
                       {doc.attachments && doc.attachments.length > 0 && (
                         <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--glass-border)' }}>
