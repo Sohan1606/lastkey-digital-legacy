@@ -141,10 +141,17 @@ const legalDocumentSchema = new mongoose.Schema({
   },
   // Attachments (scans/photos)
   attachments: [attachmentSchema],
+  // DEK encryption metadata for client-side encryption
+  encryptionMetadata: {
+    dekVersion: { type: String, default: '1' },
+    encryptedDataKey: { type: String }, // DEK-encrypted document encryption key
+    iv: { type: String },
+    authTag: { type: String }
+  },
   // Beneficiary visibility
   visibleToBeneficiaries: {
     type: Boolean,
-    default: true
+    default: false // Safe default: documents hidden until explicitly shared
   },
   // Specific beneficiary access (if not all)
   allowedBeneficiaries: [{

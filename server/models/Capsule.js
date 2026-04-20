@@ -53,7 +53,28 @@ const capsuleSchema = new mongoose.Schema({
     type: String,
     enum: ['inactivity', 'date'],
     default: 'inactivity'
-  }
+  },
+  // DEK encryption metadata
+  encryptionMetadata: {
+    dekVersion: { type: String, default: '1' },
+    iv: { type: String },
+    authTag: { type: String }
+  },
+  // Client-side encryption flag
+  clientEncrypted: {
+    type: Boolean,
+    default: true // Safe default: assume encrypted
+  },
+  // Beneficiary access control
+  beneficiaryAccess: {
+    type: String,
+    enum: ['all', 'specific', 'none'],
+    default: 'all'
+  },
+  allowedBeneficiaries: [{
+    type: mongoose.Schema.ObjectId,
+    ref: 'Beneficiary'
+  }]
 }, {
   timestamps: true
 });

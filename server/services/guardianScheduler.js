@@ -10,7 +10,8 @@ exports.scheduleGuardianJobs = async (user) => {
     return;
   }
   const userId = user._id.toString();
-  const inactivityMs = user.inactivityDuration * 60 * 1000;
+  // Convert days to milliseconds (inactivityDuration is stored in days)
+  const inactivityMs = user.inactivityDuration * 24 * 60 * 60 * 1000;
 
   // Remove existing jobs for this user
   const existingWarning = await guardianQueue.getJob(`warning-${userId}`);
@@ -40,7 +41,7 @@ exports.scheduleGuardianJobs = async (user) => {
     }
   );
 
-  console.log(`Guardian jobs scheduled for ${user.email}: warning in ${user.inactivityDuration}min, trigger in ${user.inactivityDuration * 2}min`);
+  console.log(`Guardian jobs scheduled for ${user.email}: warning in ${user.inactivityDuration} days, trigger in ${user.inactivityDuration * 2} days`);
 };
 
 /**

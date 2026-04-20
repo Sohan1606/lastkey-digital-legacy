@@ -26,7 +26,9 @@ const userSchema = new mongoose.Schema({
   },
   inactivityDuration: {
     type: Number,
-    default: 1 // minutes for testing
+    default: 90, // 90 days default (in days, converted to appropriate unit by application)
+    min: [1, 'Inactivity duration must be at least 1 day'],
+    max: [365, 'Inactivity duration cannot exceed 365 days']
   },
   triggerStatus: {
     type: String,
@@ -83,7 +85,13 @@ const userSchema = new mongoose.Schema({
   alertChannels: {
     type: [String],
     enum: ['email', 'whatsapp', 'telegram'],
-    default: ['email']
+    default: ['email'],
+    validate: {
+      validator: function(v) {
+        return v && v.length > 0;
+      },
+      message: 'At least one alert channel must be specified'
+    }
   },
   // Gamification
   streak: {

@@ -24,12 +24,14 @@ This document explains **what every major part of the project is**, **why it exi
 ### Backend
 - **Node.js + Express**: REST API + middleware.
 - **MongoDB + Mongoose**: persistent storage for users, assets, capsules, beneficiaries.
-- **Socket.IO**: real-time Guardian Protocol updates (DMS status).
-- **JWT**: stateless authentication for protected routes.
-- **Nodemailer**: transactional emails (verify, guardian alerts, emergency, etc.).
+- **Socket.IO**: real-time Guardian Protocol updates (DMS status) with JWT authentication.
+- **JWT**: stateless authentication for protected routes (no fallback secrets).
+- **Nodemailer**: transactional emails (verify, guardian alerts, beneficiary notifications, etc.).
 - **Stripe (optional)**: paid tiers and checkout sessions.
 - **BullMQ + Redis (optional)**: queue-based scheduling/workers for guardian/capsule jobs.
   - **Fallback mode** exists when Redis is disabled: server uses a cron-like loop.
+- **DEK Key Management**: Server-side service for DEK lifecycle, RSA keypair operations, and beneficiary share management.
+- **Rate Limiting**: Applied to sensitive endpoints (auth, beneficiary access) to prevent abuse.
 
 ---
 
@@ -65,13 +67,19 @@ This document explains **what every major part of the project is**, **why it exi
 
 ### Vault (Digital Assets)
 - Users store entries (platform, username, URL, secret, notes, and crypto fields).
-- Secrets are stored encrypted using an encryption key (`ASSET_ENCRYPTION_KEY`).
+- **Zero-Knowledge Architecture**: All encryption is client-side using Web Crypto API (AES-256-GCM).
+- Server only stores ciphertext - never has access to plaintext passwords.
+- Each user has a **Data Encryption Key (DEK)** that encrypts their vault contents.
+- The DEK itself is encrypted with the user's password-derived key (PBKDF2).
+- Beneficiaries receive encrypted DEK "shares" wrapped with their RSA public keys.
 
 ### Beneficiaries
 - A beneficiary is someone who should receive access to the legacy.
 - Relationship icons/colors help UX clarity.
-- **Enrollment Flow**: Beneficiaries must enroll via secure token and set an unlock secret.
-- **No Emergency Codes**: Access requires login + unlock secret after owner is triggered.
+- **Enrollment Flow**: Beneficiaries must enroll via secure token, generate RSA keypair, and set an unlock secret.
+- **Authentication**: Email OTP (6-digit, 10-min expiry, 3-attempt limit) for secure login.
+- **No Emergency Codes**: Access requires OTP login + unlock secret after owner is triggered.
+- **DEK Shares**: Each beneficiary gets an encrypted share of the owner's DEK, decryptable only with their RSA private key.
 
 ### Property & Legal Documents
 Physical documents (deeds, titles, wills) are stored as:
@@ -178,13 +186,18 @@ The server is designed to **start listening even if MongoDB/Redis are unavailabl
    - masked secrets with reveal toggle
    - copy-to-clipboard with auto-clear behavior
 
-### 8.4 Beneficiaries + Emergency access
+### 8.4 Beneficiaries + Emergency Access
 1. User adds beneficiaries at `/beneficiaries`.
-2. Beneficiary uses `/emergency?code=...`.
-3. Emergency Access UI:
-   - prefills URL code
-   - shows a large, copyable code display
-4. Backend validates code and returns permitted legacy data.
+2. Beneficiary receives enrollment email with secure token.
+3. Beneficiary enrolls at `/beneficiary-portal?enroll=TOKEN`:
+   - Generates RSA keypair (client-side)
+   - Sets unlock secret
+   - Stores encrypted private key
+4. Upon Guardian Protocol trigger:
+   - Beneficiary receives email with portal link
+   - Logs in with email + OTP
+   - Decrypts DEK share using RSA private key
+   - Accesses legacy content based on permissions
 
 ### 8.5 Pricing → Stripe checkout (optional)
 1. User visits `/pricing`.
@@ -235,10 +248,15 @@ The server is designed to **start listening even if MongoDB/Redis are unavailabl
 - **`aiController.js`**: AI endpoints (suggestions/voice/memoir/scoring).
 
 ### Models
-- **`User.js`**: identity + guardian state (`lastActive`, `triggerStatus`, `inactivityDuration`, `alertChannels`, `phone`).
-- **`Asset.js`**: vault items (encrypted secret + metadata + crypto fields).
-- **`Beneficiary.js`**: recipients + emergency code/expiry + access logging.
-- **`Capsule.js`**: time capsule content + unlockAt/release state.
+- **`User.js`**: identity + guardian state (`lastActive`, `triggerStatus`, `inactivityDuration` in days, `alertChannels`, `phone`).
+- **`Asset.js`**: vault items (client-encrypted secret + metadata + crypto fields + beneficiary access control).
+- **`Beneficiary.js`**: recipients + enrollment status + OTP authentication + RSA encryption keys + access logging.
+- **`Capsule.js`**: time capsule content + unlockAt/release state + DEK encryption metadata.
+- **`LegalDocument.js`**: property/legal docs with encrypted attachments + recording metadata.
+- **`DataEncryptionKey.js`**: master DEK storage + beneficiary shares + key verification.
+- **`EmergencyAccessGrant.js`**: beneficiary access grants with scoped permissions.
+- **`EmergencySession.js`**: temporary beneficiary sessions with audit logging.
+- **`AuditLog.js`**: comprehensive security event logging.
 
 ### Services / Workers
 - **Queue wiring**: optional Redis/BullMQ initialization gated by `REDIS_ENABLED`.
@@ -252,8 +270,8 @@ The server is designed to **start listening even if MongoDB/Redis are unavailabl
 ### Required / important
 - `PORT`: server port (default 5000)
 - `MONGO_URI`: MongoDB connection string
-- `JWT_SECRET`: JWT signing secret (required in production)
-- `ASSET_ENCRYPTION_KEY`: encryption key for vault secrets (required for real security)
+- `JWT_SECRET`: JWT signing secret (**required** - server will not start without it)
+- `FRONTEND_URL`: Base URL for email links (e.g., `https://lastkey.app`)
 
 ### Optional / feature-gated
 - `REDIS_ENABLED=false|true`: enables BullMQ queues if true
@@ -280,7 +298,72 @@ From `client/`:
 
 ---
 
-## 14) Sudden Death Readiness Policy
+## 14) Security Architecture
+
+### Zero-Knowledge Encryption Model
+
+LastKey implements a **true zero-knowledge architecture** where the server never has access to user plaintext data:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        CLIENT (Browser)                          │
+│  ┌─────────────┐    ┌─────────────┐    ┌─────────────────────┐  │
+│  │ User Password│───→│ PBKDF2      │───→│ AES-256-GCM Key     │  │
+│  │             │    │ (100k iter) │    │                     │  │
+│  └─────────────┘    └─────────────┘    └─────────────────────┘  │
+│           │                                      │               │
+│           ▼                                      ▼               │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │  DEK (Data Encryption Key) - Random 256-bit AES key      │   │
+│  │  • Encrypts all vault assets                             │   │
+│  │  • Encrypts time capsules                                │   │
+│  │  • Encrypts legal documents                              │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│           │                                                      │
+│           ▼                                                      │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │  Server stores only:                                     │   │
+│  │  • DEK encrypted with password-derived key               │   │
+│  │  • Asset ciphertext (AES-256-GCM)                        │   │
+│  │  • DEK shares encrypted with beneficiary RSA keys        │   │
+│  └──────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### DEK (Data Encryption Key) Flow
+
+1. **User Registration**: 
+   - Client generates random DEK
+   - DEK encrypted with PBKDF2-derived key from password
+   - Encrypted DEK sent to server for storage
+
+2. **Vault Operations**:
+   - User enters password → derives key → decrypts DEK (in-memory only)
+   - DEK used to encrypt/decrypt assets (AES-256-GCM)
+   - DEK never persisted to storage, never sent to server
+
+3. **Beneficiary Shares**:
+   - When beneficiary enrolls: generates RSA keypair
+   - Owner's client encrypts DEK with beneficiary's RSA public key
+   - Encrypted share stored on server
+   - Beneficiary's RSA private key encrypted with their unlock secret
+
+4. **Trigger Activation**:
+   - Beneficiary logs in with email + OTP
+   - Decrypts RSA private key using unlock secret
+   - Decrypts DEK share using RSA private key
+   - Uses DEK to decrypt legacy content
+
+### Security Properties
+
+- **Server Compromise**: Attacker gets only ciphertext, cannot decrypt without user passwords
+- **Database Breach**: Same - encrypted data is useless without DEKs
+- **Insider Threat**: Employees cannot access user data
+- **Beneficiary Access**: Only after trigger, only with unlock secret + OTP
+
+---
+
+## 15) Sudden Death Readiness Policy
 
 ### The Problem
 
@@ -319,7 +402,7 @@ if (inactivityDuration < 30 && enrolledBeneficiaryCount === 0) {
 
 ---
 
-## 15) Debugging checklist (common issues)
+## 16) Debugging checklist (common issues)
 
 ### Server boots but DB is down
 - The server should still listen; it will retry MongoDB in the background.
@@ -337,7 +420,7 @@ if (inactivityDuration < 30 && enrolledBeneficiaryCount === 0) {
 
 ---
 
-## 15) “Why this architecture?” (presentation talking points)
+## 17) "Why this architecture?" (presentation talking points)
 
 - **Resilience**: server doesn’t crash if external services are missing (Redis/Stripe/OpenAI).
 - **Security**: vault encryption key + emergency access auditing.

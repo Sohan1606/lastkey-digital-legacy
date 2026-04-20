@@ -97,24 +97,40 @@ const buildWarningEmail = (user) => `
         I'm Here \u2014 Check In Now
       </a>
     </p>
-    <p style="color:#8899bb;font-size:13px">If you don't respond within ${user.inactivityDuration} minutes, your legacy will be delivered to your beneficiaries.</p>
+    <p style="color:#8899bb;font-size:13px">If you don't respond within ${user.inactivityDuration} days, your legacy will be delivered to your beneficiaries.</p>
   </div>
 `;
 
-const buildTriggerEmail = (user, beneficiary) => `
+const getPortalUrl = () => {
+  const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  return baseUrl.replace(/\/$/, ''); // Remove trailing slash
+};
+
+const buildTriggerEmail = (user, beneficiary) => {
+  const portalUrl = `${getPortalUrl()}/beneficiary-portal`;
+  const enrollmentToken = beneficiary.enrollmentToken;
+  
+  // If beneficiary hasn't enrolled yet, include enrollment token
+  const accessUrl = enrollmentToken 
+    ? `${portalUrl}?enroll=${enrollmentToken}`
+    : portalUrl;
+  
+  return `
   <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#0b1629;color:#f0f4ff;padding:32px;border-radius:16px">
     <h2 style="color:#ff4d6d;margin-bottom:16px">Guardian Protocol Activated</h2>
     <p>Dear ${beneficiary.name},</p>
     <p><strong>${user.name}</strong> has set up a digital legacy for you and has been inactive for an extended period.</p>
     <p>Their Guardian Protocol has been automatically activated. You can now access their legacy.</p>
     <p style="margin:24px 0">
-      <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/emergency"
-         style="background:linear-gradient(135deg,#ff4d6d,#7c5cfc);color:white;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:700">
-        Access Legacy Portal
+      <a href="${accessUrl}"
+         style="background:linear-gradient(135deg,#ff4d6d,#7c5cfc);color:white;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:700;display:inline-block">
+        ${enrollmentToken ? 'Enroll & Access Legacy' : 'Access Legacy Portal'}
       </a>
     </p>
     <p style="color:#8899bb;font-size:13px">Your relationship: ${beneficiary.relationship} | Access level: ${beneficiary.accessLevel}</p>
+    ${enrollmentToken ? `<p style="color:#ff6b6b;font-size:12px;margin-top:16px">This is a one-time enrollment link. Please save your credentials securely.</p>` : ''}
   </div>
 `;
+};
 
 module.exports = guardianWorker; // Will be null if Redis is not available

@@ -101,4 +101,102 @@ export const DashboardSkeleton = () => (
   </div>
 );
 
+export const TableSkeleton = ({ rows = 5, columns = 4 }) => (
+  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+    {/* Header */}
+    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${columns}, 1fr)`, gap: 16, padding: '12px 0', borderBottom: '1px solid var(--glass-border)' }}>
+      {Array.from({ length: columns }).map((_, i) => (
+        <LoadingSkeleton key={`header-${i}`} width="w-3/4" height="h-5" lines={1} />
+      ))}
+    </div>
+    {/* Rows */}
+    {Array.from({ length: rows }).map((_, rowIndex) => (
+      <div key={`row-${rowIndex}`} style={{ display: 'grid', gridTemplateColumns: `repeat(${columns}, 1fr)`, gap: 16, padding: '16px 0', borderBottom: '1px solid var(--glass-border-subtle)' }}>
+        {Array.from({ length: columns }).map((_, colIndex) => (
+          <LoadingSkeleton key={`cell-${rowIndex}-${colIndex}`} width={colIndex === 0 ? "w-full" : "w-3/4"} height="h-4" lines={1} />
+        ))}
+      </div>
+    ))}
+  </div>
+);
+
+export const FormSkeleton = ({ fields = 4 }) => (
+  <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+    {Array.from({ length: fields }).map((_, i) => (
+      <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <LoadingSkeleton width="w-1/4" height="h-4" lines={1} />
+        <LoadingSkeleton height="h-10" lines={1} />
+      </div>
+    ))}
+    <LoadingSkeleton width="w-1/3" height="h-12" lines={1} style={{ marginTop: 12 }} />
+  </div>
+);
+
+export const VaultSkeleton = () => (
+  <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+    {/* Header area */}
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <LoadingSkeleton width="w-48" height="h-8" lines={1} />
+      <LoadingSkeleton width="w-32" height="h-10" lines={1} />
+    </div>
+    {/* Asset cards */}
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
+      {[1, 2, 3, 4, 5, 6].map((i) => (
+        <motion.div
+          key={i}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: i * 0.05 }}
+          style={{ background: 'var(--glass-1)', border: '1px solid var(--glass-border)', borderRadius: 16, padding: 20 }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+            <LoadingSkeleton variant="circular" width="w-10" height="h-10" lines={1} />
+            <div style={{ flex: 1 }}>
+              <LoadingSkeleton width="w-3/4" height="h-5" lines={1} />
+            </div>
+          </div>
+          <LoadingSkeleton lines={2} height="h-4" />
+          <div style={{ marginTop: 16, display: 'flex', gap: 8 }}>
+            <LoadingSkeleton width="w-20" height="h-8" lines={1} />
+            <LoadingSkeleton width="w-20" height="h-8" lines={1} />
+          </div>
+        </motion.div>
+      ))}
+    </div>
+  </div>
+);
+
+export const BeneficiarySkeleton = () => (
+  <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <LoadingSkeleton width="w-56" height="h-8" lines={1} />
+      <LoadingSkeleton width="w-40" height="h-10" lines={1} />
+    </div>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
+      {[1, 2, 3].map((i) => (
+        <motion.div
+          key={i}
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: i * 0.08 }}
+          style={{ background: 'var(--glass-1)', border: '1px solid var(--glass-border)', borderRadius: 16, padding: 20 }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <LoadingSkeleton variant="circular" width="w-14" height="h-14" lines={1} />
+            <div style={{ flex: 1 }}>
+              <LoadingSkeleton width="w-3/4" height="h-5" lines={1} />
+              <div style={{ marginTop: 8 }}>
+                <LoadingSkeleton width="w-1/2" height="h-4" lines={1} />
+              </div>
+            </div>
+          </div>
+          <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--glass-border-subtle)' }}>
+            <LoadingSkeleton width="w-full" height="h-10" lines={1} />
+          </div>
+        </motion.div>
+      ))}
+    </div>
+  </div>
+);
+
 export default LoadingSkeleton;

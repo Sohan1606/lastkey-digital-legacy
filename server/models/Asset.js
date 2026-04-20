@@ -59,7 +59,22 @@ const assetSchema = new mongoose.Schema({
   },
   clientEncrypted: {
     type: Boolean,
-    default: false
+    default: true // Safe default: assume encrypted unless explicitly marked otherwise
+  },
+  // Access control for beneficiaries
+  visibleToBeneficiaries: {
+    type: Boolean,
+    default: true
+  },
+  allowedBeneficiaries: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Beneficiary'
+  }],
+  // Security metadata
+  securityLevel: {
+    type: String,
+    enum: ['standard', 'high', 'critical'],
+    default: 'standard'
   }
 }, { timestamps: true });
 
