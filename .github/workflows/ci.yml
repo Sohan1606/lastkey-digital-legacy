@@ -35,12 +35,19 @@ jobs:
       - name: Run ESLint
         run: npm run lint || true
 
-      - name: Run tests
+      - name: Run unit tests
         run: npm test
         env:
           NODE_ENV: test
           JWT_SECRET: test-jwt-secret-minimum-32-characters-long
           MONGO_URI: mongodb://localhost:27017/lastkey_test
+
+      - name: Run acceptance tests
+        run: npm run test:acceptance
+        env:
+          NODE_ENV: test
+          JWT_SECRET: test-jwt-secret-minimum-32-characters-long
+          MONGO_URI: mongodb://localhost:27017/lastkey_test_acceptance
 
   lint-and-test-client:
     runs-on: ubuntu-latest

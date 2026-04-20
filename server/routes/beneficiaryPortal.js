@@ -4,9 +4,14 @@ const Capsule = require('../models/Capsule');
 const User = require('../models/User');
 const EmergencySession = require('../models/EmergencySession');
 const { log } = require('../services/auditService');
-const { protectBeneficiary } = require('./beneficiaryAuth');
 
 const router = express.Router();
+
+// Lazy load protectBeneficiary to avoid circular dependency issues
+const getProtectBeneficiary = () => {
+  const { protectBeneficiary } = require('./beneficiaryAuth');
+  return protectBeneficiary;
+};
 
 // Middleware to validate emergency session
 const validateSession = async (req, res, next) => {
@@ -51,7 +56,7 @@ const validateSession = async (req, res, next) => {
 };
 
 // Get owner's assets (scoped)
-router.get('/assets', protectBeneficiary, validateSession, async (req, res) => {
+router.get('/assets', (req, res, next) => getProtectBeneficiary()(req, res, next), validateSession, async (req, res) => {
   try {
     const { beneficiary, owner, scopes } = req;
 
@@ -84,7 +89,7 @@ router.get('/assets', protectBeneficiary, validateSession, async (req, res) => {
 });
 
 // Get owner's capsules (scoped)
-router.get('/capsules', protectBeneficiary, validateSession, async (req, res) => {
+router.get('/capsules', (req, res, next) => getProtectBeneficiary()(req, res, next), validateSession, async (req, res) => {
   try {
     const { beneficiary, owner, scopes } = req;
 
@@ -121,7 +126,7 @@ router.get('/capsules', protectBeneficiary, validateSession, async (req, res) =>
 });
 
 // Get owner info (limited)
-router.get('/owner-info', protectBeneficiary, validateSession, async (req, res) => {
+router.get('/owner-info', (req, res, next) => getProtectBeneficiary()(req, res, next), validateSession, async (req, res) => {
   try {
     const { beneficiary, owner } = req;
 
@@ -140,7 +145,7 @@ router.get('/owner-info', protectBeneficiary, validateSession, async (req, res) 
 });
 
 // Download asset credentials (with audit)
-router.get('/assets/:assetId/download', protectBeneficiary, validateSession, async (req, res) => {
+router.get('/assets/:assetId/download', (req, res, next) => getProtectBeneficiary()(req, res, next), validateSession, async (req, res) => {
   try {
     const { beneficiary, owner, scopes } = req;
     const { assetId } = req.params;

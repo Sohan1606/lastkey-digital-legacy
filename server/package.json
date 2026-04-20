@@ -4,7 +4,8 @@
   "description": "LastKey Digital Legacy Backend",
   "main": "server.js",
   "scripts": {
-    "test": "jest --detectOpenHandles --forceExit",
+    "test": "jest --detectOpenHandles --forceExit --testPathIgnorePatterns=acceptance",
+    "test:acceptance": "jest --detectOpenHandles --forceExit tests/acceptance.test.js",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "start": "node server.js",
@@ -13,8 +14,12 @@
   },
   "jest": {
     "testEnvironment": "node",
-    "setupFilesAfterEnv": ["./tests/setup.js"],
-    "testMatch": ["**/tests/**/*.test.js"],
+    "setupFilesAfterEnv": [
+      "./tests/setup.js"
+    ],
+    "testMatch": [
+      "**/tests/**/*.test.js"
+    ],
     "collectCoverageFrom": [
       "**/*.js",
       "!**/node_modules/**",
@@ -49,6 +54,7 @@
     "ioredis": "^5.10.1",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.3.3",
+    "multer": "^2.1.1",
     "node-cron": "^4.2.1",
     "nodemailer": "^8.0.4",
     "nodemon": "^3.1.14",
