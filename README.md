@@ -4,19 +4,21 @@
 
 ## **Features**
 
-### **Core Security**
+### **Core Security (Zero-Knowledge Architecture)**
+- **DEK-Based Encryption** - Per-owner Data Encryption Key, wrapped with password-derived KEK
+- **Client-Side Only** - All encryption/decryption happens in browser; server never sees plaintext
+- **RSA Keypairs for Beneficiaries** - Secure DEK sharing via RSA-OAEP public key encryption
+- **OTP Authentication** - 6-digit codes for beneficiary login (console output in FREE_MODE)
 - **Guardian Protocol** - Advanced inactivity monitoring with multi-channel alerts
-- **Zero-Knowledge Encryption** - Client-side AES-256 encryption; server never sees plaintext
-- **Emergency Access Portal** - Secure beneficiary access via enrollment + unlock secret (NO email codes)
-- **WebAuthn/Passkeys** - Modern phishing-resistant authentication
-- **Real-time Monitoring** - Live status updates via authenticated Socket.IO
 - **Scoped Access Control** - Granular permissions for beneficiary access (view, download, etc.)
+- **Rate Limiting** - Strict limits on authentication endpoints to prevent brute force
 
-### **AI-Powered Features**
+### **AI-Powered Features (Gated by FEATURE_AI)**
 - **AI Voice Messages** - Transform text to realistic voice with OpenAI TTS
 - **Memoir AI** - Guided autobiography generation with life-stage prompts
 - **Smart Suggestions** - AI-powered recommendations for legacy optimization
 - **Legacy Health Score** - Intelligent scoring system with actionable insights
+- *Note: AI features require `FEATURE_AI=true` and valid `OPENAI_API_KEY`*
 
 ### **Memory Preservation**
 - **Life Timeline** - Interactive chronicle of life events and milestones
@@ -30,19 +32,21 @@
 - **Progress Tracking** - Detailed analytics and usage insights
 - **Achievement Center** - Celebrate your legacy-building journey
 
-### **Monetization**
+### **Monetization (Gated by FEATURE_PAYMENTS)**
 - **Subscription Tiers** - Free, Guardian ($4.99), Legacy Pro ($9.99)
 - **Stripe Integration** - Complete billing with webhooks
 - **Trial Periods** - 7-day free trial for premium features
 - **Usage Analytics** - PostHog integration for growth tracking
+- *Note: Payment features require `FEATURE_PAYMENTS=true` and valid Stripe keys*
 
 ## **Quick Start**
 
 ### **Prerequisites**
 - Node.js 18+
 - MongoDB 6.0+
-- OpenAI API Key (for AI features)
-- Stripe Account (for payments)
+- OpenAI API Key (optional, for AI features)
+- Stripe Account (optional, for payments)
+- **FREE_MODE** - Run without external services (emails logged to console)
 
 ### **Installation**
 
@@ -104,19 +108,28 @@ MONGO_URI=mongodb://localhost:27017/lastkey
 PORT=5000
 NODE_ENV=development
 
-# Authentication
-JWT_SECRET=your-super-secret-jwt-key
+# Authentication (REQUIRED - no fallback, validated at boot)
+JWT_SECRET=your-super-secret-jwt-key-min-32-chars
 
-# Email Configuration
+# FREE_MODE - Run without external services (recommended for college projects)
+# When FREE_MODE=true, emails are logged to console instead of sent
+FREE_MODE=true
+
+# Email Configuration (only needed if FREE_MODE=false)
+EMAIL_MODE=console  # Options: console, ethereal, smtp
 EMAIL_HOST=smtp.gmail.com
 EMAIL_PORT=587
 EMAIL_USER=your-email@gmail.com
 EMAIL_PASS=your-app-password
 
-# OpenAI (required for AI features)
+# Feature Flags (gate external services)
+FEATURE_AI=false        # Set to true to enable OpenAI features
+FEATURE_PAYMENTS=false  # Set to true to enable Stripe billing
+
+# OpenAI (only if FEATURE_AI=true)
 OPENAI_API_KEY=sk-your-openai-key
 
-# Stripe (required for payments)
+# Stripe (only if FEATURE_PAYMENTS=true)
 STRIPE_SECRET_KEY=sk_test_your-stripe-test-key
 STRIPE_GUARDIAN_PRICE_ID=price_guardian_basic
 STRIPE_LEGACY_PRO_PRICE_ID=price_legacy_pro
@@ -186,14 +199,65 @@ LastKey's approach:
 5. Beneficiary must provide unlock secret to create session
 
 ### **Technology Stack**
-- **Frontend**: React 19, Vite, TailwindCSS, Framer Motion, WebAuthn
+- **Frontend**: React 19, Vite, TailwindCSS, Framer Motion
 - **Backend**: Node.js, Express, MongoDB, Socket.IO
-- **Authentication**: JWT with bcryptjs, WebAuthn/Passkeys
-- **Encryption**: WebCrypto API (AES-GCM, PBKDF2) - client-side only
-- **Payments**: Stripe with webhooks
-- **AI**: OpenAI GPT-4 & TTS
+- **Authentication**: JWT with bcryptjs
+- **Encryption**: WebCrypto API (AES-GCM, PBKDF2, RSA-OAEP) - client-side only
+- **Payments**: Stripe with webhooks (gated by FEATURE_PAYMENTS)
+- **AI**: OpenAI GPT-4 & TTS (gated by FEATURE_AI)
 - **Analytics**: PostHog
-- **Email**: Nodemailer with SMTP
+- **Email**: Nodemailer with SMTP, Ethereal, or Console (FREE_MODE)
+
+### **Encryption Architecture (Zero-Knowledge)**
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    CLIENT-SIDE ENCRYPTION                    │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  OWNER FLOW:                                                 │
+│  ┌─────────────┐    ┌─────────────┐    ┌─────────────────┐  │
+│  │   Password  │───▶│  PBKDF2     │───▶│      KEK        │  │
+│  └─────────────┘    │  (100k it)  │    │ (Key Encryption)│  │
+│                     └─────────────┘    └────────┬────────┘  │
+│                                                  │           │
+│  ┌─────────────┐    ┌─────────────┐             │           │
+│  │ Random DEK  │───▶│ AES-GCM     │◀────────────┘           │
+│  │ (256-bit)   │    │ Wrap DEK    │                         │
+│  └──────┬──────┘    └──────┬──────┘                         │
+│         │                   │                                │
+│         │            ┌──────▼──────┐                         │
+│         │            │ Wrapped DEK │───▶ Server Storage      │
+│         │            │ (salt, iv,  │                         │
+│         │            │ ciphertext) │                         │
+│         │            └─────────────┘                         │
+│         │                                                    │
+│         └────────────────────────────────▶ Encrypt vault     │
+│                                             assets & docs    │
+│                                                              │
+│  BENEFICIARY FLOW:                                           │
+│  ┌─────────────┐    ┌─────────────┐    ┌─────────────────┐  │
+│  │   Unlock    │───▶│  PBKDF2     │───▶│  Decrypt RSA    │  │
+│  │   Secret    │    │  (100k it)  │    │  Private Key    │  │
+│  └─────────────┘    └─────────────┘    └────────┬────────┘  │
+│                                                  │           │
+│  ┌─────────────┐    ┌─────────────┐             │           │
+│  │  Encrypted  │───▶│ RSA-OAEP    │◀────────────┘           │
+│  │  DEK Share  │    │ Decrypt DEK │                         │
+│  └──────┬──────┘    └──────┬──────┘                         │
+│         │                   │                                │
+│         └───────────────────┴────────────────▶ Decrypt vault │
+│                                                 assets       │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Key Points:**
+- **DEK (Data Encryption Key)**: Random 256-bit AES key generated per owner
+- **KEK (Key Encryption Key)**: Derived from password using PBKDF2 (100k iterations)
+- **Server never sees**: Plaintext DEK, passwords, or unencrypted content
+- **Beneficiary DEK sharing**: Owner encrypts DEK with beneficiary's RSA public key
+- **Beneficiary decryption**: Uses RSA private key (encrypted with their unlock secret)
 
 ### **Database Models**
 - **User** - Authentication, preferences, Guardian Protocol settings
