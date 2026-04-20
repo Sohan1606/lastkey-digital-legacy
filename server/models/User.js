@@ -122,7 +122,20 @@ const userSchema = new mongoose.Schema({
     counter: { type: Number, default: 0 },
     deviceName: { type: String },
     createdAt: { type: Date, default: Date.now }
-  }]
+  }],
+  
+  // Vault DEK (Data Encryption Key) - wrapped with password-derived KEK
+  vault: {
+    wrappedDek: {
+      saltB64: { type: String },
+      iterations: { type: Number, default: 100000 },
+      ivB64: { type: String },
+      ciphertextB64: { type: String },
+      version: { type: String, default: '1' }
+    },
+    createdAt: { type: Date },
+    updatedAt: { type: Date }
+  }
 }, { timestamps: true });
 
 // Hash recovery passphrase before save

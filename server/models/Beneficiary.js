@@ -63,10 +63,12 @@ const beneficiarySchema = new mongoose.Schema({
       algVersion: { type: String, default: '1' }
     }
   },
-  // Vault share (DEK encrypted with beneficiary public key)
+  // Vault share (DEK encrypted with beneficiary public key via RSA-OAEP)
   vaultShare: {
-    encryptedDek: { type: String }, // Base64 encrypted DEK
-    createdAt: { type: Date }
+    encryptedDekB64: { type: String }, // Base64 RSA-OAEP encrypted DEK
+    dekShareVersion: { type: String, default: '1' },
+    dekShareCreatedAt: { type: Date },
+    dekShareUpdatedAt: { type: Date }
   },
   // Legacy: Remove old emergency access code fields (replaced by new flow)
   // emergencyAccessCode removed - no longer used

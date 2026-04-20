@@ -230,6 +230,10 @@ app.use('/api/legal-documents', legalDocumentsRouter);
 const dekRouter = require('./routes/dek');
 app.use('/api/dek', dekRouter);
 
+// Vault Key routes (owner DEK management)
+const vaultKeyRouter = require('./routes/vaultKey');
+app.use('/api/vault-key', vaultKeyRouter);
+
 // Memoir routes
 const memoirRouter = require('./routes/memoir');
 app.use('/api/memoir', memoirRouter);
@@ -406,7 +410,7 @@ const startWorkers = async () => {
                     <p><strong>${user.name}</strong> has been inactive for an extended period.</p>
                     <p>Their LastKey Digital Legacy has been <strong>automatically activated</strong>.</p>
                     <p>Please check their digital vault and follow their instructions.</p>
-                    <p><em>They set inactivity duration to ${user.inactivityDuration} minutes.</em></p>
+                    <p><em>They set inactivity duration to ${user.inactivityDuration} days.</em></p>
                     <hr />
                     <p>Login to Beneficiary Portal to claim access: <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/beneficiary-portal">LastKey Beneficiary Portal</a></p>
                   `
