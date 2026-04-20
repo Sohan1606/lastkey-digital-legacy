@@ -5,8 +5,8 @@ import { useAuth } from '../contexts/AuthContext';
 import {
   LayoutDashboard, Lock, Users, Clock, Bot, Mic,
   Calendar, BookOpen, Trophy, Menu, X, LogOut,
-  ChevronDown, Shield, Zap, Heart, Settings, MessageSquare,
-  ClipboardList, ShieldCheck
+  ChevronDown, Shield, Zap, Settings, MessageSquare,
+  ClipboardList, ShieldCheck, UserCircle
 } from 'lucide-react';
 
 const Navbar = () => {
@@ -54,7 +54,6 @@ const Navbar = () => {
     { name: 'Achievements', path: '/gamification', icon: Trophy },
     { name: 'Trust & Security', path: '/trust', icon: ShieldCheck },
     { name: 'Settings', path: '/settings', icon: Settings },
-    { name: 'Emergency', path: '/emergency', icon: Heart },
     { name: 'Pricing', path: '/pricing', icon: Zap },
   ];
 
@@ -174,6 +173,16 @@ const Navbar = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             {user ? (
               <>
+                {/* Beneficiary Portal Link - clearly separated */}
+                <Link to="/beneficiary-portal"
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 13px', borderRadius: 10, fontSize: 12, fontWeight: 600, color: '#00e5a0', background: 'rgba(0,229,160,0.08)', border: '1px solid rgba(0,229,160,0.18)', textDecoration: 'none', transition: 'all 0.18s', marginRight: 8 }}
+                  onMouseEnter={e => { e.currentTarget.style.color = '#00e5a0'; e.currentTarget.style.background = 'rgba(0,229,160,0.15)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.color = '#00e5a0'; e.currentTarget.style.background = 'rgba(0,229,160,0.08)'; }}
+                  title="For beneficiaries to access legacy"
+                >
+                  <UserCircle size={13} />
+                  <span className="hidden md:inline">Beneficiary Portal</span>
+                </Link>
                 <div className="hidden md:flex" style={{ alignItems: 'center', gap: 7, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 9, padding: '5px 11px' }}>
                   <div style={{ width: 22, height: 22, borderRadius: '50%', background: 'linear-gradient(135deg,#4f9eff,#7c5cfc)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: 'white' }}>
                     {user.name?.charAt(0)?.toUpperCase()}
@@ -192,6 +201,15 @@ const Navbar = () => {
               </>
             ) : (
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                {/* Beneficiary Portal for non-authenticated users */}
+                <Link to="/beneficiary-portal"
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 13px', borderRadius: 10, fontSize: 12, fontWeight: 600, color: '#00e5a0', background: 'rgba(0,229,160,0.08)', border: '1px solid rgba(0,229,160,0.18)', textDecoration: 'none', transition: 'all 0.18s' }}
+                  onMouseEnter={e => { e.currentTarget.style.color = '#00e5a0'; e.currentTarget.style.background = 'rgba(0,229,160,0.15)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.color = '#00e5a0'; e.currentTarget.style.background = 'rgba(0,229,160,0.08)'; }}
+                >
+                  <UserCircle size={13} />
+                  <span>Beneficiary Portal</span>
+                </Link>
                 <Link to="/login" style={{ padding: '7px 14px', borderRadius: 10, fontSize: 13, fontWeight: 500, color: 'rgba(136,153,187,0.9)', textDecoration: 'none' }}>Sign in</Link>
                 {/* Trust & Security link for public nav (ENFORCEMENT 6) */}
                 <Link to="/trust" style={{ padding: '7px 14px', borderRadius: 10, fontSize: 13, fontWeight: 500, color: 'rgba(136,153,187,0.9)', textDecoration: 'none' }}>Security</Link>

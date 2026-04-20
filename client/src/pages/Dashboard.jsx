@@ -267,7 +267,7 @@ const Dashboard = () => {
                 { label: 'Voice Messages', sub: 'AI-narrated farewell', path: '/voice-messages', color: '#7c5cfc', icon: '🎤' },
                 { label: 'Life Timeline', sub: 'Your visual story', path: '/life-timeline', color: '#4f9eff', icon: '📅' },
                 { label: 'Memoir AI', sub: 'Write your chapters', path: '/memoir-ai', color: '#00e5a0', icon: '📖' },
-                { label: 'Emergency Access', sub: 'Beneficiary portal', path: '/emergency', color: '#ff4d6d', icon: '🛡️' },
+                { label: 'Beneficiary Portal', sub: 'For loved ones to access legacy', path: '/beneficiary-portal', color: '#00e5a0', icon: '👥' },
                 { label: 'Setup Guide', sub: 'Complete onboarding', path: '/onboarding', color: '#a78bfa', icon: '⚡' },
                 { label: 'Activity Logs', sub: 'View your activity', path: '/activity-logs', color: '#4f9eff', icon: '📋' },
               ].map((item, i) => (

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, Mail, Lock, CheckCircle, AlertCircle, Clock, Eye, EyeOff, ArrowRight, Key, Download, FileText, Unlock } from 'lucide-react';
+import { Shield, Mail, Lock, CheckCircle, AlertCircle, Clock, Eye, EyeOff, ArrowRight, Key, Download, FileText, Unlock, UserCheck, FileKey } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { 
@@ -15,6 +15,79 @@ import {
 } from '../utils/crypto';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+
+// Stepper component for visual flow indication
+const Stepper = ({ currentStep, steps }) => {
+  const stepConfig = {
+    check: 0,
+    otp: 1,
+    enroll: 2,
+    login: 2,
+    access: 3
+  };
+  
+  const currentIndex = stepConfig[currentStep] || 0;
+  
+  return (
+    <div style={{ 
+      display: 'flex', 
+      alignItems: 'center', 
+      justifyContent: 'center',
+      marginBottom: 32,
+      padding: '0 20px'
+    }}>
+      {steps.map((step, index) => {
+        const isActive = index === currentIndex;
+        const isCompleted = index < currentIndex;
+        
+        return (
+          <div key={step.id} style={{ display: 'flex', alignItems: 'center' }}>
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 8
+            }}>
+              <div style={{
+                width: 40,
+                height: 40,
+                borderRadius: '50%',
+                background: isCompleted ? '#00e5a0' : isActive ? 'rgba(0,229,160,0.2)' : 'rgba(255,255,255,0.05)',
+                border: `2px solid ${isCompleted ? '#00e5a0' : isActive ? '#00e5a0' : 'rgba(255,255,255,0.2)'}`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: isCompleted ? '#001a12' : isActive ? '#00e5a0' : 'rgba(255,255,255,0.5)',
+                fontWeight: 600,
+                fontSize: 14
+              }}>
+                {isCompleted ? <CheckCircle size={20} /> : step.icon}
+              </div>
+              <span style={{
+                fontSize: 11,
+                color: isActive ? '#00e5a0' : 'rgba(255,255,255,0.5)',
+                fontWeight: isActive ? 600 : 400,
+                textAlign: 'center',
+                maxWidth: 80
+              }}>
+                {step.label}
+              </span>
+            </div>
+            {index < steps.length - 1 && (
+              <div style={{
+                width: 40,
+                height: 2,
+                background: index < currentIndex ? '#00e5a0' : 'rgba(255,255,255,0.1)',
+                margin: '0 8px',
+                marginBottom: 20
+              }} />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
 
 const BeneficiaryPortal = () => {
   const [step, setStep] = useState('check'); // check, otp, login, enroll, access
@@ -959,6 +1032,13 @@ const BeneficiaryPortal = () => {
     </div>
   );
 
+  const stepperSteps = [
+    { id: 'check', label: 'Verify', icon: <Mail size={18} /> },
+    { id: 'otp', label: 'OTP Code', icon: <Key size={18} /> },
+    { id: 'enroll', label: 'Enroll', icon: <UserCheck size={18} /> },
+    { id: 'access', label: 'Access', icon: <FileKey size={18} /> }
+  ];
+
   return (
     <div className="page spatial-bg" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
       <div className="stars" />
@@ -968,14 +1048,17 @@ const BeneficiaryPortal = () => {
         animate={{ opacity: 1, y: 0 }}
         style={{
           width: '100%',
-          maxWidth: 600,
+          maxWidth: step === 'access' ? 900 : 600,
           background: 'var(--glass-1)',
           backdropFilter: 'blur(20px)',
           border: '1px solid var(--glass-border)',
           borderRadius: 28,
-          padding: 40
+          padding: step === 'access' ? 32 : 40
         }}
       >
+        {/* Stepper - hidden on access step */}
+        {step !== 'access' && <Stepper currentStep={step} steps={stepperSteps} />}
+        
         <AnimatePresence mode="wait">
           {step === 'check' && renderCheckStep()}
           {step === 'otp' && renderOtpStep()}
