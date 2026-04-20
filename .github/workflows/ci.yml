@@ -60,6 +60,17 @@ jobs:
           FEATURE_AI: false
           FEATURE_PAYMENTS: false
 
+      - name: Run DEK encryption tests
+        run: npm test -- tests/dek-encryption.test.js
+        env:
+          NODE_ENV: test
+          JWT_SECRET: test-jwt-secret-minimum-32-characters-long
+          MONGO_URI: mongodb://localhost:27017/lastkey_test_dek
+          FREE_MODE: true
+          EMAIL_MODE: console
+          FEATURE_AI: false
+          FEATURE_PAYMENTS: false
+
   lint-and-test-client:
     runs-on: ubuntu-latest
     defaults:
