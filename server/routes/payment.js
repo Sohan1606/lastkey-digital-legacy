@@ -1,11 +1,33 @@
 const express = require('express');
 const router = express.Router();
+
+// Feature flag check - disable payments in FREE_MODE
+const isPaymentsEnabled = () => process.env.FEATURE_PAYMENTS !== 'false' && process.env.STRIPE_SECRET_KEY;
+
 let stripe = null;
-if (process.env.STRIPE_SECRET_KEY) {
+if (isPaymentsEnabled()) {
   stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 } else {
-  console.log('⚠️ Stripe not configured - payment disabled');
+  console.log('⚠️ Payments disabled (FREE_MODE or Stripe not configured)');
 }
+
+// Middleware to check if payments are enabled
+const checkPaymentsEnabled = (req, res, next) => {
+  if (process.env.FEATURE_PAYMENTS === 'false') {
+    return res.status(501).json({
+      success: false,
+      message: 'Payment features are disabled in FREE_MODE',
+      demo: true
+    });
+  }
+  if (!stripe) {
+    return res.status(503).json({
+      success: false,
+      message: 'Payment service is currently disabled. Please configure STRIPE_SECRET_KEY.'
+    });
+  }
+  next();
+};
 const { protect } = require('../middleware/auth');
 const User = require('../models/User');
 
@@ -25,13 +47,8 @@ const SUBSCRIPTION_TIERS = {
   }
 };
 
-router.post('/create-checkout-session', protect, async (req, res) => {
+router.post('/create-checkout-session', protect, checkPaymentsEnabled, async (req, res) => {
   try {
-    if (!stripe) {
-      return res.status(503).json({
-        error: 'Payment service is currently disabled. Please configure STRIPE_SECRET_KEY.'
-      });
-    }
 
     const { tier = 'guardian' } = req.body;
     const subscriptionConfig = SUBSCRIPTION_TIERS[tier];
@@ -181,13 +198,8 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
 });
 
 // Cancel subscription
-router.post('/cancel-subscription', protect, async (req, res) => {
+router.post('/cancel-subscription', protect, checkPaymentsEnabled, async (req, res) => {
   try {
-    if (!stripe) {
-      return res.status(503).json({
-        error: 'Payment service is currently disabled'
-      });
-    }
 
     const user = req.user;
     if (!user.stripeSubscriptionId) {

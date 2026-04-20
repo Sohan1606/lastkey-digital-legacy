@@ -106,15 +106,16 @@ router.post('/check-status', validate(beneficiaryCheckStatusSchema), async (req,
   }
 });
 
-// Beneficiary enrollment (set unlock secret)
-router.post('/enroll', validate(beneficiaryEnrollSchema), async (req, res) => {
+// Beneficiary enrollment (set unlock secret + encryption keys) - REQUIRES AUTHENTICATION
+router.post('/enroll', exports.protectBeneficiary, async (req, res) => {
   try {
-    const { email, unlockSecret } = req.body;
+    const { unlockSecret, publicKeyJwk, encryptedPrivateKeyBlob } = req.body;
+    const beneficiary = req.beneficiary;
     
-    if (!email || !unlockSecret) {
+    if (!unlockSecret) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Email and unlock secret are required' 
+        message: 'Unlock secret is required' 
       });
     }
 
@@ -126,12 +127,6 @@ router.post('/enroll', validate(beneficiaryEnrollSchema), async (req, res) => {
       });
     }
 
-    const beneficiary = await Beneficiary.findOne({ email });
-    
-    if (!beneficiary) {
-      return res.status(404).json({ success: false, message: 'Beneficiary not found' });
-    }
-
     if (beneficiary.enrollmentStatus !== 'invited') {
       return res.status(400).json({ 
         success: false, 
@@ -139,8 +134,23 @@ router.post('/enroll', validate(beneficiaryEnrollSchema), async (req, res) => {
       });
     }
 
+    // Validate encryption key material
+    if (!publicKeyJwk || !encryptedPrivateKeyBlob) {
+      return res.status(400).json({
+        success: false,
+        message: 'Encryption key material is required (publicKeyJwk, encryptedPrivateKeyBlob)'
+      });
+    }
+
     // Set unlock secret
     await beneficiary.setUnlockSecret(unlockSecret);
+    
+    // Store encryption keys
+    beneficiary.encryptionKeys = {
+      publicKeyJwk,
+      encryptedPrivateKeyBlob
+    };
+    
     beneficiary.completeEnrollment();
     await beneficiary.save();
 
@@ -203,7 +213,7 @@ router.post('/login/start', beneficiaryAuthLimiter, async (req, res) => {
     await beneficiary.setLoginOtp(otp);
     await beneficiary.save();
 
-    // Send OTP via email
+    // Send OTP via email (console in FREE_MODE)
     try {
       await sendEmail({
         to: beneficiary.email,
@@ -214,14 +224,11 @@ router.post('/login/start', beneficiaryAuthLimiter, async (req, res) => {
           <h1 style="font-size: 32px; letter-spacing: 4px;">${otp}</h1>
           <p>This code expires in 10 minutes.</p>
           <p>If you didn't request this code, please ignore this email.</p>
-        `
+        `,
+        otp: otp // Pass OTP for console logging in FREE_MODE
       });
     } catch (emailErr) {
       console.error('Failed to send OTP email:', emailErr.message);
-      // Don't fail the request - in development we might not have email configured
-      if (process.env.NODE_ENV === 'development') {
-        console.log('DEV MODE - OTP:', otp);
-      }
     }
 
     res.status(200).json({

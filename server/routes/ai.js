@@ -4,11 +4,28 @@ const { generateLegacyMessage, getAISuggestions, getLegacyScoreData, generateVoi
 
 const router = express.Router();
 
-router.post('/generate-message', protect, generateLegacyMessage);
-router.post('/generate-voice', protect, generateVoiceMessage);
-router.post('/generate-memoir', protect, generateMemoir);
-router.get('/suggestions', protect, getAISuggestions);
-router.get('/legacy-score', protect, getLegacyScoreData);
+// Feature flag check middleware
+const checkAIFeature = (req, res, next) => {
+  if (process.env.FEATURE_AI === 'false') {
+    return res.status(501).json({
+      success: false,
+      message: 'AI features are disabled in FREE_MODE',
+      demo: true,
+      data: {
+        message: 'This is a demo response. AI features require OpenAI API key.',
+        suggestions: ['Write a personal message', 'Include specific memories', 'Express gratitude'],
+        score: 75
+      }
+    });
+  }
+  next();
+};
+
+router.post('/generate-message', protect, checkAIFeature, generateLegacyMessage);
+router.post('/generate-voice', protect, checkAIFeature, generateVoiceMessage);
+router.post('/generate-memoir', protect, checkAIFeature, generateMemoir);
+router.get('/suggestions', protect, checkAIFeature, getAISuggestions);
+router.get('/legacy-score', protect, checkAIFeature, getLegacyScoreData);
 
 module.exports = router;
 

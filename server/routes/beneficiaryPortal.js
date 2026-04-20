@@ -2,6 +2,8 @@ const express = require('express');
 const Asset = require('../models/Asset');
 const Capsule = require('../models/Capsule');
 const User = require('../models/User');
+const LegalDocument = require('../models/LegalDocument');
+const DataEncryptionKey = require('../models/DataEncryptionKey');
 const EmergencySession = require('../models/EmergencySession');
 const { log } = require('../services/auditService');
 
@@ -65,7 +67,7 @@ router.get('/assets', (req, res, next) => getProtectBeneficiary()(req, res, next
     }
 
     const assets = await Asset.find({ userId: owner._id })
-      .select('-password -clientEncrypted') // Never return passwords
+      .select('-clientEncrypted') // Return encrypted password ciphertext for beneficiary decryption
       .lean();
 
     // Log access
@@ -192,5 +194,143 @@ Accessed by: ${beneficiary.name} (${beneficiary.relationship})
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });
+
+// Get vault share (encrypted DEK for beneficiary)
+router.get('/vault-share', (req, res, next) => getProtectBeneficiary()(req, res, next), validateSession, async (req, res) => {
+  try {
+    const { beneficiary, owner, scopes } = req;
+
+    if (!scopes.viewAssets) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
+    // Get DEK with beneficiary share
+    const dek = await DataEncryptionKey.findOne({ ownerId: owner._id });
+    
+    if (!dek) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Vault encryption not initialized' 
+      });
+    }
+
+    const share = dek.getActiveShare(beneficiary._id);
+    
+    if (!share) {
+      return res.status(404).json({
+        success: false,
+        message: 'No vault share found. Owner must grant access first.'
+      });
+    }
+
+    // Return encryption keys and share
+    res.status(200).json({
+      success: true,
+      data: {
+        encryptedShare: share.encryptedShare,
+        encryptedPrivateKeyBlob: beneficiary.encryptionKeys?.encryptedPrivateKeyBlob,
+        grantedAt: share.grantedAt
+      }
+    });
+  } catch (err) {
+    console.error('Vault share error:', err.message);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Get legal documents (scoped)
+router.get('/legal-documents', (req, res, next) => getProtectBeneficiary()(req, res, next), validateSession, async (req, res) => {
+  try {
+    const { beneficiary, owner, scopes } = req;
+
+    if (!scopes.viewDocuments) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
+    const documents = await LegalDocument.find({
+      userId: owner._id,
+      visibleToBeneficiaries: true,
+      $or: [
+        { allowedBeneficiaries: { $size: 0 } },
+        { allowedBeneficiaries: beneficiary._id }
+      ]
+    }).select('-storagePath').lean();
+
+    // Log access
+    await log('beneficiary_documents_viewed', {
+      userId: owner._id,
+      details: { 
+        beneficiaryId: beneficiary._id,
+        count: documents.length 
+      },
+      ip: req.ip
+    });
+
+    res.status(200).json({
+      success: true,
+      data: documents
+    });
+  } catch (err) {
+    console.error('Get documents error:', err.message);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Download legal document attachment (scoped)
+router.get('/legal-documents/:docId/attachments/:attachmentId/download', 
+  (req, res, next) => getProtectBeneficiary()(req, res, next), 
+  validateSession, 
+  async (req, res) => {
+    try {
+      const { beneficiary, owner, scopes } = req;
+      const { docId, attachmentId } = req.params;
+
+      if (!scopes.downloadFiles) {
+        return res.status(403).json({ success: false, message: 'Download not permitted' });
+      }
+
+      const document = await LegalDocument.findOne({
+        _id: docId,
+        userId: owner._id,
+        visibleToBeneficiaries: true
+      });
+
+      if (!document) {
+        return res.status(404).json({ success: false, message: 'Document not found' });
+      }
+
+      const attachment = document.attachments.id(attachmentId);
+      if (!attachment) {
+        return res.status(404).json({ success: false, message: 'Attachment not found' });
+      }
+
+      // Log download
+      await log('beneficiary_document_downloaded', {
+        userId: owner._id,
+        details: { 
+          beneficiaryId: beneficiary._id,
+          documentId: docId,
+          attachmentId
+        },
+        ip: req.ip
+      });
+
+      // Return attachment metadata - actual file download through separate endpoint
+      res.status(200).json({
+        success: true,
+        data: {
+          filename: attachment.filename,
+          contentType: attachment.contentType,
+          size: attachment.size,
+          integrityHash: attachment.integrityHash,
+          downloadUrl: `/api/beneficiary/portal/legal-documents/${docId}/attachments/${attachmentId}/file`
+        }
+      });
+    } catch (err) {
+      console.error('Document download error:', err.message);
+      res.status(500).json({ success: false, message: 'Server error' });
+    }
+  }
+);
 
 module.exports = router;

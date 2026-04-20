@@ -21,7 +21,15 @@ const envSchema = z.object({
   FRONTEND_URL: z.string().default('http://localhost:5173'),
   API_BASE_URL: z.string().default('http://localhost:5000'),
   
-  // Email configuration
+  // FREE_MODE: College project mode - no paid services required
+  FREE_MODE: z.enum(['true', 'false']).default('true'),
+  EMAIL_MODE: z.enum(['smtp', 'console', '']).default('console'),
+  
+  // Feature flags
+  FEATURE_AI: z.enum(['true', 'false']).default('false'),
+  FEATURE_PAYMENTS: z.enum(['true', 'false']).default('false'),
+  
+  // Email configuration (optional in FREE_MODE)
   EMAIL_HOST: z.string().optional(),
   EMAIL_PORT: z.string().default('587'),
   EMAIL_USER: z.string().optional(),

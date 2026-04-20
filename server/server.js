@@ -84,7 +84,12 @@ app.use('/api/', standardLimiter);
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
 
-// Mount beneficiary access limiter on sensitive endpoints
+// Mount beneficiary access limiter on ALL beneficiary auth endpoints
+app.use('/api/beneficiary/auth/login', beneficiaryAccessLimiter);
+app.use('/api/beneficiary/auth/login/start', beneficiaryAccessLimiter);
+app.use('/api/beneficiary/auth/login/verify', beneficiaryAccessLimiter);
+app.use('/api/beneficiary/auth/enroll', beneficiaryAccessLimiter);
+app.use('/api/beneficiary/auth/check-status', beneficiaryAccessLimiter);
 app.use('/api/beneficiary/auth/request-access', beneficiaryAccessLimiter);
 app.use('/api/beneficiary/auth/create-session', beneficiaryAccessLimiter);
 app.use('/api/beneficiary/portal/', beneficiaryAccessLimiter);
@@ -403,7 +408,7 @@ const startWorkers = async () => {
                     <p>Please check their digital vault and follow their instructions.</p>
                     <p><em>They set inactivity duration to ${user.inactivityDuration} minutes.</em></p>
                     <hr />
-                    <p>Access their legacy: <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard">LastKey Dashboard</a></p>
+                    <p>Login to Beneficiary Portal to claim access: <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/beneficiary-portal">LastKey Beneficiary Portal</a></p>
                   `
                 });
               }

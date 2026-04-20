@@ -10,7 +10,7 @@ import Register from './pages/Register';
 import VerifyEmail from './pages/VerifyEmail';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
-import EmergencyAccess from './pages/EmergencyAccess';
+// EmergencyAccess removed - use BeneficiaryPortal instead
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -63,7 +63,7 @@ function App() {
           <Route path="/terms" element={<TermsOfService />} />
           <Route path="/trust" element={<Trust />} />
           <Route path="/pricing" element={<Pricing />} />
-          <Route path="/emergency" element={<EmergencyAccess />} />
+          {/* /emergency route removed - beneficiaries use /beneficiary-portal */}
           <Route path="/beneficiary-portal" element={<BeneficiaryPortal />} />
           <Route path="/voice-messages" element={<ProtectedRoute><VoiceMessages /></ProtectedRoute>} />
           <Route path="/life-timeline" element={<ProtectedRoute><LifeTimeline /></ProtectedRoute>} />
