@@ -1,6 +1,7 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const rateLimit = require('express-rate-limit');
 const Beneficiary = require('../models/Beneficiary');
 const User = require('../models/User');
 const EmergencyAccessGrant = require('../models/EmergencyAccessGrant');
@@ -10,6 +11,15 @@ const { sendEmail } = require('../utils/email');
 const { validate, beneficiaryCheckStatusSchema, beneficiaryEnrollSchema, beneficiaryLoginSchema, requestAccessSchema } = require('../validators');
 
 const router = express.Router();
+
+// Rate limiting for beneficiary auth endpoints
+const beneficiaryAuthLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // 5 attempts per window
+  message: { success: false, message: 'Too many login attempts. Please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
 
 // JWT secret for beneficiary tokens (can be same or different from owner)
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -150,13 +160,89 @@ router.post('/enroll', validate(beneficiaryEnrollSchema), async (req, res) => {
   }
 });
 
-// Beneficiary login (simple email-based for now, can add passkey later)
-router.post('/login', validate(beneficiaryLoginSchema), async (req, res) => {
+// DEPRECATED: Old email-only login - returns 410 Gone
+// Use /login/start and /login/verify instead
+router.post('/login', async (req, res) => {
+  res.status(410).json({
+    success: false,
+    message: 'This endpoint is deprecated. Use POST /login/start followed by POST /login/verify for secure OTP-based login.'
+  });
+});
+
+// Generate and send OTP for beneficiary login
+router.post('/login/start', beneficiaryAuthLimiter, async (req, res) => {
   try {
     const { email } = req.body;
     
     if (!email) {
       return res.status(400).json({ success: false, message: 'Email is required' });
+    }
+
+    const beneficiary = await Beneficiary.findOne({ email }).populate('userId', 'name');
+    
+    if (!beneficiary) {
+      // Don't reveal if email exists
+      return res.status(200).json({ 
+        success: true, 
+        message: 'If an account exists, an OTP has been sent.' 
+      });
+    }
+
+    // Check enrollment status
+    if (beneficiary.enrollmentStatus !== 'enrolled') {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Please complete enrollment first' 
+      });
+    }
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // Store hashed OTP
+    await beneficiary.setLoginOtp(otp);
+    await beneficiary.save();
+
+    // Send OTP via email
+    try {
+      await sendEmail({
+        to: beneficiary.email,
+        subject: 'Your LastKey Login Code',
+        html: `
+          <h2>Login Verification Code</h2>
+          <p>Your one-time login code is:</p>
+          <h1 style="font-size: 32px; letter-spacing: 4px;">${otp}</h1>
+          <p>This code expires in 10 minutes.</p>
+          <p>If you didn't request this code, please ignore this email.</p>
+        `
+      });
+    } catch (emailErr) {
+      console.error('Failed to send OTP email:', emailErr.message);
+      // Don't fail the request - in development we might not have email configured
+      if (process.env.NODE_ENV === 'development') {
+        console.log('DEV MODE - OTP:', otp);
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'If an account exists, an OTP has been sent.',
+      // In development only, return the OTP for testing
+      ...(process.env.NODE_ENV === 'development' && { devOtp: otp })
+    });
+  } catch (err) {
+    console.error('Login start error:', err.message);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Verify OTP and complete login
+router.post('/login/verify', beneficiaryAuthLimiter, async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    
+    if (!email || !otp) {
+      return res.status(400).json({ success: false, message: 'Email and OTP are required' });
     }
 
     const beneficiary = await Beneficiary.findOne({ email }).populate('userId', 'name triggerStatus');
@@ -172,6 +258,29 @@ router.post('/login', validate(beneficiaryLoginSchema), async (req, res) => {
         message: 'Please complete enrollment first' 
       });
     }
+
+    // Verify OTP
+    const otpResult = await beneficiary.verifyLoginOtp(otp);
+    
+    if (!otpResult.valid) {
+      await beneficiary.save(); // Save attempt count
+      
+      const messages = {
+        no_otp: 'No active login request found. Please start login again.',
+        expired: 'Login code has expired. Please request a new one.',
+        too_many_attempts: 'Too many failed attempts. Please request a new code.',
+        invalid: 'Invalid login code. Please try again.'
+      };
+      
+      return res.status(401).json({ 
+        success: false, 
+        message: messages[otpResult.reason] || 'Invalid credentials'
+      });
+    }
+
+    // Clear OTP and save
+    beneficiary.loginOtp = undefined;
+    await beneficiary.save();
 
     // Generate token
     const token = signToken(beneficiary._id);
@@ -192,7 +301,9 @@ router.post('/login', validate(beneficiaryLoginSchema), async (req, res) => {
           id: beneficiary._id,
           name: beneficiary.name,
           email: beneficiary.email,
-          relationship: beneficiary.relationship
+          relationship: beneficiary.relationship,
+          hasEncryptionKeys: !!beneficiary.encryptionKeys?.publicKeyJwk,
+          hasVaultShare: !!beneficiary.vaultShare?.encryptedDek
         },
         owner: {
           name: beneficiary.userId.name,
@@ -201,7 +312,7 @@ router.post('/login', validate(beneficiaryLoginSchema), async (req, res) => {
       }
     });
   } catch (err) {
-    console.error('Beneficiary login error:', err.message);
+    console.error('Login verify error:', err.message);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });

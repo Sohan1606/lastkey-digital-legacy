@@ -84,6 +84,11 @@ app.use('/api/', standardLimiter);
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
 
+// Mount beneficiary access limiter on sensitive endpoints
+app.use('/api/beneficiary/auth/request-access', beneficiaryAccessLimiter);
+app.use('/api/beneficiary/auth/create-session', beneficiaryAccessLimiter);
+app.use('/api/beneficiary/portal/', beneficiaryAccessLimiter);
+
 const jwt = require('jsonwebtoken');
 
 const io = new Server(server, {

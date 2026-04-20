@@ -2,6 +2,12 @@ const jwt = require('jsonwebtoken');
 const { promisify } = require('util');
 const User = require('../models/User');
 
+// Ensure JWT_SECRET is configured - env validation should catch this at boot
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is required');
+}
+
 exports.protect = async (req, res, next) => {
   try {
     let token;
@@ -16,7 +22,7 @@ exports.protect = async (req, res, next) => {
       });
     }
 
-    const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET || 'fallback-secret-12345');
+    const decoded = await promisify(jwt.verify)(token, JWT_SECRET);
     const user = await User.findById(decoded.id);
 
     if (!user) {
