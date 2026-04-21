@@ -410,7 +410,7 @@ label {
 /* Progress indicators */
 .progress-bar { @apply h-2 bg-white/[0.08] rounded-full overflow-hidden; }
 .progress-bar-fill { @apply h-full rounded-full transition-all duration-500; }
-.progress-bar-gradient { @apply progress-bar-fill bg-gradient-to-r from-[#00e5a0] to-[#4f9eff]; }
+.progress-bar-gradient { height: 100%; border-radius: 9999px; transition: all 0.5s; background: linear-gradient(to right, #00e5a0, #4f9eff); }
 
 /* Tooltip */
 .tooltip { @apply relative; }
@@ -428,7 +428,7 @@ label {
 
 /* Navigation */
 .nav-link { @apply flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-[#8899bb] transition-all duration-200 hover:text-white hover:bg-white/[0.05]; }
-.nav-link-active { @apply nav-link text-white bg-white/[0.08] border border-white/[0.1]; }
+.nav-link-active { display: flex; align-items: center; gap: 0.75rem; padding: 0.625rem 1rem; border-radius: 0.75rem; font-size: 0.875rem; font-weight: 500; color: #fff; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1); transition: all 0.2s; }
 
 /* Button group */
 .btn-group { @apply inline-flex rounded-xl overflow-hidden border border-white/[0.1]; }
