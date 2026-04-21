@@ -28,6 +28,10 @@ const attachmentSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  // IV for encrypted files (stored for debugging/interoperability)
+  ivB64: {
+    type: String
+  },
   // Storage path (relative to uploads directory)
   storagePath: {
     type: String,

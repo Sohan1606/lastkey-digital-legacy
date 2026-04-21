@@ -68,6 +68,39 @@ exports.protectBeneficiary = async (req, res, next) => {
   }
 };
 
+// Middleware to require beneficiary to be fully enrolled
+// Allows only /enroll and /check-status for invited beneficiaries
+exports.protectBeneficiaryEnrolled = async (req, res, next) => {
+  try {
+    // First run the standard protection
+    await exports.protectBeneficiary(req, res, () => {
+      // If beneficiary is enrolled, allow all
+      if (req.beneficiary.enrollmentStatus === 'enrolled') {
+        return next();
+      }
+
+      // For invited beneficiaries, only allow specific endpoints
+      const allowedPaths = [
+        '/api/beneficiary/auth/enroll',
+        '/api/beneficiary/auth/check-status'
+      ];
+      
+      const isAllowed = allowedPaths.some(path => req.originalUrl.startsWith(path));
+      
+      if (!isAllowed) {
+        return res.status(403).json({ 
+          success: false, 
+          message: 'Complete enrollment first to access this feature.' 
+        });
+      }
+      
+      next();
+    });
+  } catch (err) {
+    return res.status(401).json({ success: false, message: 'Not authorized' });
+  }
+};
+
 // Check beneficiary enrollment status by email
 router.post('/check-status', validate(beneficiaryCheckStatusSchema), async (req, res) => {
   try {
@@ -198,11 +231,11 @@ router.post('/login/start', beneficiaryAuthLimiter, async (req, res) => {
       });
     }
 
-    // Check enrollment status
-    if (beneficiary.enrollmentStatus !== 'enrolled') {
+    // Allow OTP login for both 'invited' and 'enrolled' beneficiaries
+    if (beneficiary.enrollmentStatus !== 'invited' && beneficiary.enrollmentStatus !== 'enrolled') {
       return res.status(400).json({ 
         success: false, 
-        message: 'Please complete enrollment first' 
+        message: 'Beneficiary account not ready. Please check your invitation email.' 
       });
     }
 
@@ -258,11 +291,11 @@ router.post('/login/verify', beneficiaryAuthLimiter, async (req, res) => {
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
 
-    // Check enrollment status
-    if (beneficiary.enrollmentStatus !== 'enrolled') {
+    // Allow OTP verify for both 'invited' and 'enrolled' beneficiaries
+    if (beneficiary.enrollmentStatus !== 'invited' && beneficiary.enrollmentStatus !== 'enrolled') {
       return res.status(400).json({ 
         success: false, 
-        message: 'Please complete enrollment first' 
+        message: 'Beneficiary account not ready.' 
       });
     }
 
@@ -309,6 +342,8 @@ router.post('/login/verify', beneficiaryAuthLimiter, async (req, res) => {
           name: beneficiary.name,
           email: beneficiary.email,
           relationship: beneficiary.relationship,
+          enrollmentStatus: beneficiary.enrollmentStatus,
+          needsEnrollment: beneficiary.enrollmentStatus === 'invited',
           hasEncryptionKeys: !!beneficiary.encryptionKeys?.publicKeyJwk,
           hasVaultShare: !!beneficiary.vaultShare?.encryptedDek
         },
@@ -325,7 +360,7 @@ router.post('/login/verify', beneficiaryAuthLimiter, async (req, res) => {
 });
 
 // Request emergency access (only works if owner is triggered)
-router.post('/request-access', exports.protectBeneficiary, validate(requestAccessSchema), async (req, res) => {
+router.post('/request-access', exports.protectBeneficiaryEnrolled, validate(requestAccessSchema), async (req, res) => {
   try {
     const { beneficiary, owner } = req;
 
@@ -405,7 +440,7 @@ router.post('/request-access', exports.protectBeneficiary, validate(requestAcces
 });
 
 // Create emergency session (after verifying unlock secret)
-router.post('/create-session', exports.protectBeneficiary, async (req, res) => {
+router.post('/create-session', exports.protectBeneficiaryEnrolled, async (req, res) => {
   try {
     const { beneficiary, owner } = req;
     const { unlockSecret, grantId } = req.body;

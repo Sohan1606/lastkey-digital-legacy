@@ -11,10 +11,10 @@ const path = require('path');
 
 const router = express.Router();
 
-// Lazy load protectBeneficiary to avoid circular dependency issues
-const getProtectBeneficiary = () => {
-  const { protectBeneficiary } = require('./beneficiaryAuth');
-  return protectBeneficiary;
+// Lazy load protectBeneficiaryEnrolled to avoid circular dependency issues
+const getProtectBeneficiaryEnrolled = () => {
+  const { protectBeneficiaryEnrolled } = require('./beneficiaryAuth');
+  return protectBeneficiaryEnrolled;
 };
 
 // Middleware to validate emergency session
@@ -60,7 +60,7 @@ const validateSession = async (req, res, next) => {
 };
 
 // Get owner's assets (scoped)
-router.get('/assets', (req, res, next) => getProtectBeneficiary()(req, res, next), validateSession, async (req, res) => {
+router.get('/assets', (req, res, next) => getProtectBeneficiaryEnrolled()(req, res, next), validateSession, async (req, res) => {
   try {
     const { beneficiary, owner, scopes } = req;
 
@@ -93,7 +93,7 @@ router.get('/assets', (req, res, next) => getProtectBeneficiary()(req, res, next
 });
 
 // Get owner's capsules (scoped)
-router.get('/capsules', (req, res, next) => getProtectBeneficiary()(req, res, next), validateSession, async (req, res) => {
+router.get('/capsules', (req, res, next) => getProtectBeneficiaryEnrolled()(req, res, next), validateSession, async (req, res) => {
   try {
     const { beneficiary, owner, scopes } = req;
 
@@ -130,7 +130,7 @@ router.get('/capsules', (req, res, next) => getProtectBeneficiary()(req, res, ne
 });
 
 // Get owner info (limited)
-router.get('/owner-info', (req, res, next) => getProtectBeneficiary()(req, res, next), validateSession, async (req, res) => {
+router.get('/owner-info', (req, res, next) => getProtectBeneficiaryEnrolled()(req, res, next), validateSession, async (req, res) => {
   try {
     const { beneficiary, owner } = req;
 
@@ -149,7 +149,7 @@ router.get('/owner-info', (req, res, next) => getProtectBeneficiary()(req, res, 
 });
 
 // Download asset credentials (with audit)
-router.get('/assets/:assetId/download', (req, res, next) => getProtectBeneficiary()(req, res, next), validateSession, async (req, res) => {
+router.get('/assets/:assetId/download', (req, res, next) => getProtectBeneficiaryEnrolled()(req, res, next), validateSession, async (req, res) => {
   try {
     const { beneficiary, owner, scopes } = req;
     const { assetId } = req.params;
@@ -198,7 +198,7 @@ Accessed by: ${beneficiary.name} (${beneficiary.relationship})
 });
 
 // Get vault share (encrypted DEK for beneficiary)
-router.get('/vault-share', (req, res, next) => getProtectBeneficiary()(req, res, next), validateSession, async (req, res) => {
+router.get('/vault-share', (req, res, next) => getProtectBeneficiaryEnrolled()(req, res, next), validateSession, async (req, res) => {
   try {
     const { beneficiary, owner, scopes } = req;
 
@@ -233,7 +233,7 @@ router.get('/vault-share', (req, res, next) => getProtectBeneficiary()(req, res,
 });
 
 // Get legal documents (scoped)
-router.get('/legal-documents', (req, res, next) => getProtectBeneficiary()(req, res, next), validateSession, async (req, res) => {
+router.get('/legal-documents', (req, res, next) => getProtectBeneficiaryEnrolled()(req, res, next), validateSession, async (req, res) => {
   try {
     const { beneficiary, owner, scopes } = req;
 
@@ -274,7 +274,7 @@ router.get('/legal-documents', (req, res, next) => getProtectBeneficiary()(req, 
 
 // Get attachment metadata
 router.get('/legal-documents/:docId/attachments/:attachmentId/meta',
-  (req, res, next) => getProtectBeneficiary()(req, res, next),
+  (req, res, next) => getProtectBeneficiaryEnrolled()(req, res, next),
   validateSession,
   async (req, res) => {
     try {
@@ -319,7 +319,7 @@ router.get('/legal-documents/:docId/attachments/:attachmentId/meta',
 
 // Stream attachment file bytes
 router.get('/legal-documents/:docId/attachments/:attachmentId/file',
-  (req, res, next) => getProtectBeneficiary()(req, res, next),
+  (req, res, next) => getProtectBeneficiaryEnrolled()(req, res, next),
   validateSession,
   async (req, res) => {
     try {
@@ -333,7 +333,11 @@ router.get('/legal-documents/:docId/attachments/:attachmentId/file',
       const document = await LegalDocument.findOne({
         _id: docId,
         ownerId: owner._id,
-        visibleToBeneficiaries: true
+        visibleToBeneficiaries: true,
+        $or: [
+          { allowedBeneficiaries: { $size: 0 } },
+          { allowedBeneficiaries: beneficiary._id }
+        ]
       });
 
       if (!document) {
@@ -363,8 +367,8 @@ router.get('/legal-documents/:docId/attachments/:attachmentId/file',
         userAgent: req.headers['user-agent']
       });
 
-      // Stream raw bytes
-      res.setHeader('Content-Type', 'application/octet-stream');
+      // Stream raw bytes with correct MIME type
+      res.setHeader('Content-Type', attachment.mimeType || 'application/octet-stream');
       res.setHeader('Content-Disposition', `attachment; filename="${attachment.originalName}"`);
       res.setHeader('X-Encrypted', attachment.encrypted ? 'true' : 'false');
       res.setHeader('X-SHA256', attachment.sha256Hash);

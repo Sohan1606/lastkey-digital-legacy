@@ -98,10 +98,38 @@ const validateEnv = () => {
  * @returns {Object} Sanitized environment
  */
 const getSanitizedEnv = () => {
-  const sensitiveKeys = ['JWT_SECRET', 'MONGO_URI', 'EMAIL_PASS', 'STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', 'LEGACY_ENCRYPTION_KEY'];
+  const sensitiveKeys = [
+    'JWT_SECRET',
+    'MONGO_URI',
+    'EMAIL_PASS',
+    'EMAIL_USER',
+    'STRIPE_SECRET_KEY',
+    'STRIPE_WEBHOOK_SECRET',
+    'LEGACY_ENCRYPTION_KEY',
+    'OPENAI_API_KEY',
+    'WHATSAPP_API_KEY',
+    'TELEGRAM_BOT_TOKEN',
+    'WEBAUTHN_RP_ID'
+  ];
+  
+  // Only return keys defined in envSchema (avoid leaking Windows env vars)
+  const schemaKeys = [
+    'NODE_ENV', 'PORT', 'JWT_SECRET', 'MONGO_URI',
+    'FRONTEND_URL', 'API_BASE_URL',
+    'FREE_MODE', 'EMAIL_MODE',
+    'FEATURE_AI', 'FEATURE_PAYMENTS',
+    'EMAIL_HOST', 'EMAIL_PORT', 'EMAIL_USER', 'EMAIL_PASS', 'EMAIL_FROM',
+    'STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET',
+    'LEGACY_ENCRYPTION_KEY',
+    'WEBAUTHN_RP_ID',
+    'RATE_LIMIT_WINDOW_MS', 'RATE_LIMIT_MAX',
+    'MAX_FILE_SIZE', 'UPLOAD_DIR'
+  ];
   
   return Object.keys(process.env).reduce((acc, key) => {
+    if (!schemaKeys.includes(key)) return acc; // Skip non-schema keys
     if (key.startsWith('npm_')) return acc;
+    
     acc[key] = sensitiveKeys.includes(key) ? '[REDACTED]' : process.env[key];
     return acc;
   }, {});

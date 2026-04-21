@@ -102,6 +102,9 @@ router.post('/', protect, upload.array('attachments', 5), async (req, res) => {
         const fileBuffer = fs.readFileSync(file.path);
         const sha256Hash = LegalDocument.computeHash(fileBuffer);
         
+        // Read IV from request body if provided
+        const ivB64 = req.body[`attachmentIv_${i}`] || req.body[`attachmentIv_${file.originalname}`];
+        
         attachments.push({
           filename: file.filename,
           originalName: file.originalname,
@@ -109,6 +112,7 @@ router.post('/', protect, upload.array('attachments', 5), async (req, res) => {
           size: file.size,
           sha256Hash,
           encrypted: clientEncrypted, // Set based on client flag
+          ivB64: ivB64 || undefined, // Store IV if provided
           storagePath: file.path,
           uploadedAt: new Date()
         });
