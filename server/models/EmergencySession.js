@@ -5,26 +5,26 @@ const emergencySessionSchema = new mongoose.Schema({
   grantId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'EmergencyAccessGrant',
-    required: true,
-    index: true
+    required: true
+    // Indexed via schema.index() if needed
   },
   beneficiaryId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Beneficiary',
-    required: true,
-    index: true
+    required: true
+    // Compound index defined at schema level (line 65)
   },
   ownerId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true,
-    index: true
+    required: true
+    // Indexed if needed for audit queries
   },
   // Session token hash (never store plain token)
   sessionTokenHash: {
     type: String,
-    required: true,
-    index: true
+    required: true
+    // Compound index defined at schema level (line 66)
   },
   // Session expires at (30 minutes default)
   expiresAt: {
@@ -48,8 +48,8 @@ const emergencySessionSchema = new mongoose.Schema({
   status: {
     type: String,
     enum: ['active', 'expired', 'revoked'],
-    default: 'active',
-    index: true
+    default: 'active'
+    // Compound index defined at schema level (lines 65-66)
   },
   revokedAt: {
     type: Date

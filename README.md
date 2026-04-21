@@ -107,6 +107,97 @@ npm run dev
 - Backend API: http://localhost:5000
 - API Health Check: http://localhost:5000/api/health
 
+---
+
+## **FREE_MODE Quickstart (No External Services)**
+
+Perfect for demos, college projects, or local development:
+
+```bash
+# server/.env
+FREE_MODE=true
+EMAIL_MODE=console
+FEATURE_AI=false
+FEATURE_PAYMENTS=false
+```
+
+**What happens:**
+- ✅ Emails (OTP codes) print to terminal instead of sending
+- ✅ No Stripe, OpenAI, or external services needed
+- ✅ Redis optional (falls back to node-cron)
+- ✅ All core features work: vault, beneficiaries, capsules, documents
+
+**OTP codes appear like this:**
+```
+========================================================================
+📧 EMAIL (CONSOLE MODE)
+========================================================================
+TO:      beneficiary@email.com
+SUBJECT: Your LastKey Access Code
+🔐 OTP CODE: 123456
+========================================================================
+```
+
+**Developer Convenience: DEV_FAST_MODE**
+
+If you want faster Guardian Protocol testing, set:
+```bash
+DEV_FAST_MODE=true
+```
+
+When enabled, inactivity durations are treated as **minutes** instead of days:
+- `7 days` → `7 minutes`
+- `30 days` → `30 minutes`
+
+This lets you test the full Guardian flow (alerts → trigger → beneficiary access) in minutes instead of weeks.
+
+---
+
+## **Beneficiary Access Flow (Perfect Workflow)**
+
+The beneficiary portal follows a secure, step-by-step flow:
+
+```
+1. Check Status
+   └→ GET /api/beneficiary/auth/check-status?email=user@email.com
+   └→ Shows if beneficiary is invited, enrolled, or has pending access
+
+2. OTP Login
+   └→ POST /api/beneficiary/auth/login/start (sends OTP)
+   └→ POST /api/beneficiary/auth/login/verify (verifies OTP)
+   └→ Returns JWT + enrollmentStatus + needsEnrollment flag
+
+3. Enrollment (if needsEnrollment=true)
+   └→ POST /api/beneficiary/auth/enroll (requires JWT)
+   └→ Beneficiary sets unlock secret + uploads RSA public key
+   └→ Status changes: invited → enrolled
+
+4. Request Access (only if owner.triggerStatus === 'triggered')
+   └→ POST /api/beneficiary/auth/request-access
+   └→ Creates EmergencyAccessGrant with scoped permissions
+
+5. Create Session
+   └→ POST /api/beneficiary/auth/create-session
+   └→ Verifies unlock secret against stored hash
+   └→ Returns session token for portal access
+
+6. View Vault + Documents
+   └→ GET /api/beneficiary/portal/assets
+   └→ GET /api/beneficiary/portal/capsules
+   └→ GET /api/beneficiary/portal/legal-documents
+
+7. Download & Decrypt Locally
+   └→ GET /api/beneficiary/portal/legal-documents/:id/file (streams bytes)
+   └→ Client decrypts using DEK + IV (AES-GCM)
+   └→ Server NEVER sees plaintext secrets
+```
+
+**Security Highlights:**
+- ✅ Zero-knowledge: server stores only ciphertext
+- ✅ Scoped access: beneficiaries can only view/download what owner permits
+- ✅ Audit logging: all access recorded with timestamps
+- ✅ Session-based: temporary access with automatic expiration
+
 ## **Environment Variables**
 
 ### **Server (.env)**

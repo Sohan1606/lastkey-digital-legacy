@@ -2,19 +2,50 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+
 const LegalDocument = require('../models/LegalDocument');
 const { protect } = require('../middleware/auth');
 const { log } = require('../services/auditService');
 
 const router = express.Router();
 
-// Ensure uploads directory exists
+/**
+ * Helpers
+ */
+function safeJsonParse(value, fallback = undefined) {
+  if (value === undefined || value === null || value === '') return fallback;
+  if (typeof value === 'object') return value; // already parsed
+  try {
+    return JSON.parse(value);
+  } catch (e) {
+    return fallback;
+  }
+}
+
+function stripStoragePaths(doc) {
+  if (!doc) return doc;
+  const obj = typeof doc.toObject === 'function' ? doc.toObject() : doc;
+
+  if (Array.isArray(obj.attachments)) {
+    obj.attachments = obj.attachments.map((a) => {
+      const { storagePath, ...rest } = a;
+      return rest;
+    });
+  }
+  return obj;
+}
+
+/**
+ * Ensure uploads directory exists
+ */
 const uploadsDir = path.join(__dirname, '../uploads/legal-documents');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-// Multer configuration
+/**
+ * Multer configuration
+ */
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const userDir = path.join(uploadsDir, req.user._id.toString());
@@ -24,55 +55,69 @@ const storage = multer.diskStorage({
     cb(null, userDir);
   },
   filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
     cb(null, uniqueSuffix + path.extname(file.originalname));
   }
 });
 
+/**
+ * IMPORTANT:
+ * If the client encrypts a file before upload, the browser often sends it as
+ * application/octet-stream. We allow that too.
+ */
 const fileFilter = (req, file, cb) => {
-  // Allow only specific file types
   const allowedMimes = [
     'application/pdf',
     'image/jpeg',
     'image/png',
-    'image/tiff'
+    'image/tiff',
+    'application/octet-stream' // for encrypted ciphertext uploads
   ];
-  
-  if (allowedMimes.includes(file.mimetype)) {
-    cb(null, true);
-  } else {
-    cb(new Error('Invalid file type. Only PDF, JPEG, PNG, and TIFF are allowed.'), false);
-  }
+
+  if (allowedMimes.includes(file.mimetype)) return cb(null, true);
+
+  return cb(
+    new Error('Invalid file type. Only PDF, JPEG, PNG, TIFF, or encrypted binary uploads are allowed.'),
+    false
+  );
 };
 
 const upload = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB limit
-    files: 5 // Max 5 files per upload
+    fileSize: 10 * 1024 * 1024, // 10MB
+    files: 5
   }
 });
 
-// Get all legal documents for owner
+/**
+ * GET /api/legal-documents
+ * Owner: list documents
+ */
 router.get('/', protect, async (req, res) => {
   try {
     const documents = await LegalDocument.find({ ownerId: req.user._id })
-      .select('-attachments.storagePath') // Don't expose storage paths
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
 
-    res.status(200).json({
+    const safeDocs = documents.map(stripStoragePaths);
+
+    return res.status(200).json({
       success: true,
-      count: documents.length,
-      data: documents
+      count: safeDocs.length,
+      data: safeDocs
     });
   } catch (err) {
     console.error('Get documents error:', err.message);
-    res.status(500).json({ success: false, message: 'Server error' });
+    return res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 
-// Create new legal document
+/**
+ * POST /api/legal-documents
+ * Owner: create document + upload attachments
+ */
 router.post('/', protect, upload.array('attachments', 5), async (req, res) => {
   try {
     const {
@@ -80,39 +125,46 @@ router.post('/', protect, upload.array('attachments', 5), async (req, res) => {
       title,
       propertyAddress,
       parcelId,
-      recordingInfo,
-      notarized,
-      notaryInfo,
-      originalLocation,
       instructionsForBeneficiary,
-      certifiedCopyInstructions,
-      visibleToBeneficiaries,
-      allowedBeneficiaries
+      certifiedCopyInstructions
     } = req.body;
 
-    // Check if client encrypted the files
+    // Booleans / JSON fields
+    const visibleToBeneficiaries = req.body.visibleToBeneficiaries !== 'false';
+    const notarized = req.body.notarized === 'true' || req.body.notarized === true;
+
+    const recordingInfo = safeJsonParse(req.body.recordingInfo, undefined);
+    const notaryInfo = safeJsonParse(req.body.notaryInfo, undefined);
+    const originalLocation = safeJsonParse(req.body.originalLocation, undefined);
+    const allowedBeneficiaries = safeJsonParse(req.body.allowedBeneficiaries, []);
+
+    // Encryption flags from client
     const clientEncrypted = req.body.clientEncrypted === 'true' || req.body.clientEncrypted === true;
     const encryptionVersion = req.body.encryptionVersion || '1';
 
     // Process uploaded files
     const attachments = [];
-    if (req.files && req.files.length > 0) {
+    if (req.files?.length) {
       for (let i = 0; i < req.files.length; i++) {
         const file = req.files[i];
         const fileBuffer = fs.readFileSync(file.path);
         const sha256Hash = LegalDocument.computeHash(fileBuffer);
-        
-        // Read IV from request body if provided
-        const ivB64 = req.body[`attachmentIv_${i}`] || req.body[`attachmentIv_${file.originalname}`];
-        
+
+        // Optional per-file IV from client
+        const ivB64 =
+          req.body[`attachmentIv_${i}`] ||
+          req.body[`attachmentIv_${file.originalname}`] ||
+          undefined;
+
         attachments.push({
           filename: file.filename,
           originalName: file.originalname,
           mimeType: file.mimetype,
           size: file.size,
           sha256Hash,
-          encrypted: clientEncrypted, // Set based on client flag
-          ivB64: ivB64 || undefined, // Store IV if provided
+          encrypted: clientEncrypted,
+          ivB64, // NOTE: you must add ivB64 to schema (next step)
+          encryptionVersion, // optional; add to schema if you want to persist
           storagePath: file.path,
           uploadedAt: new Date()
         });
@@ -125,75 +177,107 @@ router.post('/', protect, upload.array('attachments', 5), async (req, res) => {
       title,
       propertyAddress,
       parcelId,
-      recordingInfo: recordingInfo ? JSON.parse(recordingInfo) : undefined,
-      notarized: notarized === 'true',
-      notaryInfo: notaryInfo ? JSON.parse(notaryInfo) : undefined,
-      originalLocation: originalLocation ? JSON.parse(originalLocation) : undefined,
+      recordingInfo,
+      notarized,
+      notaryInfo,
+      originalLocation,
       instructionsForBeneficiary,
       certifiedCopyInstructions,
       attachments,
-      visibleToBeneficiaries: visibleToBeneficiaries !== 'false',
-      allowedBeneficiaries: allowedBeneficiaries ? JSON.parse(allowedBeneficiaries) : []
+      visibleToBeneficiaries,
+      allowedBeneficiaries
     });
 
-    // Log creation
     await log('legal_document_created', {
       userId: req.user._id,
-      details: { 
-        documentId: document._id, 
-        type: document.type,
-        title: document.title 
-      }
+      details: { documentId: document._id, type: document.type, title: document.title },
+      ip: req.ip,
+      userAgent: req.headers['user-agent']
     });
 
-    res.status(201).json({
+    // Never return storagePath to client
+    return res.status(201).json({
       success: true,
-      data: document
+      data: stripStoragePaths(document)
     });
   } catch (err) {
     console.error('Create document error:', err.message);
-    
+
     // Clean up uploaded files on error
-    if (req.files) {
-      req.files.forEach(file => {
+    if (req.files?.length) {
+      for (const file of req.files) {
         try {
           fs.unlinkSync(file.path);
-        } catch (e) {}
-      });
+        } catch (_) {}
+      }
     }
-    
-    res.status(500).json({ success: false, message: err.message });
+
+    return res.status(500).json({ success: false, message: err.message });
   }
 });
 
-// Get single document
+/**
+ * GET /api/legal-documents/:id
+ * Owner: get single document
+ */
 router.get('/:id', protect, async (req, res) => {
   try {
     const document = await LegalDocument.findOne({
       _id: req.params.id,
       ownerId: req.user._id
-    }).select('-attachments.storagePath');
+    });
 
     if (!document) {
       return res.status(404).json({ success: false, message: 'Document not found' });
     }
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
-      data: document
+      data: stripStoragePaths(document)
     });
   } catch (err) {
     console.error('Get document error:', err.message);
-    res.status(500).json({ success: false, message: 'Server error' });
+    return res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 
-// Update document
+/**
+ * PUT /api/legal-documents/:id
+ * Owner: update metadata only (not attachments)
+ */
 router.put('/:id', protect, async (req, res) => {
   try {
+    // Allow-list update fields (professional + safer)
+    const update = {
+      updatedAt: new Date()
+    };
+
+    const allowed = [
+      'type',
+      'title',
+      'propertyAddress',
+      'parcelId',
+      'instructionsForBeneficiary',
+      'certifiedCopyInstructions'
+    ];
+
+    for (const key of allowed) {
+      if (req.body[key] !== undefined) update[key] = req.body[key];
+    }
+
+    // Structured fields
+    if (req.body.recordingInfo !== undefined) update.recordingInfo = safeJsonParse(req.body.recordingInfo, undefined);
+    if (req.body.notaryInfo !== undefined) update.notaryInfo = safeJsonParse(req.body.notaryInfo, undefined);
+    if (req.body.originalLocation !== undefined) update.originalLocation = safeJsonParse(req.body.originalLocation, undefined);
+
+    if (req.body.notarized !== undefined) update.notarized = req.body.notarized === 'true' || req.body.notarized === true;
+    if (req.body.visibleToBeneficiaries !== undefined) update.visibleToBeneficiaries = req.body.visibleToBeneficiaries !== 'false';
+
+    if (req.body.allowedBeneficiaries !== undefined) update.allowedBeneficiaries = safeJsonParse(req.body.allowedBeneficiaries, []);
+
     const document = await LegalDocument.findOneAndUpdate(
       { _id: req.params.id, ownerId: req.user._id },
-      { ...req.body, updatedAt: new Date() },
+      update,
       { new: true, runValidators: true }
     );
 
@@ -201,23 +285,27 @@ router.put('/:id', protect, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Document not found' });
     }
 
-    // Log update
     await log('legal_document_updated', {
       userId: req.user._id,
-      details: { documentId: document._id }
+      details: { documentId: document._id },
+      ip: req.ip,
+      userAgent: req.headers['user-agent']
     });
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
-      data: document
+      data: stripStoragePaths(document)
     });
   } catch (err) {
     console.error('Update document error:', err.message);
-    res.status(500).json({ success: false, message: 'Server error' });
+    return res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 
-// Delete document
+/**
+ * DELETE /api/legal-documents/:id
+ * Owner: delete document + files
+ */
 router.delete('/:id', protect, async (req, res) => {
   try {
     const document = await LegalDocument.findOne({
@@ -230,10 +318,10 @@ router.delete('/:id', protect, async (req, res) => {
     }
 
     // Delete attachment files
-    if (document.attachments) {
+    if (document.attachments?.length) {
       for (const attachment of document.attachments) {
         try {
-          if (fs.existsSync(attachment.storagePath)) {
+          if (attachment.storagePath && fs.existsSync(attachment.storagePath)) {
             fs.unlinkSync(attachment.storagePath);
           }
         } catch (e) {
@@ -244,23 +332,24 @@ router.delete('/:id', protect, async (req, res) => {
 
     await document.deleteOne();
 
-    // Log deletion
     await log('legal_document_deleted', {
       userId: req.user._id,
-      details: { documentId: req.params.id }
+      details: { documentId: req.params.id },
+      ip: req.ip,
+      userAgent: req.headers['user-agent']
     });
 
-    res.status(200).json({
-      success: true,
-      message: 'Document deleted'
-    });
+    return res.status(200).json({ success: true, message: 'Document deleted' });
   } catch (err) {
     console.error('Delete document error:', err.message);
-    res.status(500).json({ success: false, message: 'Server error' });
+    return res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 
-// Download attachment (authorized endpoint)
+/**
+ * GET /api/legal-documents/:id/attachments/:attachmentId
+ * Owner: download attachment bytes (ciphertext if encrypted)
+ */
 router.get('/:id/attachments/:attachmentId', protect, async (req, res) => {
   try {
     const { id, attachmentId } = req.params;
@@ -279,26 +368,26 @@ router.get('/:id/attachments/:attachmentId', protect, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Attachment not found' });
     }
 
-    if (!fs.existsSync(attachment.storagePath)) {
+    if (!attachment.storagePath || !fs.existsSync(attachment.storagePath)) {
       return res.status(404).json({ success: false, message: 'File not found on server' });
     }
 
-    // Log download
     await log('legal_document_downloaded', {
       userId: req.user._id,
-      details: { 
-        documentId: document._id,
-        attachmentId,
-        filename: attachment.originalName
-      }
+      details: { documentId: document._id, attachmentId, filename: attachment.originalName },
+      ip: req.ip,
+      userAgent: req.headers['user-agent']
     });
 
-    res.setHeader('Content-Type', attachment.mimeType);
+    res.setHeader('Content-Type', attachment.mimeType || 'application/octet-stream');
     res.setHeader('Content-Disposition', `attachment; filename="${attachment.originalName}"`);
-    res.sendFile(attachment.storagePath);
+    res.setHeader('X-Encrypted', attachment.encrypted ? 'true' : 'false');
+    if (attachment.sha256Hash) res.setHeader('X-SHA256', attachment.sha256Hash);
+
+    return res.sendFile(path.resolve(attachment.storagePath));
   } catch (err) {
     console.error('Download error:', err.message);
-    res.status(500).json({ success: false, message: 'Server error' });
+    return res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 

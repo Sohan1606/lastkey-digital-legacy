@@ -7,8 +7,14 @@ const router = express.Router();
 
 router.use(protect);
 
+// Core routes
 router.post('/ping', ping);
 router.put('/settings', validate(updateSettingsSchema), updateSettings);
+router.get('/score', getLegacyScore);
+
+/**
+ * Stats for dashboard
+ */
 router.get('/stats', async (req, res) => {
   try {
     const userId = req.user._id;
@@ -22,7 +28,7 @@ router.get('/stats', async (req, res) => {
       Capsule.countDocuments({ userId })
     ]);
 
-    res.json({
+    return res.json({
       status: 'success',
       data: {
         stats: {
@@ -37,27 +43,36 @@ router.get('/stats', async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(400).json({ status: 'fail', message: error.message });
+    return res.status(400).json({ status: 'fail', message: error.message });
   }
 });
 
-router.post('/onboarding-complete', async (req, res) => {
+/**
+ * Mark onboarding complete
+ * NOTE: reuse updateSettingsSchema validation so inactivityDuration and alertChannels stay correct.
+ * This prevents invalid values from slipping in.
+ */
+router.post('/onboarding-complete', validate(updateSettingsSchema), async (req, res) => {
   try {
-    const { inactivityDuration, phone, alertChannels } = req.body;
+    const { inactivityDuration, phone, alertChannels } = req.validatedBody || req.body;
+
     const updateData = { onboardingComplete: true };
-    if (inactivityDuration) updateData.inactivityDuration = inactivityDuration;
-    if (phone) updateData.phone = phone;
-    if (alertChannels) updateData.alertChannels = alertChannels;
-    
-    const user = await require('../models/User').findByIdAndUpdate(
-      req.user._id, updateData, { new: true }
-    );
-    res.json({ status: 'success', data: { user } });
+    if (inactivityDuration !== undefined) updateData.inactivityDuration = inactivityDuration;
+    if (phone !== undefined) updateData.phone = phone;
+    if (alertChannels !== undefined) updateData.alertChannels = alertChannels;
+
+    const User = require('../models/User');
+    const user = await User.findByIdAndUpdate(req.user._id, updateData, { new: true });
+
+    return res.json({ status: 'success', data: { user } });
   } catch (error) {
-    res.status(400).json({ status: 'fail', message: error.message });
+    return res.status(400).json({ status: 'fail', message: error.message });
   }
 });
 
+/**
+ * Gamification summary
+ */
 router.get('/gamification', async (req, res) => {
   try {
     const userId = req.user._id;
@@ -89,10 +104,10 @@ router.get('/gamification', async (req, res) => {
       assetCount >= 5 && 'vault_master',
       score >= 500 && 'legacy_builder',
       req.user.streak >= 7 && 'week_streak',
-      req.user.streak >= 30 && 'month_streak',
+      req.user.streak >= 30 && 'month_streak'
     ].filter(Boolean);
 
-    res.json({
+    return res.json({
       status: 'success',
       data: {
         score,
@@ -104,10 +119,13 @@ router.get('/gamification', async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(400).json({ status: 'fail', message: error.message });
+    return res.status(400).json({ status: 'fail', message: error.message });
   }
 });
 
+/**
+ * Activity feed
+ */
 router.get('/activity', async (req, res) => {
   try {
     const userId = req.user._id;
@@ -122,60 +140,77 @@ router.get('/activity', async (req, res) => {
     ]);
 
     const activities = [
-      ...recentAssets.map(a => ({ type: 'vault', title: `Vault item added: ${a.platform}`, timestamp: a.createdAt, color: 'blue' })),
-      ...recentBeneficiaries.map(b => ({ type: 'beneficiary', title: `Loved one added: ${b.name}`, timestamp: b.createdAt, color: 'green' })),
-      ...recentCapsules.map(c => ({ type: 'capsule', title: c.isReleased ? `Time letter delivered: ${c.title}` : `Time letter created: ${c.title}`, timestamp: c.createdAt, color: 'purple' })),
-    ].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, 8);
+      ...recentAssets.map((a) => ({
+        type: 'vault',
+        title: `Vault item added: ${a.platform}`,
+        timestamp: a.createdAt,
+        color: 'blue'
+      })),
+      ...recentBeneficiaries.map((b) => ({
+        type: 'beneficiary',
+        title: `Beneficiary added: ${b.name}`,
+        timestamp: b.createdAt,
+        color: 'green'
+      })),
+      ...recentCapsules.map((c) => ({
+        type: 'capsule',
+        title: c.isReleased ? `Time letter delivered: ${c.title}` : `Time letter created: ${c.title}`,
+        timestamp: c.createdAt,
+        color: 'purple'
+      }))
+    ]
+      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+      .slice(0, 8);
 
-    res.json({ status: 'success', data: activities });
+    return res.json({ status: 'success', data: activities });
   } catch (error) {
-    res.status(400).json({ status: 'fail', message: error.message });
+    return res.status(400).json({ status: 'fail', message: error.message });
   }
 });
 
-router.get('/score', require('../controllers/userController').getLegacyScore);
-
-// Get audit logs for current user with optional type filter
+/**
+ * Audit logs for owner
+ */
 router.get('/logs', async (req, res) => {
   try {
     const AuditLog = require('../models/AuditLog');
-    const { type } = req.query; // optional filter
+    const { type } = req.query;
     const query = { userId: req.user._id };
-    
-    if (type && type !== 'all') {
-      query.event = type;
-    }
-    
-    const logs = await AuditLog.find(query)
-      .sort({ timestamp: -1 })
-      .limit(100)
-      .lean();
-    
-    res.json({ success: true, data: logs });
+
+    if (type && type !== 'all') query.event = type;
+
+    const logs = await AuditLog.find(query).sort({ timestamp: -1 }).limit(100).lean();
+
+    return res.json({ success: true, data: logs });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: err.message });
   }
 });
 
-// Set recovery passphrase
+/**
+ * Set recovery passphrase
+ * Stored as bcrypt hash via User model pre-save hook (never stored plaintext).
+ */
 router.put('/recovery-passphrase', async (req, res) => {
   try {
     const { passphrase } = req.body;
-    if (!passphrase || passphrase.length < 8) {
-      return res.status(400).json({ success: false, message: 'Passphrase must be at least 8 characters' });
+
+    if (!passphrase || passphrase.length < 12) {
+      return res
+        .status(400)
+        .json({ success: false, message: 'Passphrase must be at least 12 characters' });
     }
-    
+
     const User = require('../models/User');
-    const user = await User.findById(req.user._id);
-    
-    // Store hash for verification (NOT for decryption - decryption uses the raw passphrase)
-    user.recoveryPassphraseHash = passphrase;
+    const user = await User.findById(req.user._id).select('+recoveryPassphraseHash');
+
+    user.recoveryPassphraseHash = passphrase; // will be hashed in pre-save hook
     user.recoveryPassphraseSet = true;
     await user.save();
-    
-    res.json({ success: true, message: 'Recovery passphrase saved' });
+
+    return res.json({ success: true, message: 'Recovery passphrase saved' });
   } catch (error) {
-    res.status(400).json({ success: false, message: error.message });
+    return res.status(400).json({ success: false, message: error.message });
   }
 });
 

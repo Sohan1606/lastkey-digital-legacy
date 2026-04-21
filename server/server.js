@@ -20,12 +20,12 @@ const { env, getSanitizedEnv } = require('./config/env');
 
 console.log('✅ Environment validated');
 console.log('📋 Configuration:', {
-  NODE_ENV: process.env.NODE_ENV || 'development',
-  PORT: process.env.PORT || 5000,
-  FREE_MODE: process.env.FREE_MODE,
-  EMAIL_MODE: process.env.EMAIL_MODE,
-  FEATURE_PAYMENTS: process.env.FEATURE_PAYMENTS,
-  FEATURE_AI: process.env.FEATURE_AI,
+  NODE_ENV: env.NODE_ENV || 'development',
+  PORT: env.PORT || 5000,
+  FREE_MODE: env.FREE_MODE,
+  EMAIL_MODE: env.EMAIL_MODE,
+  FEATURE_PAYMENTS: env.FEATURE_PAYMENTS,
+  FEATURE_AI: env.FEATURE_AI,
   USE_REDIS: process.env.REDIS_ENABLED === 'true'
 });
 

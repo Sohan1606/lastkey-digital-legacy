@@ -56,7 +56,7 @@
     "mongoose": "^9.3.3",
     "multer": "^2.1.1",
     "node-cron": "^4.2.1",
-    "nodemailer": "^8.0.4",
+    "nodemailer": "^8.0.5",
     "nodemon": "^3.1.14",
     "openai": "^6.33.0",
     "socket.io": "^4.8.3",

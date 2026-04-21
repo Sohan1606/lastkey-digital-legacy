@@ -1,38 +1,28 @@
 const nodemailer = require('nodemailer');
+const { env } = require('../config/env');
 
 let transporter = null;
+let transporterVerified = false;
 
-// Check if we're in FREE_MODE or console email mode
-const isConsoleMode = () => {
-  return process.env.FREE_MODE === 'true' || 
-         process.env.EMAIL_MODE === 'console' ||
-         !process.env.EMAIL_HOST ||
-         !process.env.EMAIL_USER ||
-         !process.env.EMAIL_PASS;
-};
+const isConsoleMode = () => env.FREE_MODE === 'true' || env.EMAIL_MODE === 'console';
 
-const initTransporter = () => {
-  if (transporter) return transporter;
-  if (isConsoleMode()) {
-    return null;
-  }
-  transporter = nodemailer.createTransport({
-    host: process.env.EMAIL_HOST,
-    port: parseInt(process.env.EMAIL_PORT || '587'),
-    secure: false,
-    auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
-  });
-  return transporter;
+const stripHtmlToText = (html) => {
+  if (!html) return '';
+  return String(html)
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<\/?[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 };
 
 /**
- * Console email output for FREE_MODE
- * Prints email details clearly to terminal for demo/testing
+ * Console email output for FREE_MODE / console mode
  */
-const logEmailToConsole = ({ to, subject, html, otp }) => {
-  const border = '='.repeat(70);
+const logEmailToConsole = ({ to, subject, html, text, otp }) => {
+  const border = '='.repeat(72);
   console.log('\n' + border);
-  console.log('📧 EMAIL (CONSOLE MODE - FREE_MODE)');
+  console.log('📧 EMAIL (CONSOLE MODE)');
   console.log(border);
   console.log(`TO:      ${to}`);
   console.log(`SUBJECT: ${subject}`);
@@ -41,46 +31,85 @@ const logEmailToConsole = ({ to, subject, html, otp }) => {
     console.log('🔐 OTP CODE:', otp);
     console.log('');
   }
-  // Extract text content from HTML for console readability
-  const textContent = html
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .substring(0, 500);
-  console.log('CONTENT:', textContent + (textContent.length >= 500 ? '...' : ''));
+  const preview = stripHtmlToText(text || html).slice(0, 500);
+  if (preview) console.log('CONTENT:', preview + (preview.length >= 500 ? '…' : ''));
   console.log(border + '\n');
 };
 
-exports.sendEmailWithRetry = async ({ to, subject, html, otp }, maxAttempts = 3) => {
-  // In FREE_MODE or console mode, log to console instead of sending
+const initTransporter = async () => {
+  if (isConsoleMode()) return null;
+  if (transporter) return transporter;
+
+  // SMTP mode requires config
+  if (!env.EMAIL_HOST || !env.EMAIL_USER || !env.EMAIL_PASS) {
+    throw new Error(
+      'EMAIL_MODE=smtp but EMAIL_HOST/EMAIL_USER/EMAIL_PASS are missing. ' +
+        'Set them or use EMAIL_MODE=console (FREE_MODE).'
+    );
+  }
+
+  const port = Number(env.EMAIL_PORT || 587);
+
+  transporter = nodemailer.createTransport({
+    host: env.EMAIL_HOST,
+    port,
+    secure: port === 465,
+    auth: { user: env.EMAIL_USER, pass: env.EMAIL_PASS }
+  });
+
+  // Verify once (non-fatal warning if fails)
+  if (!transporterVerified) {
+    try {
+      await transporter.verify();
+      transporterVerified = true;
+      console.log('✅ Email transporter verified (SMTP mode)');
+    } catch (e) {
+      console.warn('⚠️ SMTP transporter verify failed:', e.message);
+    }
+  }
+
+  return transporter;
+};
+
+/**
+ * sendEmailWithRetry({ to, subject, html, text, otp }, maxAttempts)
+ * - Console mode: prints to terminal
+ * - SMTP mode: sends real email
+ */
+exports.sendEmailWithRetry = async ({ to, subject, html, text, otp }, maxAttempts = 3) => {
+  if (!to) throw new Error('sendEmail: "to" is required');
+  if (!subject) throw new Error('sendEmail: "subject" is required');
+
+  // FREE_MODE / console mode
   if (isConsoleMode()) {
-    logEmailToConsole({ to, subject, html, otp });
+    logEmailToConsole({ to, subject, html, text, otp });
     return { success: true, mode: 'console' };
   }
 
-  const t = initTransporter();
-  if (!t) {
-    console.log(`Email skipped (not configured): ${subject} → ${to}`);
-    return { success: false, reason: 'not_configured' };
-  }
+  const t = await initTransporter();
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       await t.sendMail({
-        from: `"LastKey" <${process.env.EMAIL_USER}>`,
-        to, subject, html,
+        from: env.EMAIL_FROM || `"LastKey" <${env.EMAIL_USER}>`,
+        to,
+        subject,
+        html,
+        text
       });
-      console.log(`Email sent [attempt ${attempt}]: ${subject} → ${to}`);
+
+      console.log(`✅ Email sent [attempt ${attempt}]: ${subject} → ${to}`);
       return { success: true, mode: 'smtp' };
     } catch (err) {
-      console.error(`Email attempt ${attempt}/${maxAttempts} failed for ${to}:`, err.message);
+      console.error(`❌ Email attempt ${attempt}/${maxAttempts} failed for ${to}:`, err.message);
       if (attempt < maxAttempts) {
-        await new Promise(r => setTimeout(r, attempt * 2000)); // exponential backoff
+        await new Promise((r) => setTimeout(r, attempt * 2000));
       }
     }
   }
+
   return { success: false, reason: 'max_retries_exceeded' };
 };
 
-// Keep backwards-compatible sendEmail for existing calls
+// Backwards compatible
 exports.sendEmail = exports.sendEmailWithRetry;

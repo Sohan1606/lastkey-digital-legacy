@@ -4,15 +4,17 @@ const { z } = require('zod');
 // Auth Validators
 // ============================================
 
-const registerSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters').max(100),
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
-  confirmPassword: z.string()
-}).refine(data => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ['confirmPassword']
-});
+const registerSchema = z
+  .object({
+    name: z.string().min(2, 'Name must be at least 2 characters').max(100),
+    email: z.string().email('Invalid email address'),
+    password: z.string().min(8, 'Password must be at least 8 characters'),
+    confirmPassword: z.string()
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ['confirmPassword']
+  });
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -23,17 +25,19 @@ const forgotPasswordSchema = z.object({
   email: z.string().email('Invalid email address')
 });
 
-const resetPasswordSchema = z.object({
-  token: z.string().min(1, 'Token is required'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
-  confirmPassword: z.string()
-}).refine(data => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ['confirmPassword']
-});
+const resetPasswordSchema = z
+  .object({
+    token: z.string().min(1, 'Token is required'),
+    password: z.string().min(8, 'Password must be at least 8 characters'),
+    confirmPassword: z.string()
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ['confirmPassword']
+  });
 
 // ============================================
-// Beneficiary Validators
+// Beneficiary (Owner-side) Validators
 // ============================================
 
 const createBeneficiarySchema = z.object({
@@ -88,26 +92,30 @@ const createCapsuleSchema = z.object({
 });
 
 // ============================================
-// Legal Document Validators
-// ============================================
+// Legal Document Validators (optional - not strictly used in routes)
+/// ============================================
 
 const createLegalDocumentSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200),
   type: z.enum(['deed', 'title', 'will', 'trust', 'poa', 'insurance', 'tax', 'other']),
   description: z.string().max(2000).optional(),
-  recordingInfo: z.object({
-    instrumentNumber: z.string().optional(),
-    book: z.string().optional(),
-    page: z.string().optional(),
-    recordingDate: z.string().datetime().optional(),
-    parcelId: z.string().optional()
-  }).optional(),
-  originalLocation: z.object({
-    location: z.string().min(1, 'Location is required'),
-    contactName: z.string().optional(),
-    contactPhone: z.string().optional(),
-    instructions: z.string().max(1000).optional()
-  }).optional(),
+  recordingInfo: z
+    .object({
+      instrumentNumber: z.string().optional(),
+      book: z.string().optional(),
+      page: z.string().optional(),
+      recordingDate: z.string().datetime().optional(),
+      parcelId: z.string().optional()
+    })
+    .optional(),
+  originalLocation: z
+    .object({
+      location: z.string().min(1, 'Location is required'),
+      contactName: z.string().optional(),
+      contactPhone: z.string().optional(),
+      instructions: z.string().max(1000).optional()
+    })
+    .optional(),
   beneficiaryIds: z.array(z.string()).optional()
 });
 
@@ -124,29 +132,68 @@ const updateSettingsSchema = z.object({
 });
 
 // ============================================
-// Beneficiary Portal Validators
+// Beneficiary Portal Validators (IMPORTANT - UPDATED)
 // ============================================
 
 const beneficiaryCheckStatusSchema = z.object({
   email: z.string().email('Invalid email address')
 });
 
-const beneficiaryEnrollSchema = z.object({
-  token: z.string().min(1, 'Token is required'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
-  confirmPassword: z.string()
-}).refine(data => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ['confirmPassword']
+/**
+ * OTP Login:
+ * - /beneficiary/auth/login/start: { email }
+ * - /beneficiary/auth/login/verify: { email, otp }
+ */
+const beneficiaryOtpStartSchema = z.object({
+  email: z.string().email('Invalid email address')
 });
 
-const beneficiaryLoginSchema = z.object({
+const beneficiaryOtpVerifySchema = z.object({
   email: z.string().email('Invalid email address'),
-  password: z.string().min(1, 'Password is required')
+  otp: z.string().regex(/^\d{6}$/, 'OTP must be a 6-digit code')
 });
 
-const requestAccessSchema = z.object({
-  ownerId: z.string().min(1, 'Owner ID is required')
+/**
+ * Enrollment payload (new system):
+ * POST /beneficiary/auth/enroll
+ * { unlockSecret, publicKeyJwk, encryptedPrivateKeyBlob }
+ *
+ * Note:
+ * - publicKeyJwk can be object or JSON string (be tolerant)
+ * - encryptedPrivateKeyBlob can be object; allow passthrough for future versions
+ */
+const beneficiaryEnrollSchema = z.object({
+  unlockSecret: z.string().min(12, 'Unlock secret must be at least 12 characters'),
+  publicKeyJwk: z.union([z.object({}).passthrough(), z.string().min(1)]),
+  encryptedPrivateKeyBlob: z.object({}).passthrough()
+});
+
+/**
+ * Keep beneficiaryLoginSchema as a tolerant union to avoid breaking any older code:
+ * - email/password (legacy)
+ * - email/otp (new)
+ */
+const beneficiaryLoginSchema = z.union([
+  z.object({
+    email: z.string().email('Invalid email address'),
+    password: z.string().min(1, 'Password is required')
+  }),
+  beneficiaryOtpVerifySchema
+]);
+
+/**
+ * Request access endpoint now uses empty body {}
+ * (Owner is derived from beneficiary record; grant is derived server-side.)
+ */
+const requestAccessSchema = z.object({}).strict();
+
+/**
+ * Create session payload:
+ * POST /beneficiary/auth/create-session
+ */
+const beneficiaryCreateSessionSchema = z.object({
+  unlockSecret: z.string().min(12, 'Unlock secret must be at least 12 characters'),
+  grantId: z.string().min(1, 'Grant ID is required')
 });
 
 // ============================================
@@ -177,7 +224,7 @@ const validate = (schema) => {
       next();
     } catch (error) {
       if (error instanceof z.ZodError) {
-        const errors = error.errors.map(err => ({
+        const errors = error.errors.map((err) => ({
           field: err.path.join('.'),
           message: err.message
         }));
@@ -198,19 +245,32 @@ module.exports = {
   loginSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
+
   createBeneficiarySchema,
   updateBeneficiarySchema,
+
   createAssetSchema,
   updateAssetSchema,
+
   createCapsuleSchema,
+
   createLegalDocumentSchema,
+
   updateSettingsSchema,
+
+  // Beneficiary Portal Schemas
   beneficiaryCheckStatusSchema,
+  beneficiaryOtpStartSchema,
+  beneficiaryOtpVerifySchema,
   beneficiaryEnrollSchema,
   beneficiaryLoginSchema,
   requestAccessSchema,
+  beneficiaryCreateSessionSchema,
+
+  // WebAuthn
   webauthnRegisterSchema,
   webauthnVerifySchema,
+
   // Middleware
   validate
 };

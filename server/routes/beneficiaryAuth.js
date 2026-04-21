@@ -1,60 +1,80 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs');
 const rateLimit = require('express-rate-limit');
+
 const Beneficiary = require('../models/Beneficiary');
 const User = require('../models/User');
 const EmergencyAccessGrant = require('../models/EmergencyAccessGrant');
 const EmergencySession = require('../models/EmergencySession');
+
 const { log } = require('../services/auditService');
 const { sendEmail } = require('../utils/email');
-const { validate, beneficiaryCheckStatusSchema, beneficiaryEnrollSchema, beneficiaryLoginSchema, requestAccessSchema } = require('../validators');
+const {
+  validate,
+  beneficiaryCheckStatusSchema,
+  beneficiaryEnrollSchema,
+  beneficiaryOtpStartSchema,
+  beneficiaryOtpVerifySchema,
+  requestAccessSchema,
+  beneficiaryCreateSessionSchema
+} = require('../validators');
 
 const router = express.Router();
 
-// Rate limiting for beneficiary auth endpoints
+/**
+ * Rate limiting for beneficiary OTP endpoints
+ */
 const beneficiaryAuthLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // 5 attempts per window
+  windowMs: 15 * 60 * 1000,
+  max: 5,
   message: { success: false, message: 'Too many login attempts. Please try again later.' },
   standardHeaders: true,
   legacyHeaders: false
 });
 
-// JWT secret for beneficiary tokens (can be same or different from owner)
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) throw new Error('JWT_SECRET is not set');
 
-const signToken = (id, type = 'beneficiary') => jwt.sign({ id, type }, JWT_SECRET, {
-  expiresIn: process.env.JWT_EXPIRES_IN || '24h'
-});
+const signToken = (id, type = 'beneficiary') =>
+  jwt.sign({ id, type }, JWT_SECRET, {
+    expiresIn: process.env.JWT_EXPIRES_IN || '24h'
+  });
 
-// Middleware to protect beneficiary routes
-exports.protectBeneficiary = async (req, res, next) => {
+function getBearerToken(req) {
+  if (req.headers.authorization?.startsWith('Bearer ')) {
+    return req.headers.authorization.split(' ')[1];
+  }
+  return null;
+}
+
+function getSessionToken(req) {
+  return req.headers['x-session-token'] || null;
+}
+
+/**
+ * Middleware: protect beneficiary routes (beneficiary JWT only)
+ * IMPORTANT: select +unlockSecretHash because verifyUnlockSecret needs it.
+ */
+const protectBeneficiary = async (req, res, next) => {
   try {
-    let token;
-    if (req.headers.authorization?.startsWith('Bearer')) {
-      token = req.headers.authorization.split(' ')[1];
-    }
+    const token = getBearerToken(req);
 
     if (!token) {
       return res.status(401).json({ success: false, message: 'Not authorized' });
     }
 
     const decoded = jwt.verify(token, JWT_SECRET);
-    
-    // Verify this is a beneficiary token
+
     if (decoded.type !== 'beneficiary') {
       return res.status(401).json({ success: false, message: 'Invalid token type' });
     }
 
-    // Find beneficiary
-    const beneficiary = await Beneficiary.findById(decoded.id);
+    // IMPORTANT: include hidden fields needed by later steps
+    const beneficiary = await Beneficiary.findById(decoded.id).select('+unlockSecretHash +loginOtp.hash');
     if (!beneficiary) {
       return res.status(401).json({ success: false, message: 'Beneficiary not found' });
     }
 
-    // Check if owner is triggered
     const owner = await User.findById(beneficiary.userId).select('triggerStatus name');
     if (!owner) {
       return res.status(401).json({ success: false, message: 'Owner not found' });
@@ -68,185 +88,135 @@ exports.protectBeneficiary = async (req, res, next) => {
   }
 };
 
-// Middleware to require beneficiary to be fully enrolled
-// Allows only /enroll and /check-status for invited beneficiaries
-exports.protectBeneficiaryEnrolled = async (req, res, next) => {
-  try {
-    // First run the standard protection
-    await exports.protectBeneficiary(req, res, () => {
-      // If beneficiary is enrolled, allow all
-      if (req.beneficiary.enrollmentStatus === 'enrolled') {
-        return next();
-      }
+/**
+ * Middleware: invited beneficiaries can ONLY:
+ * - POST /api/beneficiary/auth/enroll
+ * - POST /api/beneficiary/auth/check-status
+ */
+const protectBeneficiaryEnrolled = async (req, res, next) => {
+  return protectBeneficiary(req, res, () => {
+    if (req.beneficiary.enrollmentStatus === 'enrolled') return next();
 
-      // For invited beneficiaries, only allow specific endpoints
-      const allowedPaths = [
-        '/api/beneficiary/auth/enroll',
-        '/api/beneficiary/auth/check-status'
-      ];
-      
-      const isAllowed = allowedPaths.some(path => req.originalUrl.startsWith(path));
-      
-      if (!isAllowed) {
-        return res.status(403).json({ 
-          success: false, 
-          message: 'Complete enrollment first to access this feature.' 
-        });
-      }
-      
-      next();
-    });
-  } catch (err) {
-    return res.status(401).json({ success: false, message: 'Not authorized' });
-  }
-};
+    const allowedPrefixes = [
+      '/api/beneficiary/auth/enroll',
+      '/api/beneficiary/auth/check-status'
+    ];
 
-// Check beneficiary enrollment status by email
-router.post('/check-status', validate(beneficiaryCheckStatusSchema), async (req, res) => {
-  try {
-    const { email } = req.body;
-    
-    if (!email) {
-      return res.status(400).json({ success: false, message: 'Email is required' });
-    }
-
-    const beneficiary = await Beneficiary.findOne({ email }).populate('userId', 'name triggerStatus');
-    
-    if (!beneficiary) {
-      // Don't reveal if email exists or not
-      return res.status(200).json({ 
-        success: true, 
-        data: { status: 'not_found' }
+    const ok = allowedPrefixes.some((p) => req.originalUrl.startsWith(p));
+    if (!ok) {
+      return res.status(403).json({
+        success: false,
+        message: 'Complete enrollment first to access this feature.'
       });
     }
 
-    // Check if owner is triggered
+    next();
+  });
+};
+
+/**
+ * Check beneficiary enrollment status by email (public)
+ * IMPORTANT: select +unlockSecretHash so hasUnlockSecret is accurate
+ */
+router.post('/check-status', validate(beneficiaryCheckStatusSchema), async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const beneficiary = await Beneficiary.findOne({ email })
+      .select('+unlockSecretHash')
+      .populate('userId', 'name triggerStatus');
+
+    if (!beneficiary) {
+      return res.status(200).json({ success: true, data: { status: 'not_found' } });
+    }
+
     const ownerTriggered = beneficiary.userId?.triggerStatus === 'triggered';
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       data: {
         status: beneficiary.enrollmentStatus,
         ownerName: beneficiary.userId?.name,
         ownerTriggered,
-        hasPasskey: beneficiary.webauthnCredentials?.length > 0,
+        hasPasskey: (beneficiary.webauthnCredentials || []).length > 0,
         hasUnlockSecret: !!beneficiary.unlockSecretHash
       }
     });
   } catch (err) {
     console.error('Check status error:', err.message);
-    res.status(500).json({ success: false, message: 'Server error' });
+    return res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 
-// Beneficiary enrollment (set unlock secret + encryption keys) - REQUIRES AUTHENTICATION
-router.post('/enroll', exports.protectBeneficiary, async (req, res) => {
+/**
+ * Enrollment (requires beneficiary JWT from OTP login)
+ * Allowed only when invited.
+ */
+router.post('/enroll', protectBeneficiary, validate(beneficiaryEnrollSchema), async (req, res) => {
   try {
     const { unlockSecret, publicKeyJwk, encryptedPrivateKeyBlob } = req.body;
     const beneficiary = req.beneficiary;
-    
-    if (!unlockSecret) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Unlock secret is required' 
-      });
-    }
-
-    // Validate unlock secret strength
-    if (unlockSecret.length < 12) {
-      return res.status(400).json({
-        success: false,
-        message: 'Unlock secret must be at least 12 characters'
-      });
-    }
 
     if (beneficiary.enrollmentStatus !== 'invited') {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Beneficiary already enrolled' 
-      });
+      return res.status(400).json({ success: false, message: 'Beneficiary already enrolled' });
     }
 
-    // Validate encryption key material
-    if (!publicKeyJwk || !encryptedPrivateKeyBlob) {
-      return res.status(400).json({
-        success: false,
-        message: 'Encryption key material is required (publicKeyJwk, encryptedPrivateKeyBlob)'
-      });
-    }
-
-    // Set unlock secret
     await beneficiary.setUnlockSecret(unlockSecret);
-    
-    // Store encryption keys
-    beneficiary.encryptionKeys = {
-      publicKeyJwk,
-      encryptedPrivateKeyBlob
-    };
-    
+    beneficiary.encryptionKeys = { publicKeyJwk, encryptedPrivateKeyBlob };
     beneficiary.completeEnrollment();
     await beneficiary.save();
 
-    // Log enrollment
     await log('beneficiary_enrolled', {
       userId: beneficiary.userId,
-      details: { beneficiaryId: beneficiary._id, email: beneficiary.email }
+      details: { beneficiaryId: beneficiary._id, email: beneficiary.email },
+      ip: req.ip,
+      userAgent: req.headers['user-agent']
     });
 
-    res.status(200).json({
-      success: true,
-      message: 'Enrollment successful'
-    });
+    return res.status(200).json({ success: true, message: 'Enrollment successful' });
   } catch (err) {
     console.error('Enrollment error:', err.message);
-    res.status(500).json({ success: false, message: 'Server error' });
+    return res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 
-// DEPRECATED: Old email-only login - returns 410 Gone
-// Use /login/start and /login/verify instead
+/**
+ * Deprecated legacy endpoint
+ */
 router.post('/login', async (req, res) => {
-  res.status(410).json({
+  return res.status(410).json({
     success: false,
-    message: 'This endpoint is deprecated. Use POST /login/start followed by POST /login/verify for secure OTP-based login.'
+    message:
+      'This endpoint is deprecated. Use POST /login/start followed by POST /login/verify for secure OTP-based login.'
   });
 });
 
-// Generate and send OTP for beneficiary login
-router.post('/login/start', beneficiaryAuthLimiter, async (req, res) => {
+/**
+ * OTP login start (invited + enrolled)
+ */
+router.post('/login/start', beneficiaryAuthLimiter, validate(beneficiaryOtpStartSchema), async (req, res) => {
   try {
     const { email } = req.body;
-    
-    if (!email) {
-      return res.status(400).json({ success: false, message: 'Email is required' });
-    }
 
     const beneficiary = await Beneficiary.findOne({ email }).populate('userId', 'name');
-    
+
+    // do not reveal existence
     if (!beneficiary) {
-      // Don't reveal if email exists
-      return res.status(200).json({ 
-        success: true, 
-        message: 'If an account exists, an OTP has been sent.' 
+      return res.status(200).json({ success: true, message: 'If an account exists, an OTP has been sent.' });
+    }
+
+    if (!['invited', 'enrolled'].includes(beneficiary.enrollmentStatus)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Beneficiary account not ready. Please check your invitation email.'
       });
     }
 
-    // Allow OTP login for both 'invited' and 'enrolled' beneficiaries
-    if (beneficiary.enrollmentStatus !== 'invited' && beneficiary.enrollmentStatus !== 'enrolled') {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Beneficiary account not ready. Please check your invitation email.' 
-      });
-    }
-
-    // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    
-    // Store hashed OTP
+
     await beneficiary.setLoginOtp(otp);
     await beneficiary.save();
 
-    // Send OTP via email (console in FREE_MODE)
     try {
       await sendEmail({
         to: beneficiary.email,
@@ -258,82 +228,72 @@ router.post('/login/start', beneficiaryAuthLimiter, async (req, res) => {
           <p>This code expires in 10 minutes.</p>
           <p>If you didn't request this code, please ignore this email.</p>
         `,
-        otp: otp // Pass OTP for console logging in FREE_MODE
+        otp
       });
     } catch (emailErr) {
       console.error('Failed to send OTP email:', emailErr.message);
     }
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: 'If an account exists, an OTP has been sent.',
-      // In development only, return the OTP for testing
       ...(process.env.NODE_ENV === 'development' && { devOtp: otp })
     });
   } catch (err) {
     console.error('Login start error:', err.message);
-    res.status(500).json({ success: false, message: 'Server error' });
+    return res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 
-// Verify OTP and complete login
-router.post('/login/verify', beneficiaryAuthLimiter, async (req, res) => {
+/**
+ * OTP login verify (invited + enrolled)
+ * IMPORTANT: select +loginOtp.hash so verifyLoginOtp can compare hash.
+ */
+router.post('/login/verify', beneficiaryAuthLimiter, validate(beneficiaryOtpVerifySchema), async (req, res) => {
   try {
     const { email, otp } = req.body;
-    
-    if (!email || !otp) {
-      return res.status(400).json({ success: false, message: 'Email and OTP are required' });
+
+    const beneficiary = await Beneficiary.findOne({ email })
+      .select('+loginOtp.hash') // IMPORTANT
+      .populate('userId', 'name triggerStatus');
+
+    if (!beneficiary) return res.status(401).json({ success: false, message: 'Invalid credentials' });
+
+    if (!['invited', 'enrolled'].includes(beneficiary.enrollmentStatus)) {
+      return res.status(400).json({ success: false, message: 'Beneficiary account not ready.' });
     }
 
-    const beneficiary = await Beneficiary.findOne({ email }).populate('userId', 'name triggerStatus');
-    
-    if (!beneficiary) {
-      return res.status(401).json({ success: false, message: 'Invalid credentials' });
-    }
-
-    // Allow OTP verify for both 'invited' and 'enrolled' beneficiaries
-    if (beneficiary.enrollmentStatus !== 'invited' && beneficiary.enrollmentStatus !== 'enrolled') {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Beneficiary account not ready.' 
-      });
-    }
-
-    // Verify OTP
     const otpResult = await beneficiary.verifyLoginOtp(otp);
-    
     if (!otpResult.valid) {
-      await beneficiary.save(); // Save attempt count
-      
+      await beneficiary.save();
+
       const messages = {
         no_otp: 'No active login request found. Please start login again.',
         expired: 'Login code has expired. Please request a new one.',
         too_many_attempts: 'Too many failed attempts. Please request a new code.',
         invalid: 'Invalid login code. Please try again.'
       };
-      
-      return res.status(401).json({ 
-        success: false, 
+
+      return res.status(401).json({
+        success: false,
         message: messages[otpResult.reason] || 'Invalid credentials'
       });
     }
 
-    // Clear OTP and save
+    // OTP cleared inside verifyLoginOtp on success, but keep safe:
     beneficiary.loginOtp = undefined;
     await beneficiary.save();
 
-    // Generate token
     const token = signToken(beneficiary._id);
 
-    // Log login
     await log('beneficiary_login', {
-      userId: beneficiary.userId._id,
+      userId: beneficiary.userId?._id,
       details: { beneficiaryId: beneficiary._id, email: beneficiary.email },
       ip: req.ip,
       userAgent: req.headers['user-agent']
     });
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       token,
       data: {
@@ -345,26 +305,27 @@ router.post('/login/verify', beneficiaryAuthLimiter, async (req, res) => {
           enrollmentStatus: beneficiary.enrollmentStatus,
           needsEnrollment: beneficiary.enrollmentStatus === 'invited',
           hasEncryptionKeys: !!beneficiary.encryptionKeys?.publicKeyJwk,
-          hasVaultShare: !!beneficiary.vaultShare?.encryptedDek
+          hasVaultShare: !!beneficiary.vaultShare?.encryptedDekB64
         },
         owner: {
-          name: beneficiary.userId.name,
-          triggered: beneficiary.userId.triggerStatus === 'triggered'
+          name: beneficiary.userId?.name,
+          triggered: beneficiary.userId?.triggerStatus === 'triggered'
         }
       }
     });
   } catch (err) {
     console.error('Login verify error:', err.message);
-    res.status(500).json({ success: false, message: 'Server error' });
+    return res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 
-// Request emergency access (only works if owner is triggered)
-router.post('/request-access', exports.protectBeneficiaryEnrolled, validate(requestAccessSchema), async (req, res) => {
+/**
+ * Request emergency access (triggered only)
+ */
+router.post('/request-access', protectBeneficiaryEnrolled, validate(requestAccessSchema), async (req, res) => {
   try {
     const { beneficiary, owner } = req;
 
-    // Check if owner is triggered
     if (owner.triggerStatus !== 'triggered') {
       return res.status(403).json({
         success: false,
@@ -372,7 +333,6 @@ router.post('/request-access', exports.protectBeneficiaryEnrolled, validate(requ
       });
     }
 
-    // Check for existing pending/granted access
     const existingGrant = await EmergencyAccessGrant.findOne({
       ownerId: owner._id,
       beneficiaryId: beneficiary._id,
@@ -391,12 +351,11 @@ router.post('/request-access', exports.protectBeneficiaryEnrolled, validate(requ
       });
     }
 
-    // Create new access request
     const grant = await EmergencyAccessGrant.create({
       ownerId: owner._id,
       beneficiaryId: beneficiary._id,
       status: 'pending',
-      waitPeriodHours: 0, // Can be configured per beneficiary
+      waitPeriodHours: 0,
       scopes: {
         viewAssets: true,
         viewDocuments: true,
@@ -408,22 +367,18 @@ router.post('/request-access', exports.protectBeneficiaryEnrolled, validate(requ
       requestUserAgent: req.headers['user-agent']
     });
 
-    // Auto-grant for now (can add wait period logic later)
+    // auto-grant for now
     grant.status = 'granted';
     grant.grantedAt = new Date();
-    grant.expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    grant.expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
     await grant.save();
 
-    // Log access grant
     await log('emergency_access_granted', {
       userId: owner._id,
-      details: { 
-        beneficiaryId: beneficiary._id, 
-        grantId: grant._id 
-      }
+      details: { beneficiaryId: beneficiary._id, grantId: grant._id }
     });
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       data: {
         grantId: grant._id,
@@ -435,24 +390,19 @@ router.post('/request-access', exports.protectBeneficiaryEnrolled, validate(requ
     });
   } catch (err) {
     console.error('Request access error:', err.message);
-    res.status(500).json({ success: false, message: 'Server error' });
+    return res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 
-// Create emergency session (after verifying unlock secret)
-router.post('/create-session', exports.protectBeneficiaryEnrolled, async (req, res) => {
+/**
+ * Create emergency session (unlock secret)
+ * IMPORTANT: unlockSecretHash is select:false, but protectBeneficiary selects it.
+ */
+router.post('/create-session', protectBeneficiaryEnrolled, validate(beneficiaryCreateSessionSchema), async (req, res) => {
   try {
     const { beneficiary, owner } = req;
     const { unlockSecret, grantId } = req.body;
 
-    if (!unlockSecret || !grantId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Unlock secret and grant ID are required'
-      });
-    }
-
-    // Verify grant exists and is valid
     const grant = await EmergencyAccessGrant.findOne({
       _id: grantId,
       beneficiaryId: beneficiary._id,
@@ -466,47 +416,36 @@ router.post('/create-session', exports.protectBeneficiaryEnrolled, async (req, r
       });
     }
 
-    // Verify unlock secret
     const isValidSecret = await beneficiary.verifyUnlockSecret(unlockSecret);
     if (!isValidSecret) {
-      // Log failed attempt
       await log('emergency_session_failed', {
         userId: owner._id,
         details: { beneficiaryId: beneficiary._id, reason: 'invalid_unlock_secret' },
         ip: req.ip
       });
-      
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid unlock secret'
-      });
+
+      return res.status(401).json({ success: false, message: 'Invalid unlock secret' });
     }
 
-    // Generate session token
     const sessionToken = EmergencySession.generateToken();
     const sessionTokenHash = EmergencySession.hashToken(sessionToken);
 
-    // Create session
     const session = await EmergencySession.create({
       grantId: grant._id,
       beneficiaryId: beneficiary._id,
       ownerId: owner._id,
       sessionTokenHash,
-      expiresAt: new Date(Date.now() + 30 * 60 * 1000), // 30 minutes
+      expiresAt: new Date(Date.now() + 30 * 60 * 1000),
       ip: req.ip,
       userAgent: req.headers['user-agent']
     });
 
-    // Log session creation
     await log('emergency_session_created', {
       userId: owner._id,
-      details: { 
-        beneficiaryId: beneficiary._id, 
-        sessionId: session._id 
-      }
+      details: { beneficiaryId: beneficiary._id, sessionId: session._id }
     });
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       data: {
         sessionToken,
@@ -516,18 +455,17 @@ router.post('/create-session', exports.protectBeneficiaryEnrolled, async (req, r
     });
   } catch (err) {
     console.error('Create session error:', err.message);
-    res.status(500).json({ success: false, message: 'Server error' });
+    return res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 
-// Verify session and get access info
+/**
+ * Verify emergency session (expects x-session-token)
+ */
 router.get('/session', async (req, res) => {
   try {
-    const token = req.headers.authorization?.split(' ')[1];
-    
-    if (!token) {
-      return res.status(401).json({ success: false, message: 'No session token' });
-    }
+    const token = getSessionToken(req);
+    if (!token) return res.status(401).json({ success: false, message: 'No session token' });
 
     const tokenHash = EmergencySession.hashToken(token);
     const session = await EmergencySession.findOne({
@@ -539,10 +477,9 @@ router.get('/session', async (req, res) => {
       return res.status(401).json({ success: false, message: 'Invalid or expired session' });
     }
 
-    // Extend session on activity
     await session.extend();
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       data: {
         expiresAt: session.expiresAt,
@@ -552,30 +489,35 @@ router.get('/session', async (req, res) => {
     });
   } catch (err) {
     console.error('Session verify error:', err.message);
-    res.status(500).json({ success: false, message: 'Server error' });
+    return res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 
-// Logout/destroy session
+/**
+ * Logout / destroy session (expects x-session-token)
+ */
 router.post('/logout', async (req, res) => {
   try {
-    const token = req.headers.authorization?.split(' ')[1];
-    
+    const token = getSessionToken(req);
+
     if (token) {
       const tokenHash = EmergencySession.hashToken(token);
       const session = await EmergencySession.findOne({ sessionTokenHash: tokenHash });
-      
-      if (session) {
-        await session.revoke('User logout');
-      }
+      if (session) await session.revoke('User logout');
     }
 
-    res.status(200).json({ success: true, message: 'Logged out' });
+    return res.status(200).json({ success: true, message: 'Logged out' });
   } catch (err) {
     console.error('Logout error:', err.message);
-    res.status(500).json({ success: false, message: 'Server error' });
+    return res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 
+/**
+ * Export middlewares as properties on the router so destructuring works:
+ * const { protectBeneficiary } = require('./beneficiaryAuth')
+ */
+router.protectBeneficiary = protectBeneficiary;
+router.protectBeneficiaryEnrolled = protectBeneficiaryEnrolled;
+
 module.exports = router;
-module.exports.protectBeneficiary = exports.protectBeneficiary;
