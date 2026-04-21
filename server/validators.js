@@ -48,7 +48,7 @@ const resetPasswordSchema = z.object({
 });
 
 // Asset schemas
-const CreateAssetSchema = z.object({
+const createAssetSchema = z.object({
   name: z.string().min(1, 'Asset name is required').max(200),
   type: z.string().min(1, 'Asset type is required'),
   value: z.string().optional(),
@@ -56,20 +56,20 @@ const CreateAssetSchema = z.object({
   beneficiary: z.string().optional()
 });
 
-const UpdateAssetSchema = CreateAssetSchema.partial();
+const updateAssetSchema = createAssetSchema.partial();
 
 // Beneficiary schemas
-const CreateBeneficiarySchema = z.object({
+const createBeneficiarySchema = z.object({
   name: z.string().min(1, 'Name is required').max(200),
   email: z.string().email('Invalid email address'),
   relationship: z.string().min(1, 'Relationship is required'),
   accessLevel: z.enum(['view', 'download', 'full']).optional()
 });
 
-const UpdateBeneficiarySchema = CreateBeneficiarySchema.partial();
+const updateBeneficiarySchema = createBeneficiarySchema.partial();
 
 // Capsule schemas
-const CreateCapsuleSchema = z.object({
+const createCapsuleSchema = z.object({
   title: z.string().min(1, 'Title is required').max(300),
   content: z.string().min(1, 'Content is required'),
   scheduledFor: z.string().refine((val) => {
@@ -80,7 +80,7 @@ const CreateCapsuleSchema = z.object({
 });
 
 // User settings schema
-const UpdateSettingsSchema = z.object({
+const updateSettingsSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   email: z.string().email().optional(),
   theme: z.enum(['light', 'dark', 'system']).optional(),
@@ -93,10 +93,10 @@ module.exports = {
   loginSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
-  CreateAssetSchema,
-  UpdateAssetSchema,
-  CreateBeneficiarySchema,
-  UpdateBeneficiarySchema,
-  CreateCapsuleSchema,
-  UpdateSettingsSchema
+  createAssetSchema,
+  updateAssetSchema,
+  createBeneficiarySchema,
+  updateBeneficiarySchema,
+  createCapsuleSchema,
+  updateSettingsSchema
 };
