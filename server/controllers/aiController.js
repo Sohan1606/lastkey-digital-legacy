@@ -252,7 +252,7 @@ const generateMemoir = async (req, res) => {
     const userPrompt = `Life Stage: ${stage}\n\nUser Responses:\n${prompts.join('\n')}\n\nPrevious Chapters: ${existingChapters?.length || 0}\n\nWrite a memoir chapter for this life stage.`;
 
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4',
+      model: 'gpt-4o-mini', // Changed from gpt-4 to gpt-4o-mini (more available & cheaper)
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }
@@ -273,8 +273,9 @@ const generateMemoir = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Memoir Generation Error:', error);
-    res.status(500).json({ status: 'fail', message: 'Failed to generate memoir chapter' });
+    console.error('Memoir Generation Error:', error.message);
+    console.error('Full error:', error);
+    res.status(500).json({ status: 'fail', message: 'Failed to generate memoir chapter', error: error.message });
   }
 };
 
