@@ -598,18 +598,29 @@ const LegalDocuments = () => {
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 style={{ 
-                                  fontSize: 11, 
+                                  fontSize: 12, 
+                                  fontWeight: 600,
                                   color: '#4f9eff', 
                                   display: 'flex', 
                                   alignItems: 'center', 
-                                  gap: 4,
-                                  padding: '4px 8px',
-                                  background: 'rgba(79,158,255,0.1)',
-                                  borderRadius: 6,
-                                  textDecoration: 'none'
+                                  gap: 6,
+                                  padding: '8px 12px',
+                                  background: 'rgba(79,158,255,0.15)',
+                                  border: '1px solid rgba(79,158,255,0.3)',
+                                  borderRadius: 8,
+                                  textDecoration: 'none',
+                                  transition: 'all 0.2s'
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.background = 'rgba(79,158,255,0.25)';
+                                  e.currentTarget.style.borderColor = 'rgba(79,158,255,0.5)';
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.background = 'rgba(79,158,255,0.15)';
+                                  e.currentTarget.style.borderColor = 'rgba(79,158,255,0.3)';
                                 }}
                               >
-                                <Download size={12} />
+                                <Download size={14} />
                                 {att.originalName}
                               </a>
                             ))}
