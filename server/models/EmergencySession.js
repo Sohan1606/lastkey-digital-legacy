@@ -29,8 +29,8 @@ const emergencySessionSchema = new mongoose.Schema({
   // Session expires at (30 minutes default)
   expiresAt: {
     type: Date,
-    required: true,
-    index: true
+    required: true
+    // TTL index defined at schema level (line 67)
   },
   // Last activity timestamp
   lastSeenAt: {

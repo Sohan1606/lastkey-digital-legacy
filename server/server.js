@@ -6,11 +6,25 @@ const mongoose = require('mongoose');
 const path = require('path');
 require('dotenv').config();
 
+// Dev-safe: enable autoIndex in development for faster index creation
+// In production, consider setting mongoose.set('autoIndex', false) and managing indexes manually
+if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
+  mongoose.set('autoIndex', true);
+}
+
 // Validate environment variables
 const { env, getSanitizedEnv } = require('./config/env');
 
 console.log('✅ Environment validated');
-console.log('📋 Configuration:', JSON.stringify(getSanitizedEnv(), null, 2));
+console.log('📋 Configuration:', {
+  NODE_ENV: process.env.NODE_ENV || 'development',
+  PORT: process.env.PORT || 5000,
+  FREE_MODE: process.env.FREE_MODE,
+  EMAIL_MODE: process.env.EMAIL_MODE,
+  FEATURE_PAYMENTS: process.env.FEATURE_PAYMENTS,
+  FEATURE_AI: process.env.FEATURE_AI,
+  USE_REDIS: process.env.REDIS_ENABLED === 'true'
+});
 
 // Import models
 const User = require('./models/User');
@@ -285,6 +299,17 @@ const startServer = async () => {
         console.warn('⚠️  MongoDB connection failed (server still running).');
         console.warn(`   URI: ${MONGO_URI}`);
         console.warn(`   Error: ${error?.message || error}`);
+        
+        // Help developers fix TTL index conflicts
+        if (error?.message?.includes('equivalent index already exists')) {
+          console.warn('');
+          console.warn('💡 TTL Index Conflict Detected!');
+          console.warn('   Run this in MongoDB shell to fix:');
+          console.warn('   use lastkey');
+          console.warn('   db.emergencysessions.dropIndex("expiresAt_1")');
+          console.warn('   Then restart the server.');
+          console.warn('');
+        }
       }
     };
 

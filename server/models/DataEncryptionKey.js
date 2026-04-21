@@ -16,8 +16,8 @@ const beneficiaryShareSchema = new mongoose.Schema({
   beneficiaryId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Beneficiary',
-    required: true,
-    index: true
+    required: true
+    // Index defined at schema level (line 75)
   },
   // Encrypted DEK share (encrypted with beneficiary's RSA public key)
   encryptedShare: {
@@ -38,8 +38,8 @@ const dekSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true,
-    unique: true,
-    index: true
+    unique: true
+    // Index defined at schema level (line 74)
   },
   
   // Master DEK (256-bit AES key) - stored encrypted
@@ -71,7 +71,7 @@ const dekSchema = new mongoose.Schema({
 });
 
 // Indexes
-dekSchema.index({ ownerId: 1 });
+// Note: ownerId already has unique index from field definition (line 41)
 dekSchema.index({ 'beneficiaryShares.beneficiaryId': 1 });
 
 /**

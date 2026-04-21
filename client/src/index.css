@@ -334,21 +334,23 @@ label {
 /* ─── Design System Utilities ─── */
 
 /* Card variants */
-.card { @apply glass p-6; }
-.card-hover { @apply card transition-all duration-300 hover:scale-[1.02] hover:shadow-xl; }
-.card-interactive { @apply card-hover cursor-pointer; }
+.card { background: var(--glass-2); backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%); border: 1px solid var(--glass-border); border-radius: 20px; padding: 1.5rem; }
+.card-hover { background: var(--glass-2); backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%); border: 1px solid var(--glass-border); border-radius: 20px; padding: 1.5rem; transition: all 0.3s; }
+.card-hover:hover { transform: scale(1.02); box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
+.card-interactive { background: var(--glass-2); backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%); border: 1px solid var(--glass-border); border-radius: 20px; padding: 1.5rem; transition: all 0.3s; cursor: pointer; }
+.card-interactive:hover { transform: scale(1.02); box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
 
 /* Text gradients */
 .text-gradient { @apply bg-clip-text text-transparent; }
-.text-gradient-primary { @apply text-gradient bg-gradient-to-r from-[#4f9eff] to-[#7c5cfc]; }
-.text-gradient-success { @apply text-gradient bg-gradient-to-r from-[#00e5a0] to-[#4f9eff]; }
-.text-gradient-warm { @apply text-gradient bg-gradient-to-r from-[#ffb830] to-[#ff4d6d]; }
+.text-gradient-primary { @apply bg-clip-text text-transparent bg-gradient-to-r from-[#4f9eff] to-[#7c5cfc]; }
+.text-gradient-success { @apply bg-clip-text text-transparent bg-gradient-to-r from-[#00e5a0] to-[#4f9eff]; }
+.text-gradient-warm { @apply bg-clip-text text-transparent bg-gradient-to-r from-[#ffb830] to-[#ff4d6d]; }
 
 /* Status indicators */
 .status-dot { @apply w-2 h-2 rounded-full; }
-.status-active { @apply status-dot bg-[#00e5a0] shadow-[0_0_8px_#00e5a0]; }
-.status-warning { @apply status-dot bg-[#ffb830] shadow-[0_0_8px_#ffb830] animate-pulse; }
-.status-danger { @apply status-dot bg-[#ff4d6d] shadow-[0_0_8px_#ff4d6d] animate-pulse; }
+.status-active { @apply w-2 h-2 rounded-full bg-[#00e5a0] shadow-[0_0_8px_#00e5a0]; }
+.status-warning { @apply w-2 h-2 rounded-full bg-[#ffb830] shadow-[0_0_8px_#ffb830] animate-pulse; }
+.status-danger { @apply w-2 h-2 rounded-full bg-[#ff4d6d] shadow-[0_0_8px_#ff4d6d] animate-pulse; }
 
 /* Form states */
 .input-error { @apply border-[#ff4d6d] !important; }

@@ -83,6 +83,14 @@ cp client/.env.example client/.env
 mongod
 ```
 
+> **Note: TTL Index Conflicts**
+> If you changed TTL indexes and MongoDB complains with "An equivalent index already exists", 
+> drop the old index in MongoDB shell:
+> ```javascript
+> db.emergencysessions.dropIndex('expiresAt_1')
+> ```
+> Or drop the dev database entirely: `use lastkey; db.dropDatabase()`
+
 5. **Start the application**
 ```bash
 # Terminal 1 - Backend
