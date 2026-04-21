@@ -6,6 +6,8 @@ const LegalDocument = require('../models/LegalDocument');
 const Beneficiary = require('../models/Beneficiary');
 const EmergencySession = require('../models/EmergencySession');
 const { log } = require('../services/auditService');
+const fs = require('fs');
+const path = require('path');
 
 const router = express.Router();
 
@@ -239,14 +241,15 @@ router.get('/legal-documents', (req, res, next) => getProtectBeneficiary()(req, 
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
 
+    // Use ownerId (not userId) - LegalDocument schema uses ownerId
     const documents = await LegalDocument.find({
-      userId: owner._id,
+      ownerId: owner._id,
       visibleToBeneficiaries: true,
       $or: [
         { allowedBeneficiaries: { $size: 0 } },
         { allowedBeneficiaries: beneficiary._id }
       ]
-    }).select('-storagePath').lean();
+    }).select('-attachments.storagePath').lean();
 
     // Log access
     await log('beneficiary_documents_viewed', {
@@ -255,7 +258,8 @@ router.get('/legal-documents', (req, res, next) => getProtectBeneficiary()(req, 
         beneficiaryId: beneficiary._id,
         count: documents.length 
       },
-      ip: req.ip
+      ip: req.ip,
+      userAgent: req.headers['user-agent']
     });
 
     res.status(200).json({
@@ -268,22 +272,22 @@ router.get('/legal-documents', (req, res, next) => getProtectBeneficiary()(req, 
   }
 });
 
-// Download legal document attachment (scoped)
-router.get('/legal-documents/:docId/attachments/:attachmentId/download', 
-  (req, res, next) => getProtectBeneficiary()(req, res, next), 
-  validateSession, 
+// Get attachment metadata
+router.get('/legal-documents/:docId/attachments/:attachmentId/meta',
+  (req, res, next) => getProtectBeneficiary()(req, res, next),
+  validateSession,
   async (req, res) => {
     try {
       const { beneficiary, owner, scopes } = req;
       const { docId, attachmentId } = req.params;
 
-      if (!scopes.downloadFiles) {
-        return res.status(403).json({ success: false, message: 'Download not permitted' });
+      if (!scopes.viewDocuments) {
+        return res.status(403).json({ success: false, message: 'Access denied' });
       }
 
       const document = await LegalDocument.findOne({
         _id: docId,
-        userId: owner._id,
+        ownerId: owner._id,
         visibleToBeneficiaries: true
       });
 
@@ -296,30 +300,79 @@ router.get('/legal-documents/:docId/attachments/:attachmentId/download',
         return res.status(404).json({ success: false, message: 'Attachment not found' });
       }
 
+      res.status(200).json({
+        success: true,
+        data: {
+          filename: attachment.originalName,
+          mimeType: attachment.mimeType,
+          size: attachment.size,
+          sha256Hash: attachment.sha256Hash,
+          encrypted: attachment.encrypted
+        }
+      });
+    } catch (err) {
+      console.error('Attachment meta error:', err.message);
+      res.status(500).json({ success: false, message: 'Server error' });
+    }
+  }
+);
+
+// Stream attachment file bytes
+router.get('/legal-documents/:docId/attachments/:attachmentId/file',
+  (req, res, next) => getProtectBeneficiary()(req, res, next),
+  validateSession,
+  async (req, res) => {
+    try {
+      const { beneficiary, owner, scopes } = req;
+      const { docId, attachmentId } = req.params;
+
+      if (!scopes.downloadFiles) {
+        return res.status(403).json({ success: false, message: 'Download not permitted' });
+      }
+
+      const document = await LegalDocument.findOne({
+        _id: docId,
+        ownerId: owner._id,
+        visibleToBeneficiaries: true
+      });
+
+      if (!document) {
+        return res.status(404).json({ success: false, message: 'Document not found' });
+      }
+
+      const attachment = document.attachments.id(attachmentId);
+      if (!attachment) {
+        return res.status(404).json({ success: false, message: 'Attachment not found' });
+      }
+
+      // Check file exists
+      if (!fs.existsSync(attachment.storagePath)) {
+        return res.status(404).json({ success: false, message: 'File not found on server' });
+      }
+
       // Log download
       await log('beneficiary_document_downloaded', {
         userId: owner._id,
         details: { 
           beneficiaryId: beneficiary._id,
           documentId: docId,
-          attachmentId
+          attachmentId,
+          filename: attachment.originalName
         },
-        ip: req.ip
+        ip: req.ip,
+        userAgent: req.headers['user-agent']
       });
 
-      // Return attachment metadata - actual file download through separate endpoint
-      res.status(200).json({
-        success: true,
-        data: {
-          filename: attachment.filename,
-          contentType: attachment.contentType,
-          size: attachment.size,
-          integrityHash: attachment.integrityHash,
-          downloadUrl: `/api/beneficiary/portal/legal-documents/${docId}/attachments/${attachmentId}/file`
-        }
-      });
+      // Stream raw bytes
+      res.setHeader('Content-Type', 'application/octet-stream');
+      res.setHeader('Content-Disposition', `attachment; filename="${attachment.originalName}"`);
+      res.setHeader('X-Encrypted', attachment.encrypted ? 'true' : 'false');
+      res.setHeader('X-SHA256', attachment.sha256Hash);
+
+      const stream = fs.createReadStream(attachment.storagePath);
+      stream.pipe(res);
     } catch (err) {
-      console.error('Document download error:', err.message);
+      console.error('File download error:', err.message);
       res.status(500).json({ success: false, message: 'Server error' });
     }
   }

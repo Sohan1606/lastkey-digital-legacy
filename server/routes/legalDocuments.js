@@ -90,10 +90,15 @@ router.post('/', protect, upload.array('attachments', 5), async (req, res) => {
       allowedBeneficiaries
     } = req.body;
 
+    // Check if client encrypted the files
+    const clientEncrypted = req.body.clientEncrypted === 'true' || req.body.clientEncrypted === true;
+    const encryptionVersion = req.body.encryptionVersion || '1';
+
     // Process uploaded files
     const attachments = [];
     if (req.files && req.files.length > 0) {
-      for (const file of req.files) {
+      for (let i = 0; i < req.files.length; i++) {
+        const file = req.files[i];
         const fileBuffer = fs.readFileSync(file.path);
         const sha256Hash = LegalDocument.computeHash(fileBuffer);
         
@@ -103,7 +108,7 @@ router.post('/', protect, upload.array('attachments', 5), async (req, res) => {
           mimeType: file.mimetype,
           size: file.size,
           sha256Hash,
-          encrypted: false, // Files are stored as-is; client can encrypt before upload if needed
+          encrypted: clientEncrypted, // Set based on client flag
           storagePath: file.path,
           uploadedAt: new Date()
         });

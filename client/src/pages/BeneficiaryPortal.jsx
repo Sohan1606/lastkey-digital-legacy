@@ -10,6 +10,7 @@ import {
   importRSAPrivateKey,
   decryptDEKAsBeneficiary,
   decryptTextWithDEK,
+  decryptFileWithDEK,
   deriveKey,
   encryptText
 } from '../utils/crypto';
@@ -109,6 +110,7 @@ const BeneficiaryPortal = () => {
   const [dek, setDek] = useState(null);
   const [activeTab, setActiveTab] = useState('assets');
   const [decryptedPasswords, setDecryptedPasswords] = useState({});
+  const [downloadedDocs, setDownloadedDocs] = useState({}); // track downloaded doc blobs
 
   // Check enrollment status
   const checkStatus = async (e) => {
@@ -357,6 +359,89 @@ const BeneficiaryPortal = () => {
     } catch (err) {
       toast.error('Failed to decrypt password');
     }
+  };
+
+  // Download and decrypt legal document attachment
+  const downloadAndDecryptDoc = async (docId, attachmentId, encrypted) => {
+    if (!dek) {
+      toast.error('DEK not available');
+      return;
+    }
+    
+    const cacheKey = `${docId}_${attachmentId}`;
+    
+    try {
+      toast.loading('Downloading...', { id: cacheKey });
+      
+      // Download raw bytes
+      const response = await axios.get(
+        `${API_BASE}/beneficiary/portal/legal-documents/${docId}/attachments/${attachmentId}/file`,
+        {
+          headers: { 
+            Authorization: `Bearer ${authToken}`,
+            'X-Session-Token': sessionToken
+          },
+          responseType: 'arraybuffer'
+        }
+      );
+      
+      const mimeType = response.headers['content-type'] || 'application/octet-stream';
+      
+      if (!encrypted) {
+        // Legacy unencrypted file - save as-is
+        const blob = new Blob([response.data], { type: mimeType });
+        setDownloadedDocs(prev => ({ ...prev, [cacheKey]: { blob, mimeType, decrypted: true } }));
+        toast.success('Downloaded (unencrypted legacy file)', { id: cacheKey });
+        return;
+      }
+      
+      // Decrypt with DEK
+      // The file was encrypted as a single blob (IV + ciphertext combined)
+      const combined = new Uint8Array(response.data);
+      const iv = combined.slice(0, 12);
+      const ciphertext = combined.slice(12);
+      
+      const decryptedBuffer = await window.crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv },
+        dek,
+        ciphertext
+      );
+      
+      const blob = new Blob([decryptedBuffer], { type: mimeType });
+      setDownloadedDocs(prev => ({ ...prev, [cacheKey]: { blob, mimeType, decrypted: true } }));
+      toast.success('Downloaded and decrypted!', { id: cacheKey });
+    } catch (err) {
+      console.error('Download/decrypt error:', err);
+      toast.error('Failed to download or decrypt file', { id: cacheKey });
+    }
+  };
+
+  // Open decrypted file in new tab
+  const openDecryptedFile = (docId, attachmentId) => {
+    const cacheKey = `${docId}_${attachmentId}`;
+    const doc = downloadedDocs[cacheKey];
+    if (!doc) return;
+    
+    const url = URL.createObjectURL(doc.blob);
+    window.open(url, '_blank');
+    // Clean up after a delay
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  };
+
+  // Save decrypted file to disk
+  const saveDecryptedFile = (docId, attachmentId, filename) => {
+    const cacheKey = `${docId}_${attachmentId}`;
+    const doc = downloadedDocs[cacheKey];
+    if (!doc) return;
+    
+    const url = URL.createObjectURL(doc.blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   const renderCheckStep = () => (
@@ -1004,28 +1089,138 @@ const BeneficiaryPortal = () => {
               padding: 16
             }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <h4 style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>{doc.title}</h4>
-                <p style={{ fontSize: 12, color: 'var(--text-3)' }}>{doc.documentType}</p>
-              </div>
-              <button
-                style={{
-                  padding: '8px 12px',
-                  borderRadius: 8,
-                  border: 'none',
-                  background: 'rgba(0,229,160,0.15)',
-                  color: '#00e5a0',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 4
-                }}
-              >
-                <Download size={14} />
-                Download
-              </button>
+            <div style={{ marginBottom: 12 }}>
+              <h4 style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>{doc.title}</h4>
+              <p style={{ fontSize: 12, color: 'var(--text-3)', textTransform: 'capitalize' }}>{doc.type}</p>
             </div>
+            
+            {doc.propertyAddress && (
+              <p style={{ fontSize: 12, color: 'var(--text-2)', marginBottom: 8 }}>
+                <strong>Property:</strong> {doc.propertyAddress}
+              </p>
+            )}
+            
+            {doc.originalLocation && (
+              <p style={{ fontSize: 12, color: 'var(--text-2)', marginBottom: 8 }}>
+                <strong>Original Location:</strong> {doc.originalLocation.type} — {doc.originalLocation.details}
+              </p>
+            )}
+            
+            {doc.instructionsForBeneficiary && (
+              <div style={{ 
+                background: 'rgba(0,0,0,0.2)', 
+                borderRadius: 8, 
+                padding: 10,
+                marginBottom: 12,
+                fontSize: 12,
+                color: 'var(--text-2)'
+              }}>
+                <strong style={{ color: '#ffb830' }}>Instructions:</strong><br/>
+                {doc.instructionsForBeneficiary}
+              </div>
+            )}
+            
+            {/* Attachments */}
+            {doc.attachments && doc.attachments.length > 0 && (
+              <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--glass-border)' }}>
+                <p style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 8, fontWeight: 600 }}>
+                  ATTACHMENTS ({doc.attachments.length})
+                </p>
+                <div style={{ display: 'grid', gap: 8 }}>
+                  {doc.attachments.map(att => {
+                    const cacheKey = `${doc._id}_${att._id}`;
+                    const isDownloaded = downloadedDocs[cacheKey]?.decrypted;
+                    
+                    return (
+                      <div 
+                        key={att._id}
+                        style={{
+                          background: 'rgba(0,0,0,0.15)',
+                          borderRadius: 8,
+                          padding: 10,
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center'
+                        }}
+                      >
+                        <div>
+                          <p style={{ fontSize: 12, fontWeight: 500 }}>{att.originalName || att.filename}</p>
+                          <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                            <span style={{ fontSize: 10, color: 'var(--text-3)' }}>
+                              {(att.size / 1024).toFixed(1)} KB
+                            </span>
+                            {att.encrypted ? (
+                              <span style={{ fontSize: 10, color: '#00e5a0', display: 'flex', alignItems: 'center', gap: 2 }}>
+                                <Lock size={8} /> Encrypted
+                              </span>
+                            ) : (
+                              <span style={{ fontSize: 10, color: '#ffb830', display: 'flex', alignItems: 'center', gap: 2 }}>
+                                <AlertCircle size={8} /> Unencrypted (legacy)
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {!isDownloaded ? (
+                          <button
+                            onClick={() => downloadAndDecryptDoc(doc._id, att._id, att.encrypted)}
+                            style={{
+                              padding: '6px 12px',
+                              borderRadius: 6,
+                              border: 'none',
+                              background: 'rgba(0,229,160,0.15)',
+                              color: '#00e5a0',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 4,
+                              fontSize: 11,
+                              fontWeight: 600
+                            }}
+                          >
+                            <Download size={12} />
+                            Download
+                          </button>
+                        ) : (
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            <button
+                              onClick={() => openDecryptedFile(doc._id, att._id)}
+                              style={{
+                                padding: '6px 10px',
+                                borderRadius: 6,
+                                border: 'none',
+                                background: 'rgba(79,158,255,0.15)',
+                                color: '#4f9eff',
+                                cursor: 'pointer',
+                                fontSize: 11,
+                                fontWeight: 600
+                              }}
+                            >
+                              Open
+                            </button>
+                            <button
+                              onClick={() => saveDecryptedFile(doc._id, att._id, att.originalName || att.filename)}
+                              style={{
+                                padding: '6px 10px',
+                                borderRadius: 6,
+                                border: 'none',
+                                background: 'rgba(0,229,160,0.15)',
+                                color: '#00e5a0',
+                                cursor: 'pointer',
+                                fontSize: 11,
+                                fontWeight: 600
+                              }}
+                            >
+                              Save
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         ))
       )}
