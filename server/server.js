@@ -6,13 +6,16 @@ const mongoose = require('mongoose');
 const path = require('path');
 require('dotenv').config();
 
+const http = require('http');
+const { Server } = require('socket.io');
+const jwt = require('jsonwebtoken');
+
 // Dev-safe: enable autoIndex in development for faster index creation
-// In production, consider setting mongoose.set('autoIndex', false) and managing indexes manually
 if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
   mongoose.set('autoIndex', true);
 }
 
-// Validate environment variables
+// Validate environment variables (fails fast)
 const { env, getSanitizedEnv } = require('./config/env');
 
 console.log('✅ Environment validated');
@@ -26,7 +29,114 @@ console.log('📋 Configuration:', {
   USE_REDIS: process.env.REDIS_ENABLED === 'true'
 });
 
-// Import models
+const app = express();
+const server = http.createServer(app);
+
+const PORT = Number(env.PORT || 5000);
+const MONGO_URI = env.MONGO_URI;
+
+// ------------------------
+// Helpers
+// ------------------------
+function maskMongoUri(uri) {
+  // Avoid leaking credentials in logs
+  try {
+    // mongodb://user:pass@host:port/db?...
+    return uri.replace(/\/\/([^@]+)@/g, '//[REDACTED]@');
+  } catch {
+    return '[REDACTED]';
+  }
+}
+
+// DEV_FAST_MODE:
+// - true  => treat inactivityDuration as minutes (fast demos)
+// - false => treat inactivityDuration as days (realistic)
+const DEV_FAST_MODE =
+  env.NODE_ENV !== 'production' && (process.env.DEV_FAST_MODE === 'true' || process.env.DEV_FAST_MODE === '1');
+
+// ------------------------
+// Middleware
+// ------------------------
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' }
+  })
+);
+
+const allowedOrigins =
+  env.NODE_ENV === 'production'
+    ? [env.FRONTEND_URL].filter(Boolean)
+    : [
+        'http://localhost:5173',
+        'http://localhost:5174',
+        'http://localhost:5175',
+        'http://localhost:5176',
+        'http://localhost:5177'
+      ];
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+      return callback(new Error('Not allowed by CORS'));
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    // IMPORTANT: allow X-Session-Token for beneficiary portal
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Session-Token', 'x-session-token']
+  })
+);
+
+app.use(express.json({ limit: '2mb' }));
+
+// Input sanitization middleware
+const { sanitizeBody } = require('./middleware/sanitize');
+app.use(sanitizeBody);
+
+// REMOVED: Public uploads exposure
+// All file access must go through authorized endpoints
+// app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// ------------------------
+// Rate limiting
+// ------------------------
+const standardLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: { message: 'Too many requests, please try again later' }
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  skipSuccessfulRequests: true,
+  message: { message: 'Too many login attempts, please try again later' }
+});
+
+const beneficiaryAccessLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  message: { message: 'Too many access requests, please try again later' }
+});
+
+app.use('/api/', standardLimiter);
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
+
+// Beneficiary hard limits (auth + portal)
+app.use('/api/beneficiary/auth/login', beneficiaryAccessLimiter);
+app.use('/api/beneficiary/auth/login/start', beneficiaryAccessLimiter);
+app.use('/api/beneficiary/auth/login/verify', beneficiaryAccessLimiter);
+app.use('/api/beneficiary/auth/enroll', beneficiaryAccessLimiter);
+app.use('/api/beneficiary/auth/check-status', beneficiaryAccessLimiter);
+app.use('/api/beneficiary/auth/request-access', beneficiaryAccessLimiter);
+app.use('/api/beneficiary/auth/create-session', beneficiaryAccessLimiter);
+app.use('/api/beneficiary/auth/logout', beneficiaryAccessLimiter);
+app.use('/api/beneficiary/portal/', beneficiaryAccessLimiter);
+
+// ------------------------
+// Models (used for createIndexes + workers)
+// ------------------------
 const User = require('./models/User');
 const Asset = require('./models/Asset');
 const Beneficiary = require('./models/Beneficiary');
@@ -35,122 +145,36 @@ const LegalDocument = require('./models/LegalDocument');
 const EmergencyAccessGrant = require('./models/EmergencyAccessGrant');
 const EmergencySession = require('./models/EmergencySession');
 
-const app = express();
-
-const http = require('http');
-const { Server } = require('socket.io');
-
-const server = http.createServer(app);
-const PORT = process.env.PORT || 5000;
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/lastkey';
-
-// Middleware
-app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" }
-}));
-const allowedOrigins = process.env.NODE_ENV === 'production'
-  ? [process.env.FRONTEND_URL].filter(Boolean)
-  : ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175', 'http://localhost:5176', 'http://localhost:5177'];
-
-app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-}));
-app.use(express.json());
-
-// Add input sanitization middleware
-const { sanitizeBody } = require('./middleware/sanitize');
-app.use(sanitizeBody);
-
-// REMOVED: Public uploads exposure (S2)
-// All file access must go through authorized endpoints
-// app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
-// Rate limiting - stricter for auth and sensitive endpoints
-const standardLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  message: { message: 'Too many requests, please try again later' }
-});
-
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // stricter limit for auth endpoints
-  skipSuccessfulRequests: true, // don't count successful logins
-  message: { message: 'Too many login attempts, please try again later' }
-});
-
-const beneficiaryAccessLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 10, // limit access requests
-  message: { message: 'Too many access requests, please try again later' }
-});
-
-app.use('/api/', standardLimiter);
-app.use('/api/auth/login', authLimiter);
-app.use('/api/auth/register', authLimiter);
-
-// Mount beneficiary access limiter on ALL beneficiary auth endpoints
-app.use('/api/beneficiary/auth/login', beneficiaryAccessLimiter);
-app.use('/api/beneficiary/auth/login/start', beneficiaryAccessLimiter);
-app.use('/api/beneficiary/auth/login/verify', beneficiaryAccessLimiter);
-app.use('/api/beneficiary/auth/enroll', beneficiaryAccessLimiter);
-app.use('/api/beneficiary/auth/check-status', beneficiaryAccessLimiter);
-app.use('/api/beneficiary/auth/request-access', beneficiaryAccessLimiter);
-app.use('/api/beneficiary/auth/create-session', beneficiaryAccessLimiter);
-app.use('/api/beneficiary/portal/', beneficiaryAccessLimiter);
-
-const jwt = require('jsonwebtoken');
-
+// ------------------------
+// Socket.IO
+// ------------------------
 const io = new Server(server, {
   cors: {
     origin: allowedOrigins,
-    methods: ["GET", "POST"],
+    methods: ['GET', 'POST'],
     credentials: true
   }
 });
 
 global.io = io;
 
-// Socket.IO JWT authentication middleware
 io.use(async (socket, next) => {
   try {
     const token = socket.handshake.auth.token || socket.handshake.query.token;
-    
-    if (!token) {
-      return next(new Error('Authentication error: No token provided'));
-    }
-    
-    const JWT_SECRET = process.env.JWT_SECRET;
-    if (!JWT_SECRET) {
-      console.error('❌ JWT_SECRET not configured');
-      return next(new Error('Server configuration error'));
-    }
-    
-    const decoded = jwt.verify(token, JWT_SECRET);
-    
-    // Verify user exists and is active
+    if (!token) return next(new Error('Authentication error: No token provided'));
+
+    const decoded = jwt.verify(token, env.JWT_SECRET);
+
     const user = await User.findById(decoded.id).select('+triggerStatus');
-    if (!user) {
-      return next(new Error('Authentication error: User not found'));
-    }
-    
-    // Attach user data to socket
+    if (!user) return next(new Error('Authentication error: User not found'));
+
     socket.userId = user._id.toString();
     socket.user = {
       id: user._id.toString(),
       email: user.email,
       triggerStatus: user.triggerStatus
     };
-    
+
     next();
   } catch (err) {
     console.error('Socket auth error:', err.message);
@@ -160,21 +184,19 @@ io.use(async (socket, next) => {
 
 io.on('connection', (socket) => {
   console.log('⚡ Authenticated client connected:', socket.id, 'User:', socket.userId);
-  
-  // Auto-join user to their private room based on JWT-derived userId
+
   const userRoom = `user:${socket.userId}`;
   socket.join(userRoom);
   console.log(`👤 User ${socket.userId} auto-joined room ${userRoom}`);
-  
-  // Remove insecure join-room that accepts userId from client
-  // Clients cannot join arbitrary rooms anymore
-  
+
   socket.on('disconnect', () => {
     console.log('❌ Client disconnected:', socket.id);
   });
 });
 
-// Health/Test route
+// ------------------------
+// Health
+// ------------------------
 app.get('/api/health', (req, res) => {
   const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
   res.json({
@@ -185,108 +207,70 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Auth routes
-const authRouter = require('./routes/auth');
-app.use('/api/auth', authRouter);
+// ------------------------
+// Routes
+// ------------------------
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/assets', require('./routes/assets'));
+app.use('/api/user', require('./routes/user'));
+app.use('/api/ai', require('./routes/ai'));
+app.use('/api/payment', require('./routes/payment'));
+app.use('/api/beneficiaries', require('./routes/beneficiaries'));
+app.use('/api/capsules', require('./routes/capsules'));
 
-// Asset routes
-const assetRouter = require('./routes/assets');
-app.use('/api/assets', assetRouter);
+app.use('/api/beneficiary/auth', require('./routes/beneficiaryAuth'));
+app.use('/api/beneficiary/portal', require('./routes/beneficiaryPortal'));
 
-// User routes (dead man switch)
-const userRouter = require('./routes/user');
-app.use('/api/user', userRouter);
+app.use('/api/webauthn', require('./routes/webauthn'));
+app.use('/api/migration', require('./routes/migration'));
+app.use('/api/timeline', require('./routes/timeline'));
+app.use('/api/voice-messages', require('./routes/voice-messages'));
 
-// AI routes
-const aiRouter = require('./routes/ai');
-app.use('/api/ai', aiRouter);
+app.use('/api/legal-documents', require('./routes/legalDocuments'));
 
-// Payment routes
-const paymentRouter = require('./routes/payment');
-app.use('/api/payment', paymentRouter);
+app.use('/api/dek', require('./routes/dek'));
+app.use('/api/vault-key', require('./routes/vaultKey'));
 
-// Beneficiaries routes
-const beneficiaryRouter = require('./routes/beneficiaries');
-app.use('/api/beneficiaries', beneficiaryRouter);
-
-// Capsules routes
-const capsuleRouter = require('./routes/capsules');
-app.use('/api/capsules', capsuleRouter);
-
-// Beneficiary Portal routes (new secure flow)
-const beneficiaryAuthRouter = require('./routes/beneficiaryAuth');
-app.use('/api/beneficiary/auth', beneficiaryAuthRouter);
-
-const beneficiaryPortalRouter = require('./routes/beneficiaryPortal');
-app.use('/api/beneficiary/portal', beneficiaryPortalRouter);
-
-// WebAuthn/Passkey routes
-const webauthnRouter = require('./routes/webauthn');
-app.use('/api/webauthn', webauthnRouter);
-
-// Migration routes (for legacy asset migration)
-const migrationRouter = require('./routes/migration');
-app.use('/api/migration', migrationRouter);
-
-// Timeline routes
-const timelineRouter = require('./routes/timeline');
-app.use('/api/timeline', timelineRouter);
-
-// Voice messages routes
-const voiceMessagesRouter = require('./routes/voice-messages');
-app.use('/api/voice-messages', voiceMessagesRouter);
-
-// Legal Documents routes (Property & Legal Binder)
-const legalDocumentsRouter = require('./routes/legalDocuments');
-app.use('/api/legal-documents', legalDocumentsRouter);
-
-// DEK (Data Encryption Key) routes
-const dekRouter = require('./routes/dek');
-app.use('/api/dek', dekRouter);
-
-// Vault Key routes (owner DEK management)
-const vaultKeyRouter = require('./routes/vaultKey');
-app.use('/api/vault-key', vaultKeyRouter);
-
-// Memoir routes
-const memoirRouter = require('./routes/memoir');
-app.use('/api/memoir', memoirRouter);
-
-// Final Message routes
-const finalMessageRouter = require('./routes/finalMessage');
-app.use('/api/final-message', finalMessageRouter);
+app.use('/api/memoir', require('./routes/memoir'));
+app.use('/api/final-message', require('./routes/finalMessage'));
 
 // Basic test route (legacy)
 app.get('/api/test', (req, res) => {
   res.json({ message: 'Server test OK' });
 });
 
+// ------------------------
+// Startup
+// ------------------------
 const startServer = async () => {
   try {
-    // Start server first so the process can boot even if DB is unavailable.
-    server.listen(PORT, () => {
-      console.log(`✅ Server running on port ${PORT}`);
-      console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`🔗 Socket.IO initialized`);
-    }).on('error', (err) => {
-      if (err.code === 'EADDRINUSE') {
-        console.error(`❌ Port ${PORT} is already in use. Please kill the process or use a different port.`);
-        console.error(`💡 Run: npx kill-port ${PORT} or change PORT in .env`);
-        process.exit(1);
-      } else {
-        console.error('❌ Server error:', err);
-        process.exit(1);
-      }
-    });
+    server
+      .listen(PORT, () => {
+        console.log(`✅ Server running on port ${PORT}`);
+        console.log(`🌐 Environment: ${env.NODE_ENV}`);
+        console.log(`🔗 Socket.IO initialized`);
+        console.log(`✉️  Email mode: ${env.EMAIL_MODE}${env.FREE_MODE === 'true' ? ' (FREE_MODE)' : ''}`);
+        console.log(`⚙️  Guardian mode: ${DEV_FAST_MODE ? 'DEV_FAST_MODE (minutes)' : 'Standard (days)'}`);
+      })
+      .on('error', (err) => {
+        if (err.code === 'EADDRINUSE') {
+          console.error(`❌ Port ${PORT} is already in use.`);
+          console.error(`💡 Run: npx kill-port ${PORT} or change PORT in .env`);
+          process.exit(1);
+        } else {
+          console.error('❌ Server error:', err);
+          process.exit(1);
+        }
+      });
 
-    // Connect to MongoDB in the background with retry.
     const connectWithRetry = async () => {
       try {
         if (mongoose.connection.readyState === 1) return;
+
         await mongoose.connect(MONGO_URI);
         console.log('✅ Database connected successfully');
 
-        // Create indexes for performance (safe to run on every successful connect)
+        // Create indexes
         await User.createIndexes();
         await Asset.createIndexes();
         await Beneficiary.createIndexes();
@@ -297,11 +281,10 @@ const startServer = async () => {
         console.log('✅ Database indexes created');
       } catch (error) {
         console.warn('⚠️  MongoDB connection failed (server still running).');
-        console.warn(`   URI: ${MONGO_URI}`);
+        console.warn(`   URI: ${maskMongoUri(MONGO_URI)}`);
         console.warn(`   Error: ${error?.message || error}`);
-        
-        // Help developers fix TTL index conflicts
-        if (error?.message?.includes('equivalent index already exists')) {
+
+        if (String(error?.message || '').includes('equivalent index already exists')) {
           console.warn('');
           console.warn('💡 TTL Index Conflict Detected!');
           console.warn('   Run this in MongoDB shell to fix:');
@@ -322,36 +305,30 @@ const startServer = async () => {
 };
 
 const startWorkers = async () => {
-  // Check if Redis is available
-  const { redisConnection, redisClient } = require('./services/queue');
-  
+  const { redisClient } = require('./services/queue');
+
   try {
-    if (!redisClient) {
-      throw new Error('Redis disabled (set REDIS_ENABLED=true to enable BullMQ)');
-    }
-    // Use shared client (it has error handlers attached)
+    if (!redisClient) throw new Error('Redis disabled (set REDIS_ENABLED=true to enable BullMQ)');
     await redisClient.ping();
-    
-    // Start workers (they will handle null case internally)
+
     const guardianWorker = require('./workers/guardianWorker');
     const capsuleWorker = require('./workers/capsuleWorker');
-    
+
     if (guardianWorker && capsuleWorker) {
       console.log('BullMQ workers started');
-      
-      // Schedule guardian jobs for all existing active users on startup
+
       const { scheduleGuardianJobs } = require('./services/guardianScheduler');
       if (mongoose.connection.readyState !== 1) {
         console.warn('MongoDB not connected; skipping guardian job scheduling for now.');
         return;
       }
+
       const users = await User.find({ triggerStatus: { $ne: 'triggered' } });
       for (const user of users) {
         await scheduleGuardianJobs(user);
       }
       console.log(`Guardian jobs scheduled for ${users.length} users`);
-      
-      // Schedule pending capsules on startup
+
       const { scheduleCapsuleRelease } = require('./services/capsuleScheduler');
       const pendingCapsules = await Capsule.find({ isReleased: false, unlockAt: { $gte: new Date() } });
       for (const capsule of pendingCapsules) {
@@ -359,73 +336,71 @@ const startWorkers = async () => {
       }
       console.log(`${pendingCapsules.length} pending capsules scheduled`);
     }
-    
   } catch (redisErr) {
-    console.warn('Redis not available \u2014 falling back to node-cron (development mode)');
+    console.warn('Redis not available — falling back to node-cron (development mode)');
     console.warn('   Install Redis for production use: https://redis.io/download');
-    
-    // FALLBACK: keep the original cron for development without Redis
+
     const cron = require('node-cron');
     const { sendEmail } = require('./utils/email');
-    
+
     cron.schedule('* * * * *', async () => {
       try {
         if (mongoose.connection.readyState !== 1) {
-          console.log('Skipping Guardian Protocol - DB not ready');
+          console.log('Skipping Guardian Protocol — DB not ready');
           return;
         }
+
         console.log('Running Guardian Protocol check (fallback mode)...');
-        
+
         const now = new Date();
         const users = await User.find({ triggerStatus: { $ne: 'triggered' } });
-        
+
         for (const user of users) {
-          const inactiveMinutes = (now - user.lastActive) / (1000 * 60);
-          
-          if (inactiveMinutes > user.inactivityDuration) {
-            const wasTriggered = user.triggerStatus === 'triggered';
-            
-            if (inactiveMinutes > user.inactivityDuration * 2) {
+          const diffMs = now - user.lastActive;
+
+          const inactiveMinutes = diffMs / (1000 * 60);
+          const inactiveDays = diffMs / (1000 * 60 * 60 * 24);
+
+          const inactiveValue = DEV_FAST_MODE ? inactiveMinutes : inactiveDays;
+          const unitLabel = DEV_FAST_MODE ? 'minutes' : 'days';
+
+          const threshold = user.inactivityDuration; // interpreted in minutes if DEV_FAST_MODE else days
+          const wasTriggered = user.triggerStatus === 'triggered';
+
+          if (inactiveValue > threshold) {
+            if (inactiveValue > threshold * 2) {
               user.triggerStatus = 'triggered';
               user.warningEmailSent = false;
-              console.log(`GUARDIAN PROTOCOL TRIGGERED for ${user.email}: Legacy protocols activated!`);
+              console.log(`GUARDIAN PROTOCOL TRIGGERED for ${user.email}`);
             } else if (user.triggerStatus !== 'warning') {
               user.triggerStatus = 'warning';
               user.warningEmailSent = false;
-              console.log(`WARNING for ${user.email}: ${Math.floor(inactiveMinutes)}/${user.inactivityDuration} minutes inactive`);
+              console.log(`WARNING for ${user.email}: inactive ${inactiveValue.toFixed(1)} ${unitLabel}`);
             }
-            
+
             await user.save();
 
-            // Real-time notification to user-specific room (only send once per state change)
+            // Realtime status update
+            global.io.to(`user:${user._id.toString()}`).emit('dms-update', {
+              userId: user._id.toString(),
+              status: user.triggerStatus,
+              unit: unitLabel,
+              inactive: Math.floor(inactiveValue),
+              threshold
+            });
+
+            // Send warning email only once per warning incident
             if (user.triggerStatus === 'warning' && !user.warningEmailSent) {
-              global.io.to(`user:${user._id.toString()}`).emit('dms-update', {
-                userId: user._id.toString(),
-                status: user.triggerStatus,
-                remainingMinutes: user.inactivityDuration - Math.floor(inactiveMinutes),
-                message: `Warning: ${user.inactivityDuration - Math.floor(inactiveMinutes)}min remaining`,
-                inactiveMinutes: Math.floor(inactiveMinutes),
-                inactivityDuration: user.inactivityDuration
-              });
               user.warningEmailSent = true;
               await user.save();
-            } else if (user.triggerStatus === 'triggered') {
-              global.io.to(`user:${user._id.toString()}`).emit('dms-update', {
-                userId: user._id.toString(),
-                status: user.triggerStatus,
-                remainingMinutes: 0,
-                message: `GUARDIAN PROTOCOL TRIGGERED!`,
-                inactiveMinutes: Math.floor(inactiveMinutes),
-                inactivityDuration: user.inactivityDuration
-              });
             }
 
-            // Send emails ONLY on new trigger (no duplicates)
+            // Send beneficiary notifications ONLY on new trigger
             if (user.triggerStatus === 'triggered' && !wasTriggered) {
-              console.log(`Sending Guardian Protocol emails for ${user.email}...`);
+              console.log(`Sending Guardian Protocol notifications for ${user.email}...`);
 
               const beneficiaries = await Beneficiary.find({ userId: user._id });
-              
+
               for (const beneficiary of beneficiaries) {
                 await sendEmail({
                   to: beneficiary.email,
@@ -433,11 +408,11 @@ const startWorkers = async () => {
                   html: `
                     <h2>Important Notice</h2>
                     <p><strong>${user.name}</strong> has been inactive for an extended period.</p>
-                    <p>Their LastKey Digital Legacy has been <strong>automatically activated</strong>.</p>
-                    <p>Please check their digital vault and follow their instructions.</p>
-                    <p><em>They set inactivity duration to ${user.inactivityDuration} days.</em></p>
+                    <p>Their LastKey Digital Legacy has been <strong>activated</strong>.</p>
+                    <p><em>Inactivity threshold: ${threshold} ${unitLabel}.</em></p>
                     <hr />
-                    <p>Login to Beneficiary Portal to claim access: <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/beneficiary-portal">LastKey Beneficiary Portal</a></p>
+                    <p>Login to Beneficiary Portal to claim access:</p>
+                    <p><a href="${env.FRONTEND_URL}/beneficiary-portal">${env.FRONTEND_URL}/beneficiary-portal</a></p>
                   `
                 });
               }
@@ -454,19 +429,20 @@ const startWorkers = async () => {
 // Export for tests
 module.exports = { app, server, startServer, startWorkers };
 
-// Start the server (skip auto-start in test mode to avoid port/Mongo conflicts)
-if (process.env.NODE_ENV !== 'test') {
+// Auto-start (skip in test)
+if (env.NODE_ENV !== 'test') {
   startServer().then(() => startWorkers());
 }
 
-// Graceful shutdown handlers
+// ------------------------
+// Graceful shutdown
+// ------------------------
 const gracefulShutdown = async (signal) => {
   console.log(`\n📡 Received ${signal}. Starting graceful shutdown...`);
-  
+
   server.close(async () => {
     console.log('✅ HTTP server closed');
-    
-    // Close MongoDB connection
+
     try {
       await mongoose.connection.close();
       console.log('✅ MongoDB connection closed');
@@ -477,18 +453,15 @@ const gracefulShutdown = async (signal) => {
     }
   });
 
-  // Force close after 10 seconds
   setTimeout(() => {
     console.error('❌ Forced shutdown after timeout');
     process.exit(1);
   }, 10000);
 };
 
-// Handle process signals
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
-// Handle unhandled rejections
 process.on('unhandledRejection', (reason, promise) => {
   console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
   gracefulShutdown('unhandledRejection');
@@ -499,9 +472,10 @@ process.on('uncaughtException', (error) => {
   gracefulShutdown('uncaughtException');
 });
 
-// Centralized error handler (S4) - no stack traces in production
+// Centralized error handler
 app.use((err, req, res, next) => {
-  // Log error with request context (but redact sensitive data)
+  const isDev = env.NODE_ENV !== 'production';
+
   const logEntry = {
     message: err.message,
     path: req.path,
@@ -509,26 +483,16 @@ app.use((err, req, res, next) => {
     ip: req.ip,
     timestamp: new Date().toISOString()
   };
-  
-  // In production, don't expose stack traces
-  const isDev = process.env.NODE_ENV !== 'production';
-  
-  if (isDev) {
-    console.error('Error:', err);
-  } else {
-    console.error('Error:', logEntry);
-  }
-  
-  // Send safe error response
+
+  if (isDev) console.error('Error:', err);
+  else console.error('Error:', logEntry);
+
   const statusCode = err.statusCode || err.status || 500;
   const message = isDev ? err.message : 'An error occurred. Please try again later.';
-  
-  res.status(statusCode).json({ 
+
+  return res.status(statusCode).json({
     success: false,
-    message: message,
+    message,
     ...(isDev && { stack: err.stack })
   });
 });
-
-// Start server - listen already called in startServer()
-
