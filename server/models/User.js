@@ -145,14 +145,9 @@ const userSchema = new mongoose.Schema(
 );
 
 // Hash password before save
-userSchema.pre('save', async function (next) {
-  try {
-    if (!this.isModified('password')) return next();
-    this.password = await bcrypt.hash(this.password, 12);
-    next();
-  } catch (e) {
-    next(e);
-  }
+userSchema.pre('save', async function () {
+  if (!this.isModified('password')) return;
+  this.password = await bcrypt.hash(this.password, 12);
 });
 
 /**
@@ -160,21 +155,16 @@ userSchema.pre('save', async function (next) {
  * Backward compatible: if some route sets recoveryPassphraseHash to plaintext,
  * this hashes it. If it already looks like a bcrypt hash, it will not re-hash.
  */
-userSchema.pre('save', async function (next) {
-  try {
-    if (!this.isModified('recoveryPassphraseHash') || !this.recoveryPassphraseHash) return next();
+userSchema.pre('save', async function () {
+  if (!this.isModified('recoveryPassphraseHash') || !this.recoveryPassphraseHash) return;
 
-    // If already bcrypt hash, do not hash again
-    if (typeof this.recoveryPassphraseHash === 'string' && this.recoveryPassphraseHash.startsWith('$2')) {
-      return next();
-    }
-
-    this.recoveryPassphraseHash = await bcrypt.hash(this.recoveryPassphraseHash, 12);
-    this.recoveryPassphraseSet = true;
-    next();
-  } catch (e) {
-    next(e);
+  // If already bcrypt hash, do not hash again
+  if (typeof this.recoveryPassphraseHash === 'string' && this.recoveryPassphraseHash.startsWith('$2')) {
+    return;
   }
+
+  this.recoveryPassphraseHash = await bcrypt.hash(this.recoveryPassphraseHash, 12);
+  this.recoveryPassphraseSet = true;
 });
 
 // Compare password method

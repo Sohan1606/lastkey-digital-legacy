@@ -7,16 +7,22 @@ const validate = (schema) => (req, res, next) => {
     next();
   } catch (error) {
     if (error instanceof z.ZodError) {
+      const errors = error.issues.map(err => ({
+        field: err.path.join('.'),
+        message: err.message
+      }));
       return res.status(400).json({
         status: 'fail',
         message: 'Validation error',
-        errors: error.errors.map(err => ({
-          field: err.path.join('.'),
-          message: err.message
-        }))
+        errors
       });
     }
-    next(error);
+    // For non-Zod errors, return 500 directly
+    console.error('Validation middleware error:', error);
+    return res.status(500).json({
+      status: 'error',
+      message: 'Internal server error'
+    });
   }
 };
 

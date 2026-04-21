@@ -120,10 +120,13 @@ exports.register = async (req, res, next) => {
     });
   } catch (error) {
     console.error('❌ Registration error:', error.message);
-    res.status(400).json({
-      status: 'fail',
-      message: error.message
-    });
+    console.error('Stack:', error.stack);
+    if (!res.headersSent) {
+      res.status(400).json({
+        status: 'fail',
+        message: error.message
+      });
+    }
   }
 };
 
