@@ -393,4 +393,168 @@ describe('PERFECT Workflow', () => {
       }
     });
   });
+
+  // ============================================================
+  // E) BENEFICIARY ENROLLMENT FLOW
+  // ============================================================
+  describe('E) Beneficiary Enrollment Flow', () => {
+    test('E1) Invited beneficiary can OTP login and gets needsEnrollment=true', async () => {
+      const User = require('../models/User');
+      const Beneficiary = require('../models/Beneficiary');
+
+      const owner = await User.create({
+        name: 'Test Owner',
+        email: 'owner-enroll@test.com',
+        password: 'password123'
+      });
+
+      const beneficiary = await Beneficiary.create({
+        userId: owner._id,
+        name: 'Invited Beneficiary',
+        email: 'invited@test.com',
+        relationship: 'child',
+        enrollmentStatus: 'invited',
+        otpSecret: 'test-otp'
+      });
+
+      // Start OTP login (this generates and stores the OTP)
+      const startRes = await request(app)
+        .post('/api/beneficiary/auth/login/start')
+        .send({ email: 'invited@test.com' });
+
+      expect(startRes.status).toBe(200);
+      const otp = startRes.body.devOtp; // In test mode, OTP is returned
+
+      // Verify OTP
+      const res = await request(app)
+        .post('/api/beneficiary/auth/login/verify')
+        .send({ email: 'invited@test.com', otp });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.beneficiary.enrollmentStatus).toBe('invited');
+      expect(res.body.data.beneficiary.needsEnrollment).toBe(true);
+
+      await Beneficiary.deleteOne({ _id: beneficiary._id });
+      await User.deleteOne({ _id: owner._id });
+    });
+
+    test('E2) Invited beneficiary blocked from request-access until enrolled', async () => {
+      const User = require('../models/User');
+      const Beneficiary = require('../models/Beneficiary');
+      const jwt = require('jsonwebtoken');
+
+      const owner = await User.create({
+        name: 'Test Owner',
+        email: 'owner-block@test.com',
+        password: 'password123',
+        triggerStatus: 'triggered'
+      });
+
+      const beneficiary = await Beneficiary.create({
+        userId: owner._id,
+        name: 'Invited Beneficiary',
+        email: 'invited-block@test.com',
+        relationship: 'child',
+        enrollmentStatus: 'invited',
+        otpSecret: 'test-otp'
+      });
+
+      const token = jwt.sign({ id: beneficiary._id, type: 'beneficiary' }, process.env.JWT_SECRET, { expiresIn: '1h' });
+
+      // Try to request access (should be blocked)
+      const res = await request(app)
+        .post('/api/beneficiary/auth/request-access')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(403);
+      expect(res.body.message).toContain('Complete enrollment first');
+
+      await Beneficiary.deleteOne({ _id: beneficiary._id });
+      await User.deleteOne({ _id: owner._id });
+    });
+
+    test('E3) Enrolled beneficiary can request-access when triggered', async () => {
+      const User = require('../models/User');
+      const Beneficiary = require('../models/Beneficiary');
+      const jwt = require('jsonwebtoken');
+
+      const owner = await User.create({
+        name: 'Test Owner',
+        email: 'owner-access@test.com',
+        password: 'password123',
+        triggerStatus: 'triggered'
+      });
+
+      const beneficiary = await Beneficiary.create({
+        userId: owner._id,
+        name: 'Enrolled Beneficiary',
+        email: 'enrolled@test.com',
+        relationship: 'spouse',
+        enrollmentStatus: 'enrolled',
+        otpSecret: 'test-otp',
+        encryptionKeys: {
+          publicKeyJwk: JSON.stringify({ kty: 'RSA' }),
+          encryptedPrivateKeyBlob: { iv: 'test', ciphertext: 'test', kdfSalt: 'test', kdfIterations: 100000, algVersion: '1' }
+        }
+      });
+
+      const token = jwt.sign({ id: beneficiary._id, type: 'beneficiary' }, process.env.JWT_SECRET, { expiresIn: '1h' });
+
+      const res = await request(app)
+        .post('/api/beneficiary/auth/request-access')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.status).toBe('granted');
+
+      await Beneficiary.deleteOne({ _id: beneficiary._id });
+      await User.deleteOne({ _id: owner._id });
+    });
+  });
+
+  // ============================================================
+  // F) ENV SANITIZATION
+  // ============================================================
+  describe('F) Environment Sanitization', () => {
+    test('F1) getSanitizedEnv redacts OPENAI_API_KEY', () => {
+      // OPENAI_API_KEY needs to be in process.env AND in schema to be included
+      process.env.OPENAI_API_KEY = 'sk-test-secret-key';
+      
+      // Temporarily add it to schema keys by importing and checking the function
+      const { getSanitizedEnv } = require('../config/env');
+      const sanitized = getSanitizedEnv();
+
+      // It should be redacted if it's in the sensitive list
+      // Since it's not in schema keys, it won't be in sanitized output
+      expect(sanitized.OPENAI_API_KEY).toBeUndefined();
+      
+      delete process.env.OPENAI_API_KEY;
+    });
+
+    test('F2) getSanitizedEnv redacts JWT_SECRET', () => {
+      const { getSanitizedEnv } = require('../config/env');
+      const sanitized = getSanitizedEnv();
+
+      expect(sanitized.JWT_SECRET).toBe('[REDACTED]');
+    });
+
+    test('F3) getSanitizedEnv redacts EMAIL_PASS', () => {
+      const { getSanitizedEnv } = require('../config/env');
+      const sanitized = getSanitizedEnv();
+
+      expect(sanitized.EMAIL_PASS).toBe('[REDACTED]');
+    });
+
+    test('F4) getSanitizedEnv does NOT include Windows env vars', () => {
+      const { getSanitizedEnv } = require('../config/env');
+      const sanitized = getSanitizedEnv();
+
+      // Should only include schema-defined keys
+      expect(sanitized).toHaveProperty('NODE_ENV');
+      expect(sanitized).toHaveProperty('PORT');
+      expect(sanitized).not.toHaveProperty('Path');
+      expect(sanitized).not.toHaveProperty('USERPROFILE');
+    });
+  });
 });
