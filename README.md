@@ -262,8 +262,9 @@ LastKey's approach:
 ### **Database Models**
 - **User** - Authentication, preferences, Guardian Protocol settings
 - **Asset** - Encrypted vault items with zero-knowledge encryption
-- **Beneficiary** - Loved ones with contact information
+- **Beneficiary** - Loved ones with enrollment, RSA keys, OTP auth, vault shares
 - **Capsule** - Time-locked messages and content
+- **LegalDocument** - Property/legal docs with encrypted attachments + recording metadata
 - **Timeline** - Life events and milestones
 - **VoiceMessage** - AI-generated voice recordings
 - **Memoir** - AI-generated autobiography chapters
@@ -277,7 +278,7 @@ LastKey's approach:
 /api/capsules      - Time capsule operations
 /api/ai            - AI features (suggestions, voice, memoir)
 /api/payment       - Stripe billing and webhooks
-/api/emergency     - Beneficiary access portal
+/api/beneficiary   - Beneficiary authentication and portal access
 /api/timeline      - Life timeline operations
 /api/voice-messages - Voice message management
 /api/memoir         - Memoir chapter operations
@@ -317,8 +318,11 @@ LastKey's approach:
 
 ## **Security Features**
 
-- **Zero-Knowledge Encryption**: Client-side AES-256 encryption for vault data
-- **Secure Authentication**: JWT tokens with bcryptjs password hashing
+- **Zero-Knowledge Encryption**: Client-side AES-256-GCM encryption for vault data and legal documents
+- **DEK-Based Encryption**: Per-owner Data Encryption Key; server only stores ciphertext
+- **Beneficiary RSA Keypairs**: Secure DEK sharing via RSA-OAEP public key encryption
+- **Secure Authentication**: JWT tokens with bcryptjs password hashing (no fallback secrets)
+- **Scoped Beneficiary Access**: Granular permissions (viewAssets, viewCapsules, viewDocuments, downloadFiles)
 - **Rate Limiting**: API protection against brute force attacks
 - **HTTPS Enforcement**: Secure communication channels
 - **Data Validation**: Comprehensive input sanitization
@@ -376,6 +380,58 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Framer Motion** - For beautiful animations
 - **TailwindCSS** - For rapid UI development
 - **MongoDB** - For flexible data storage
+
+## **How to Test Locally**
+
+### **Run the Tests**
+```bash
+cd server
+npm test                          # Run all tests
+npm test -- tests/perfect-workflow.test.js  # Run perfect workflow tests only
+```
+
+### **Test the Perfect Workflow**
+1. **Start the server**:
+   ```bash
+   cd server
+   # Ensure FREE_MODE=true in .env for console email output
+   npm run dev
+   ```
+
+2. **Register an owner**:
+   - Visit `http://localhost:5173/register`
+   - Create an account
+   - Go to Vault page and unlock with your password to generate a DEK
+
+3. **Add a beneficiary**:
+   - Go to `/beneficiaries`
+   - Add a beneficiary email
+   - The enrollment OTP will be logged to the server console (FREE_MODE)
+
+4. **Upload a legal document**:
+   - Go to `/legal-documents`
+   - With vault unlocked, upload a PDF
+   - File is encrypted client-side with DEK before upload
+   - Server stores ciphertext with `encrypted=true`
+
+5. **Trigger Guardian Protocol**:
+   - Use the test trigger endpoint or wait for inactivity
+   - Owner status changes to `triggered`
+
+6. **Access as beneficiary**:
+   - Visit `/beneficiary-portal`
+   - Enter beneficiary email
+   - Enter OTP from console
+   - Enter unlock secret
+   - View assets, capsules, and legal documents
+   - Download legal doc ciphertext and decrypt locally
+
+### **Verify Security**
+- `/api/emergency/*` returns 404 (legacy routes removed)
+- Tokens signed with wrong JWT secret are rejected (401)
+- Legal documents query uses `ownerId` (not `userId`)
+- `storagePath` is never exposed in API responses
+- Attachments have `sha256Hash` for integrity verification
 
 ## **Support**
 

@@ -555,7 +555,7 @@ const LegalDocuments = () => {
                       )}
 
                       <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-                        {doc.clientEncrypted && (
+                        {doc.attachments?.some(a => a.encrypted) && (
                           <span style={{ 
                             fontSize: 11, 
                             color: '#4f9eff', 
@@ -567,7 +567,7 @@ const LegalDocuments = () => {
                             alignItems: 'center',
                             gap: 4
                           }}>
-                            <Lock size={12} /> DEK Encrypted
+                            <Lock size={12} /> Encrypted before upload
                           </span>
                         )}
                         {doc.notarized && (

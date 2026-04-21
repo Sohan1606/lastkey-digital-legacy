@@ -426,8 +426,13 @@ const startWorkers = async () => {
   }
 };
 
-// Start the server
-startServer().then(() => startWorkers());
+// Export for tests
+module.exports = { app, server, startServer, startWorkers };
+
+// Start the server (skip auto-start in test mode to avoid port/Mongo conflicts)
+if (process.env.NODE_ENV !== 'test') {
+  startServer().then(() => startWorkers());
+}
 
 // Graceful shutdown handlers
 const gracefulShutdown = async (signal) => {

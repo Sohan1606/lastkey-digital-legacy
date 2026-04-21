@@ -186,18 +186,21 @@ The server is designed to **start listening even if MongoDB/Redis are unavailabl
    - masked secrets with reveal toggle
    - copy-to-clipboard with auto-clear behavior
 
-### 8.4 Beneficiaries + Emergency Access
+### 8.4 Beneficiaries + Legacy Access
 1. User adds beneficiaries at `/beneficiaries`.
 2. Beneficiary receives enrollment email with secure token.
-3. Beneficiary enrolls at `/beneficiary-portal?enroll=TOKEN`:
+3. Beneficiary enrolls at `/beneficiary-portal`:
    - Generates RSA keypair (client-side)
-   - Sets unlock secret
+   - Sets unlock secret (never sent to server)
    - Stores encrypted private key
 4. Upon Guardian Protocol trigger:
-   - Beneficiary receives email with portal link
-   - Logs in with email + OTP
+   - Beneficiary receives email with portal link (`/beneficiary-portal`)
+   - Logs in with email + OTP (6-digit, 10-min expiry)
+   - Creates session with unlock secret
+   - Decrypts RSA private key using unlock secret
    - Decrypts DEK share using RSA private key
-   - Accesses legacy content based on permissions
+   - Accesses legacy content (assets, capsules, legal docs) based on scoped permissions
+   - Downloads legal document ciphertext and decrypts locally with DEK
 
 ### 8.5 Pricing → Stripe checkout (optional)
 1. User visits `/pricing`.
@@ -221,7 +224,7 @@ The server is designed to **start listening even if MongoDB/Redis are unavailabl
 - **Capsules / Memories**: `LifeTimeline`, `MemoirAI`, `VoiceMessages`.
 - **`Pricing.jsx`**: tier comparison + annual toggle + checkout (optional).
 - **`Settings.jsx`**: update inactivity duration / phone / alert channels after onboarding.
-- **`EmergencyAccess.jsx`**: public portal for beneficiaries to redeem emergency access.
+- **`BeneficiaryPortal.jsx`**: public portal for beneficiaries to authenticate via OTP and access legacy after Guardian Protocol trigger.
 - **Legal**: `PrivacyPolicy`, `TermsOfService`.
 
 ---

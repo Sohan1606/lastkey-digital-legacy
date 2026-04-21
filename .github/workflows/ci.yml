@@ -71,6 +71,17 @@ jobs:
           FEATURE_AI: false
           FEATURE_PAYMENTS: false
 
+      - name: Run perfect workflow tests
+        run: npm test -- tests/perfect-workflow.test.js
+        env:
+          NODE_ENV: test
+          JWT_SECRET: test-jwt-secret-minimum-32-characters-long
+          MONGO_URI: mongodb://localhost:27017/lastkey_test_perfect
+          FREE_MODE: true
+          EMAIL_MODE: console
+          FEATURE_AI: false
+          FEATURE_PAYMENTS: false
+
   lint-and-test-client:
     runs-on: ubuntu-latest
     defaults:
