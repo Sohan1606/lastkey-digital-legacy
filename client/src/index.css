@@ -353,8 +353,8 @@ label {
 .status-danger { @apply w-2 h-2 rounded-full bg-[#ff4d6d] shadow-[0_0_8px_#ff4d6d] animate-pulse; }
 
 /* Form states */
-.input-error { @apply border-[#ff4d6d] !important; }
-.input-success { @apply border-[#00e5a0] !important; }
+.input-error { border-color: #ff4d6d !important; }
+.input-success { border-color: #00e5a0 !important; }
 .input-disabled { @apply opacity-50 cursor-not-allowed; }
 
 /* Animation utilities */
