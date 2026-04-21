@@ -70,14 +70,19 @@ const updateBeneficiarySchema = createBeneficiarySchema.partial();
 
 // Capsule schemas
 const createCapsuleSchema = z.object({
-  title: z.string().min(1, 'Title is required').max(300),
-  content: z.string().min(1, 'Content is required'),
-  scheduledFor: z.string().refine((val) => {
+  title: z.string().min(1, 'Title is required').max(100),
+  message: z.string().min(1, 'Message is required').max(5000),
+  content: z.string().max(10000).optional(),
+  unlockAt: z.string().refine((val) => {
     const date = new Date(val);
     return !isNaN(date.getTime());
   }, 'Invalid date format'),
-  type: z.enum(['message', 'video', 'document', 'audio']).optional()
+  type: z.enum(['message', 'video', 'document', 'audio']).optional(),
+  isFinalMessage: z.boolean().optional(),
+  triggerType: z.enum(['inactivity', 'date']).optional()
 });
+
+const updateCapsuleSchema = createCapsuleSchema.partial();
 
 // User settings schema
 const updateSettingsSchema = z.object({
@@ -98,5 +103,6 @@ module.exports = {
   createBeneficiarySchema,
   updateBeneficiarySchema,
   createCapsuleSchema,
+  updateCapsuleSchema,
   updateSettingsSchema
 };
