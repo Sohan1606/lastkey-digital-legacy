@@ -103,7 +103,7 @@ router.post('/register-options', protect, async (req, res) => {
     const options = await generateRegistrationOptions({
       rpName,
       rpID,
-      userID: userId,
+      userID: Buffer.from(userId), // v13 requires Buffer, not string
       userName: email,
       userDisplayName: name,
       attestationType: 'none',
@@ -120,7 +120,9 @@ router.post('/register-options', protect, async (req, res) => {
     return res.status(200).json({ success: true, data: options });
   } catch (err) {
     console.error('WebAuthn register options error:', err.message);
-    return res.status(500).json({ success: false, message: 'Failed to generate registration options' });
+    console.error('Stack:', err.stack);
+    console.error('User:', req.user);
+    return res.status(500).json({ success: false, message: 'Failed to generate registration options', error: err.message });
   }
 });
 
