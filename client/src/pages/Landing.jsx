@@ -32,10 +32,7 @@ const Landing = () => {
           <div style={{ position: 'absolute', bottom: -100, right: -60, width: 160, height: 160, borderRadius: '50%', background: 'radial-gradient(circle,rgba(124,92,252,0.06),transparent)', filter: 'blur(50px)', animation: 'float 8s ease-in-out infinite' }} />
 
           <div style={{ marginBottom: 24 }}>
-            <motion.div animate={{ rotate: 360 }} transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
-              style={{ width: 60, height: 60, borderRadius: 15, background: 'linear-gradient(135deg,#4f9eff,#7c5cfc)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--glow-ion)' }}>
-              <Shield size={24} color="white" />
-            </motion.div>
+<BrandMark size={28} />
           </div>
 
           <h1 className="display" style={{ fontSize: 'clamp(2.5rem,5vw,4rem)', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: 12, background: 'linear-gradient(135deg,#4f9eff,#a78bfa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
