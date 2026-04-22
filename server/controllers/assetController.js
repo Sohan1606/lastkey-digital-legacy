@@ -1,13 +1,38 @@
 const Asset = require('../models/Asset');
 const { log } = require('../services/auditService');
 
+// Ciphertext validation helper
+const isCiphertext = (str) => {
+  if (typeof str !== 'string' || str.length < 50) return false;
+  // Base64-like chars (allow padding)
+  return /^[A-Za-z0-9+/]*={0,2}$/.test(str);
+};
+
 // NOTE: Server-side decryption removed (P2)
 // Passwords are client-encrypted; server never sees plaintext
 
 exports.createAsset = async (req, res, next) => {
   try {
+    const validatedBody = req.validatedBody || req.body;
+    
+    // Server safety net: enforce ciphertext-only for passwords
+    if (validatedBody.password) {
+      if (validatedBody.clientEncrypted !== true) {
+        return res.status(400).json({
+          status: 'fail',
+          message: 'Password must be client-encrypted (clientEncrypted: true)'
+        });
+      }
+      if (!isCiphertext(validatedBody.password)) {
+        return res.status(400).json({
+          status: 'fail',
+          message: 'Invalid password ciphertext format (must be base64-encoded, min length 50)'
+        });
+      }
+    }
+
     const assetData = {
-      ...req.body,
+      ...validatedBody,
       userId: req.user._id
     };
 
@@ -64,6 +89,24 @@ exports.getAssets = async (req, res, next) => {
 
 exports.updateAsset = async (req, res, next) => {
   try {
+    const validatedBody = req.validatedBody || req.body;
+    
+    // Server safety net: enforce ciphertext-only for passwords
+    if (validatedBody.password) {
+      if (validatedBody.clientEncrypted !== true) {
+        return res.status(400).json({
+          status: 'fail',
+          message: 'Password must be client-encrypted (clientEncrypted: true)'
+        });
+      }
+      if (!isCiphertext(validatedBody.password)) {
+        return res.status(400).json({
+          status: 'fail',
+          message: 'Invalid password ciphertext format (must be base64-encoded, min length 50)'
+        });
+      }
+    }
+
     const asset = await Asset.findOne({ _id: req.params.id, userId: req.user._id });
 
     if (!asset) {
@@ -73,16 +116,10 @@ exports.updateAsset = async (req, res, next) => {
       });
     }
 
-    // Update fields
-    const { password, ...otherFields } = req.body;
-    Object.keys(otherFields).forEach(key => {
-      asset[key] = otherFields[key];
+    // Update fields from validated body
+    Object.keys(validatedBody).forEach(key => {
+      asset[key] = validatedBody[key];
     });
-
-    // Only update password if a new one was explicitly provided
-    if (password && password !== '••••••••••••' && password.trim() !== '') {
-      asset.password = password; // pre('save') hook will encrypt it
-    }
 
     await asset.save();
 

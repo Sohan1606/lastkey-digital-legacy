@@ -7,7 +7,7 @@ const {
   updateAsset, 
   deleteAsset 
 } = require('../controllers/assetController');
-const { validate, createAssetSchema, updateAssetSchema } = require('../validators');
+const { validate, createAssetSchema, updateAssetSchema } = require('../validators/index.js');
 
 const router = express.Router();
 

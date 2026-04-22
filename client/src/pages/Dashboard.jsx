@@ -134,7 +134,7 @@ const Dashboard = () => {
   useEffect(() => {
     if (!user || !token) return;
     
-    const socket = initSocket(user._id || user.id);
+    const socket = initSocket(token);
     
     const handleDMS = (data) => {
       setDmsStatus(data);

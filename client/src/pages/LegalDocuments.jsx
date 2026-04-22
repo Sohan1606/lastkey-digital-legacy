@@ -446,16 +446,16 @@ const LegalDocuments = () => {
                     style={{ 
                       padding: '14px 24px', 
                       borderRadius: 12, 
-                      border: 'none', 
-                      background: !hasDEK() ? 'var(--glass-2)' : uploading ? 'var(--glass-2)' : 'linear-gradient(135deg, #4f9eff, #00e5a0)', 
-                      color: '#001a12', 
+                      border: !hasDEK() ? '2px solid rgba(255,184,48,0.5)' : 'none', 
+                      background: !hasDEK() ? 'rgba(255,184,48,0.15)' : uploading ? 'var(--glass-2)' : 'linear-gradient(135deg, #4f9eff, #00e5a0)', 
+                      color: !hasDEK() ? '#ffb830' : '#001a12', 
                       fontWeight: 700, 
                       fontSize: 14, 
                       cursor: (uploading || !hasDEK()) ? 'not-allowed' : 'pointer', 
-                      opacity: (uploading || !hasDEK()) ? 0.6 : 1 
+                      opacity: 1
                     }}
                   >
-                    {!hasDEK() ? 'Unlock Vault First' : uploading ? 'Encrypting & Uploading...' : 'Add to Legal Binder'}
+                    {!hasDEK() ? '🔒 Unlock Vault First' : uploading ? 'Encrypting & Uploading...' : 'Add to Legal Binder'}
                   </motion.button>
                 </form>
               </div>

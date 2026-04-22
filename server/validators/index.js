@@ -59,25 +59,33 @@ const updateBeneficiarySchema = z.object({
 });
 
 // ============================================
-// Asset Validators
+// Asset Validators (Vault UI compatible)
 // ============================================
 
 const createAssetSchema = z.object({
-  type: z.enum(['password', 'note', 'file', 'crypto', 'license', 'other']),
-  name: z.string().min(1, 'Name is required').max(200),
-  encryptedData: z.string().min(1, 'Encrypted data is required'),
-  category: z.string().optional(),
-  tags: z.array(z.string()).optional(),
-  beneficiaryIds: z.array(z.string()).optional()
+  platform: z.string().min(1, 'Platform required').max(100),
+  username: z.string().optional(),
+  password: z.string().optional(),  // Ciphertext enforced in controller
+  url: z.string().url().optional().or(z.string().max(500)),
+  notes: z.string().max(2000).optional(),
+  instruction: z.enum(['delete', 'share', 'transfer']),
+  assetType: z.enum([
+    'general', 'crypto_exchange', 'crypto_wallet', 'hardware_wallet', 
+    'seed_phrase', 'private_key'
+  ]).optional(),
+  cryptocurrency: z.enum([
+    'BTC', 'ETH', 'USDT', 'USDC', 'BNB', 'SOL', 'ADA', 'DOT', 'MATIC', 
+    'AVAX', 'LINK', 'UNI', 'AAVE', 'COMP', 'MKR', 'SUSHI', 'CRV', 'YFI', 'other'
+  ]).optional(),
+  walletAddress: z.string().max(100).optional(),
+  blockchain: z.enum([
+    'Bitcoin', 'Ethereum', 'BSC', 'Polygon', 'Solana', 'Avalanche', 
+    'Cardano', 'Polkadot', 'other'
+  ]).optional(),
+  clientEncrypted: z.boolean().optional()
 });
 
-const updateAssetSchema = z.object({
-  name: z.string().min(1).max(200).optional(),
-  encryptedData: z.string().optional(),
-  category: z.string().optional(),
-  tags: z.array(z.string()).optional(),
-  beneficiaryIds: z.array(z.string()).optional()
-});
+const updateAssetSchema = createAssetSchema.partial();
 
 // ============================================
 // Capsule Validators

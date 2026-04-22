@@ -239,44 +239,91 @@ describe('DEK Encryption', () => {
     });
   });
 
-  describe('3. Ciphertext-Only Responses', () => {
-    test('should return encrypted passwords in assets (not plaintext)', async () => {
-      const User = require('../models/User');
-      const Asset = require('../models/Asset');
+  describe('3. Asset Ciphertext Enforcement', () => {
+    let user, token;
 
-      const owner = await User.create({
+    beforeEach(async () => {
+      const User = require('../models/User');
+      user = await User.create({
         name: 'Test Owner',
-        email: 'owner6@test.com',
+        email: 'owner@test.com',
         password: 'password123'
       });
+      token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+    });
 
+    afterEach(async () => {
+      const User = require('../models/User');
+      const Asset = require('../../models/Asset');
+      await Asset.deleteMany({});
+      await User.deleteOne({ _id: user._id });
+    });
+
+    test('POST /api/assets rejects plaintext password (no clientEncrypted)', async () => {
+      const res = await request(app)
+        .post('/api/assets')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          platform: 'Test',
+          username: 'test',
+          password: 'plaintext123',
+          instruction: 'share'
+        });
+      expect(res.status).toBe(400);
+      expect(res.body.message).toContain('client-encrypted');
+    });
+
+    test('POST /api/assets rejects plaintext password (short string)', async () => {
+      const res = await request(app)
+        .post('/api/assets')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          platform: 'Test',
+          username: 'test',
+          password: 'short',
+          clientEncrypted: true,
+          instruction: 'share'
+        });
+      expect(res.status).toBe(400);
+      expect(res.body.message).toContain('ciphertext format');
+    });
+
+    test('POST /api/assets accepts valid ciphertext', async () => {
+      const res = await request(app)
+        .post('/api/assets')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          platform: 'Test',
+          username: 'test',
+          password: 'dGVzdGNpcGhlcnRleHR2ZXJ5bG9uZ2Jhc2U2NGVuY29kZWRjaXBoZXJ0ZXh0Zm9yY2xpZW50ZW5jcnlwdGlvbg==',
+          clientEncrypted: true,
+          instruction: 'share'
+        });
+      expect(res.status).toBe(201);
+    });
+
+    test('PUT /api/assets rejects plaintext password update', async () => {
+      // First create asset
       await Asset.create({
-        userId: owner._id,
-        platform: 'Test Platform',
-        username: 'testuser',
-        password: 'encrypted-ciphertext-here',
+        userId: user._id,
+        platform: 'Test',
+        username: 'test',
+        password: 'oldciphertext',
         clientEncrypted: true,
         instruction: 'share'
       });
 
-      const token = jwt.sign({ id: owner._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+      const asset = await Asset.findOne({ userId: user._id });
 
       const res = await request(app)
-        .get('/api/assets')
-        .set('Authorization', `Bearer ${token}`);
-
-      expect(res.status).toBe(200);
-      expect(res.body.data).toBeDefined();
-      expect(res.body.data.length).toBeGreaterThan(0);
-      
-      // Password should be ciphertext, not plaintext
-      const asset = res.body.data[0];
-      expect(asset.password).toBeDefined();
-      expect(asset.password).not.toBe('plaintext-password');
-      expect(asset.clientEncrypted).toBe(true);
-
-      await User.deleteOne({ _id: owner._id });
-      await Asset.deleteMany({ userId: owner._id });
+        .put(`/api/assets/${asset._id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          password: 'plaintext456',
+          clientEncrypted: false
+        });
+      expect(res.status).toBe(400);
+      expect(res.body.message).toContain('client-encrypted');
     });
   });
 

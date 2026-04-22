@@ -30,6 +30,7 @@ const Vault = () => {
   });
   const [showPasswords, setShowPasswords] = useState({});
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [passwordChanged, setPasswordChanged] = useState(false);
   const [cryptoSupported, setCryptoSupported] = useState(true);
   const [vaultPassword, setVaultPassword] = useState('');
   const [showUnlockModal, setShowUnlockModal] = useState(false);
@@ -60,7 +61,7 @@ const Vault = () => {
 
   useEffect(() => {
     if (dekStatus) {
-      setDekInitialized(dekStatus.initialized);
+      setDekInitialized(dekStatus.hasWrappedDek);
     }
   }, [dekStatus]);
 
@@ -108,7 +109,13 @@ const Vault = () => {
       return true;
     } catch (err) {
       console.error('DEK initialization error:', err);
-      toast.error(err.response?.data?.message || 'Failed to initialize vault');
+      if (err.response?.status === 409) {
+        toast.error('Vault already initialized. Please unlock instead.');
+        // Update status to prevent repeated attempts
+        setDekInitialized(true);
+      } else {
+        toast.error(err.response?.data?.message || 'Failed to initialize vault');
+      }
       return false;
     } finally {
       setIsInitializingDEK(false);
@@ -212,6 +219,13 @@ const Vault = () => {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, assetData }) => {
+      // Block plaintext updates - require vault unlock for password changes
+      if (assetData.password && assetData.password.trim() !== '' && !hasDEK()) {
+        toast.error('Unlock vault to update password');
+        setShowUnlockModal(true);
+        throw new Error('Vault must be unlocked to update password');
+      }
+      
       // ENFORCEMENT: Encrypt password if provided and vault is unlocked using DEK
       if (cryptoSupported && assetData.password && assetData.password.trim() !== '' && hasDEK()) {
         try {
@@ -229,9 +243,11 @@ const Vault = () => {
       setShowForm(false);
       setFormData({ platform: '', username: '', url: '', password: '', notes: '', instruction: 'delete', assetType: 'general', cryptocurrency: '', walletAddress: '', blockchain: '' });
       setEditingId(null);
+      setPasswordChanged(false);
       toast.success('Asset updated!');
     },
-    onError: () => {
+    onError: (err) => {
+      if (err.message.includes('unlock')) return;
       toast.error('Failed to update asset.');
     }
   });
@@ -246,6 +262,11 @@ const Vault = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (passwordChanged && !hasDEK()) {
+      toast.error('Unlock vault to update password');
+      setShowUnlockModal(true);
+      return;
+    }
     if (!hasDEK() && !editingId) {
       setShowUnlockModal(true);
       return;
@@ -497,17 +518,23 @@ const Vault = () => {
                     <input 
                       type="password" 
                       value={formData.password} 
-                      onChange={e => setFormData({...formData, password: e.target.value})}
+                      onChange={e => {
+                        setFormData({...formData, password: e.target.value});
+                        if (editingId) setPasswordChanged(e.target.value !== '');
+                      }}
                       placeholder={hasDEK() ? "Enter the secure key" : "Unlock vault first to add assets"} 
                       required 
                       disabled={!hasDEK() && !editingId}
                     />
-                    {!hasDEK() && !editingId && (
+                    {(!hasDEK() && editingId && passwordChanged) ? (
+                      <p style={{ fontSize: 11, color: '#ffb830', marginTop: 6, marginBottom: 0 }}>
+                        ⚠️ Unlock vault to update password (required for client encryption)
+                      </p>
+                    ) : !hasDEK() && !editingId ? (
                       <p style={{ fontSize: 11, color: '#ffb830', marginTop: 6, marginBottom: 0 }}>
                         ⚠️ Please unlock your vault using the button above to enable encryption.
                       </p>
-                    )}
-                    {hasDEK() && (
+                    ) : (
                       <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 6, marginBottom: 0 }}>
                         This password will be encrypted in your browser before being sent to our servers.
                       </p>
@@ -568,8 +595,15 @@ const Vault = () => {
                     <textarea value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} placeholder="Instructions or context..." style={{ height: 80, resize: 'none' }} />
                   </div>
                   <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 12 }}>
-                    <motion.button type="submit" whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }} disabled={createMutation.isPending || updateMutation.isPending || (!hasDEK() && !editingId)}
-                      style={{ flex: 1, padding: '14px 24px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg, #4f9eff, #00e5a0)', color: '#001a12', fontWeight: 700, fontSize: 14, cursor: (createMutation.isPending || updateMutation.isPending || (!hasDEK() && !editingId)) ? 'not-allowed' : 'pointer', opacity: (createMutation.isPending || updateMutation.isPending || (!hasDEK() && !editingId)) ? 0.6 : 1 }}>
+                    <motion.button type="submit" whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }} disabled={createMutation.isPending || updateMutation.isPending || (!hasDEK() && (passwordChanged || !editingId))}
+                      style={{ 
+                        flex: 1, padding: '14px 24px', borderRadius: 12, border: 'none', 
+                        background: (!hasDEK() && passwordChanged) ? 'var(--glass-2)' : 'linear-gradient(135deg, #4f9eff, #00e5a0)', 
+                        color: (!hasDEK() && passwordChanged) ? 'var(--text-2)' : '#001a12', 
+                        fontWeight: 700, fontSize: 14, 
+                        cursor: (createMutation.isPending || updateMutation.isPending || (!hasDEK() && (passwordChanged || !editingId))) ? 'not-allowed' : 'pointer', 
+                        opacity: (createMutation.isPending || updateMutation.isPending || (!hasDEK() && (passwordChanged || !editingId))) ? 0.6 : 1 
+                      }}>
                       {createMutation.isPending || updateMutation.isPending ? 'Processing...' : editingId ? 'Update Asset' : 'Secure Asset'}
                     </motion.button>
                     <motion.button type="button" whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }} onClick={() => { setShowForm(false); setEditingId(null); }}

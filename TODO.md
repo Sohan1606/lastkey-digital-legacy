@@ -1,29 +1,14 @@
-# LastKey Digital Legacy - Task Progress
+## P0 Vault Fixes - Progress Tracker
 
-## Completed Tasks
+### Completed: ✅ None yet
+### Remaining Steps:
 
-### Server Fixes
-- [x] Fix duplicate PORT declaration in server.js
-- [x] Remove duplicate dotenv.config() call in server.js
-- [x] Add /api/user/stats endpoint to user routes
-- [x] Fix API response format inconsistencies across controllers
+1. ✅ [P0] Update server/validators/index.js - Replace legacy asset schemas
+2. ✅ [P0] Add server safety net - server/controllers/assetController.js
+3. ✅ [P0] Client update blocking - client/src/pages/Vault.jsx (JSX fixed)
+4. ✅ [P1] Add regression tests - server/tests/dek-encryption.test.js
+5. ✅ Run `npm test` - Output pending user confirmation
+6. **Manual verification** - Create/edit assets, test plaintext rejection, beneficiary portal intact
+7. **attempt_completion** - Present final result
 
-### Client Fixes
-- [x] Fix API endpoint calls in Dashboard.jsx (stats & ping)
-- [x] Add missing toast import in Vault.jsx
-- [x] Fix ActivityFeed.jsx undefined setActivities
-- [x] Fix ActivityFeed to use correct activity properties
-
-### Security Fixes
-- [x] Fix encryption key length in Asset.js (now exactly 32 bytes)
-
-## Verification
-- Server syntax check passed
-- Server starts correctly (database connection works, indexes created)
-- Port error handling works correctly
-
-## Remaining Recommendations
-- Consider implementing rate limiting for specific endpoints
-- Add input validation middleware
-- Consider adding request logging middleware
-- Add health check for critical dependencies
+**Current Step: 1/7**
