@@ -14,12 +14,9 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api
 
 const steps = [
   { id: 'welcome', title: 'Welcome', icon: Sparkles },
-  { id: 'security', title: 'Security Setup', icon: Shield },
-  { id: 'passkey', title: 'Passkey Setup', icon: Fingerprint },
-  { id: 'vault', title: 'Vault Encryption', icon: Lock },
+  { id: 'vault', title: 'Vault Setup', icon: Lock },
   { id: 'guardian', title: 'Guardian Protocol', icon: Clock },
-  { id: 'beneficiaries', title: 'Add Beneficiaries', icon: Users },
-  { id: 'complete', title: 'Complete', icon: CheckCircle }
+  { id: 'beneficiaries', title: 'Beneficiaries', icon: Users }
 ];
 
 const Onboarding = () => {
@@ -613,56 +610,38 @@ const Onboarding = () => {
   };
 
   return (
-    <div className="page spatial-bg" style={{ minHeight: '100vh', padding: '40px 24px' }}>
-      <div className="stars" />
-      
-      <div style={{ maxWidth: 800, margin: '0 auto' }}>
+    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-950 to-black px-4 py-8">
+      <div className="max-w-4xl mx-auto">
         {/* Progress Bar */}
-        <div style={{ marginBottom: 48 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+        <div className="mb-12">
+          <div className="flex justify-between items-center mb-6">
             {steps.map((step, i) => (
               <div 
                 key={step.id}
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: 6,
-                  opacity: i <= currentStep ? 1 : 0.4
-                }}
+                className={`flex flex-col items-center gap-2 ${
+                  i <= currentStep ? 'opacity-100' : 'opacity-40'
+                }`}
               >
-                <div style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 10,
-                  background: i <= currentStep ? 'linear-gradient(135deg, #00e5a0, #4f9eff)' : 'var(--glass-2)',
-                  border: `1px solid ${i <= currentStep ? 'rgba(0,229,160,0.3)' : 'var(--glass-border)'}`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}>
-                  <step.icon size={18} style={{ color: i <= currentStep ? '#001a12' : 'var(--text-3)' }} />
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300 ${
+                  i <= currentStep 
+                    ? 'bg-gradient-to-br from-blue-600 to-purple-600 border border-blue-500/30' 
+                    : 'bg-white/5 border border-white/10'
+                }`}>
+                  <step.icon size={20} className={i <= currentStep ? 'text-white' : 'text-slate-500'} />
                 </div>
-                <span style={{ fontSize: 10, color: i <= currentStep ? 'var(--text-1)' : 'var(--text-3)' }}>
+                <span className={`text-xs font-medium ${
+                  i <= currentStep ? 'text-white' : 'text-slate-500'
+                }`}>
                   {step.title}
                 </span>
               </div>
             ))}
           </div>
-          <div style={{
-            height: 4,
-            background: 'var(--glass-2)',
-            borderRadius: 2,
-            overflow: 'hidden'
-          }}>
+          <div className="h-2 bg-white/5 rounded-full overflow-hidden">
             <motion.div
               initial={{ width: 0 }}
               animate={{ width: `${((currentStep) / (steps.length - 1)) * 100}%` }}
-              style={{
-                height: '100%',
-                background: 'linear-gradient(90deg, #00e5a0, #4f9eff)',
-                borderRadius: 2
-              }}
+              className="h-full bg-gradient-to-r from-blue-600 to-purple-600 rounded-full"
             />
           </div>
         </div>
@@ -674,34 +653,20 @@ const Onboarding = () => {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -20 }}
           transition={{ duration: 0.3 }}
-          style={{
-            background: 'var(--glass-1)',
-            backdropFilter: 'blur(20px)',
-            border: '1px solid var(--glass-border)',
-            borderRadius: 28,
-            padding: 40
-          }}
+          className="bg-[#070e1b] border border-white/4 rounded-3xl p-8 md:p-12"
         >
           {renderStep()}
         </motion.div>
 
         {/* Navigation */}
         {currentStep > 0 && currentStep < steps.length - 1 && (
-          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 24 }}>
+          <div className="flex justify-center mt-8">
             <button
               onClick={handleBack}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                background: 'none',
-                border: 'none',
-                color: 'var(--text-3)',
-                fontSize: 14,
-                cursor: 'pointer'
-              }}
+              className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors font-medium"
             >
-              <ArrowLeft size={16} /> Back
+              <ArrowLeft size={16} />
+              Back
             </button>
           </div>
         )}

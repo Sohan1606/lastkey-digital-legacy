@@ -15,15 +15,15 @@ export const initAnalytics = () => {
           debug: import.meta.env.DEV
         });
 
-        if (import.meta.env.DEV) console.log('📊 PostHog analytics initialized');
+        // PostHog initialized successfully
       }).catch(err => {
-        if (import.meta.env.DEV) console.warn('PostHog not available:', err);
+        // PostHog initialization failed
       });
     } else {
-      if (import.meta.env.DEV) console.log('📊 PostHog analytics disabled (no API key)');
+      // PostHog not available
     }
   } catch (error) {
-    if (import.meta.env.DEV) console.error('Analytics initialization error:', error);
+    // Error initializing PostHog
   }
 };
 
@@ -31,7 +31,7 @@ export const initAnalytics = () => {
 export const trackEvent = (eventName, properties = {}) => {
   if (posthog) {
     posthog.capture(eventName, properties);
-    if (import.meta.env.DEV) console.log('📊 Event tracked:', eventName, properties);
+    // Event tracked
   }
 };
 
@@ -42,7 +42,7 @@ export const trackPageView = (pageName, properties = {}) => {
       page: pageName,
       ...properties
     });
-    if (import.meta.env.DEV) console.log('📊 Page view tracked:', pageName);
+    // Event tracked
   }
 };
 
@@ -53,7 +53,7 @@ export const trackEngagement = (action, details = {}) => {
       action,
       ...details
     });
-    if (import.meta.env.DEV) console.log('📊 Engagement tracked:', action, details);
+    // Event tracked
   }
 };
 
@@ -64,7 +64,7 @@ export const trackFeatureUsage = (featureName, properties = {}) => {
       feature: featureName,
       ...properties
     });
-    if (import.meta.env.DEV) console.log('📊 Feature usage tracked:', featureName, properties);
+    // Event tracked
   }
 };
 
@@ -75,7 +75,7 @@ export const trackConversion = (conversionType, properties = {}) => {
       type: conversionType,
       ...properties
     });
-    if (import.meta.env.DEV) console.log('📊 Conversion tracked:', conversionType, properties);
+    // Event tracked
   }
 };
 
@@ -86,7 +86,7 @@ export const trackError = (errorType, errorDetails = {}) => {
       type: errorType,
       ...errorDetails
     });
-    if (import.meta.env.DEV) console.log('📊 Error tracked:', errorType, errorDetails);
+    // Event tracked
   }
 };
 
@@ -94,7 +94,7 @@ export const trackError = (errorType, errorDetails = {}) => {
 export const setUserProperties = (properties) => {
   if (posthog) {
     posthog.people.set(properties);
-    if (import.meta.env.DEV) console.log('📊 User properties set:', properties);
+    // Event tracked
   }
 };
 
@@ -102,7 +102,7 @@ export const setUserProperties = (properties) => {
 export const identifyUser = (userId, properties = {}) => {
   if (posthog) {
     posthog.identify(userId, properties);
-    if (import.meta.env.DEV) console.log('📊 User identified:', userId, properties);
+    // Event tracked
   }
 };
 

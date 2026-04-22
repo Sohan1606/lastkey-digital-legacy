@@ -9,7 +9,6 @@ try {
     apiKey: process.env.OPENAI_API_KEY,
   });
 } catch (error) {
-  console.log('⚠️ OpenAI not configured - AI features disabled');
   openai = null;
 }
 

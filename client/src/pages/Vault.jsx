@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../contexts/AuthContext';
-import { Pencil, Trash2, Eye, EyeOff, Plus, Shield, Lock, ExternalLink, X, Copy, ShieldCheck } from 'lucide-react';
+import { Pencil, Trash2, Eye, EyeOff, Plus, Shield, Lock, ExternalLink, X, Copy, ShieldCheck, Search, Filter, Key, Wallet, FileText, Database, CreditCard } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import Sidebar from '../components/Sidebar';
 import { 
   deriveKey, encryptText, decryptText, isCryptoSupported,
   generateMasterDEK, setMasterDEK, getMasterDEK, hasDEK, clearMasterDEK,
@@ -311,87 +312,132 @@ const Vault = () => {
   };
 
   if (isLoading) return (
-    <div className="page spatial-bg" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div className="stars" />
-      <div style={{ textAlign: 'center' }}>
-        <div className="spinner" />
-        <p style={{ color: 'var(--text-2)', marginTop: 16, fontSize: 14 }}>Loading your vault...</p>
+    <div style={{ display: 'flex' }}>
+      <Sidebar />
+      <div style={{
+        marginLeft: '240px',
+        minHeight: '100vh',
+        background: '#030508',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{
+            width: '40px',
+            height: '40px',
+            border: '4px solid rgba(255,255,255,0.1)',
+            borderTop: '4px solid #3b82f6',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite',
+            margin: '0 auto 16px'
+          }} />
+          <p style={{ color: '#64748b', fontSize: 14 }}>Loading your vault...</p>
+        </div>
       </div>
     </div>
   );
 
   return (
-    <div className="page spatial-bg">
-      <div className="stars" />
-      <div className="container">
-        {/* Unlock Modal */}
-        <AnimatePresence>
-          {showUnlockModal && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              style={{
-                position: 'fixed', inset: 0, zIndex: 100,
-                background: 'rgba(0,0,0,0.7)',
-                backdropFilter: 'blur(8px)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center'
-              }}
-              onClick={() => setShowUnlockModal(false)}
-            >
+    <div style={{ display: 'flex' }}>
+      <Sidebar />
+      <div style={{
+        marginLeft: '240px',
+        minHeight: '100vh',
+        background: '#030508',
+        flex: 1,
+        padding: '32px'
+      }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+          {/* Unlock Modal */}
+          <AnimatePresence>
+            {showUnlockModal && (
               <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.9, opacity: 0 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
                 style={{
-                  background: 'var(--glass-1)',
-                  backdropFilter: 'blur(24px)',
-                  border: '1px solid var(--glass-border)',
-                  borderRadius: 24,
-                  padding: 32,
-                  maxWidth: 400,
-                  width: '90%'
+                  position: 'fixed', inset: 0, zIndex: 100,
+                  background: 'rgba(0,0,0,0.7)',
+                  backdropFilter: 'blur(8px)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center'
                 }}
-                onClick={e => e.stopPropagation()}
+                onClick={() => setShowUnlockModal(false)}
               >
-                <div style={{ textAlign: 'center', marginBottom: 24 }}>
-                  <div style={{
-                    width: 56, height: 56, borderRadius: 16,
-                    background: 'linear-gradient(135deg, rgba(0,229,160,0.2), rgba(79,158,255,0.2))',
-                    border: '1px solid rgba(0,229,160,0.3)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    margin: '0 auto 16px'
-                  }}>
-                    <Lock style={{ width: 26, height: 26, color: '#00e5a0' }} />
-                  </div>
-                  <h3 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-1)', marginBottom: 8 }}>
-                    {dekInitialized ? 'Unlock Your Vault' : 'Initialize Your Vault'}
-                  </h3>
-                  <p style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.5 }}>
-                    {dekInitialized 
-                      ? 'Enter your vault password to decrypt your DEK and access your assets.'
-                      : 'Create a vault password to generate your Data Encryption Key (DEK).'
-                    }
-                    <br /><strong>Your password never leaves this device.</strong>
-                  </p>
-                  {!dekInitialized && (
-                    <div style={{ marginTop: 12, padding: 10, background: 'rgba(255,184,48,0.1)', border: '1px solid rgba(255,184,48,0.2)', borderRadius: 8 }}>
-                      <p style={{ fontSize: 11, color: '#ffb830', margin: 0 }}>
-                        This password will encrypt your DEK. Store it safely - it cannot be recovered!
-                      </p>
+                <motion.div
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.9, opacity: 0 }}
+                  style={{
+                    background: '#050d1a',
+                    backdropFilter: 'blur(24px)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: 16,
+                    padding: 32,
+                    maxWidth: 400,
+                    width: '90%'
+                  }}
+                  onClick={e => e.stopPropagation()}
+                >
+                  <div style={{ textAlign: 'center', marginBottom: 24 }}>
+                    <div style={{
+                      width: 56, height: 56, borderRadius: 16,
+                      background: 'linear-gradient(135deg, rgba(0,229,160,0.2), rgba(79,158,255,0.2))',
+                      border: '1px solid rgba(0,229,160,0.3)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      margin: '0 auto 16px'
+                    }}>
+                      <Lock style={{ width: 26, height: 26, color: '#00e5a0' }} />
                     </div>
-                  )}
-                </div>
-                <input
-                  type="password"
-                  placeholder="Enter vault password..."
-                  value={vaultPassword}
-                  onChange={e => setVaultPassword(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter') {
+                    <h3 style={{ fontSize: 20, fontWeight: 700, color: '#ffffff', marginBottom: 8 }}>
+                      {dekInitialized ? 'Unlock Your Vault' : 'Initialize Your Vault'}
+                    </h3>
+                    <p style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.5 }}>
+                      {dekInitialized 
+                        ? 'Enter your vault password to decrypt your DEK and access your assets.'
+                        : 'Create a vault password to generate your Data Encryption Key (DEK).'
+                      }
+                      <br /><strong>Your password never leaves this device.</strong>
+                    </p>
+                    {!dekInitialized && (
+                      <div style={{ marginTop: 12, padding: 10, background: 'rgba(255,184,48,0.1)', border: '1px solid rgba(255,184,48,0.2)', borderRadius: 8 }}>
+                        <p style={{ fontSize: 11, color: '#ffb830', margin: 0 }}>
+                          This password will encrypt your DEK. Store it safely - it cannot be recovered!
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  <input
+                    type="password"
+                    placeholder="Enter vault password..."
+                    value={vaultPassword}
+                    onChange={e => setVaultPassword(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        unlockVault(vaultPassword).then(success => {
+                          if (success && pendingDecryptId) {
+                            const asset = assets.find(a => a._id === pendingDecryptId);
+                            if (asset) {
+                              handleShowPassword(pendingDecryptId, asset.password);
+                            }
+                            setPendingDecryptId(null);
+                          }
+                        });
+                      }
+                    }}
+                    style={{
+                      width: '100%', padding: '14px 16px', borderRadius: 12,
+                      border: '1px solid rgba(255,255,255,0.1)', background: '#030508',
+                      color: '#ffffff', fontSize: 14, marginBottom: 16
+                    }}
+                  />
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    disabled={isInitializingDEK}
+                    onClick={() => {
                       unlockVault(vaultPassword).then(success => {
                         if (success && pendingDecryptId) {
-                          // Retry the decrypt after unlock
                           const asset = assets.find(a => a._id === pendingDecryptId);
                           if (asset) {
                             handleShowPassword(pendingDecryptId, asset.password);
@@ -399,356 +445,1169 @@ const Vault = () => {
                           setPendingDecryptId(null);
                         }
                       });
-                    }
-                  }}
-                  style={{
-                    width: '100%', padding: '14px 16px', borderRadius: 12,
-                    border: '1px solid var(--glass-border)', background: 'var(--glass-2)',
-                    color: 'var(--text-1)', fontSize: 14, marginBottom: 16
-                  }}
-                />
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  disabled={isInitializingDEK}
-                  onClick={() => {
-                    unlockVault(vaultPassword).then(success => {
-                      if (success && pendingDecryptId) {
-                        const asset = assets.find(a => a._id === pendingDecryptId);
-                        if (asset) {
-                          handleShowPassword(pendingDecryptId, asset.password);
-                        }
-                        setPendingDecryptId(null);
-                      }
-                    });
-                  }}
-                  style={{
-                    width: '100%', padding: '14px', borderRadius: 12,
-                    border: 'none', background: 'linear-gradient(135deg, #00e5a0, #4f9eff)',
-                    color: '#001a12', fontWeight: 700, fontSize: 14, cursor: isInitializingDEK ? 'not-allowed' : 'pointer',
-                    opacity: isInitializingDEK ? 0.7 : 1
-                  }}
-                >
-                  {isInitializingDEK ? 'Initializing...' : dekInitialized ? 'Unlock Vault' : 'Initialize Vault'}
-                </motion.button>
+                    }}
+                    style={{
+                      width: '100%', padding: '14px', borderRadius: 12,
+                      border: 'none', background: 'linear-gradient(135deg, #00e5a0, #4f9eff)',
+                      color: '#001a12', fontWeight: 700, fontSize: 14, cursor: isInitializingDEK ? 'not-allowed' : 'pointer',
+                      opacity: isInitializingDEK ? 0.7 : 1
+                    }}
+                  >
+                    {isInitializingDEK ? 'Initializing...' : dekInitialized ? 'Unlock Vault' : 'Initialize Vault'}
+                  </motion.button>
+                </motion.div>
               </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            )}
+          </AnimatePresence>
 
-        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 32 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-              <div style={{ width: 48, height: 48, borderRadius: 14, background: 'linear-gradient(135deg, rgba(0,229,160,0.2), rgba(79,158,255,0.2))', border: '1px solid rgba(0,229,160,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Shield style={{ width: 22, height: 22, color: 'var(--pulse)' }} />
-              </div>
-              <div>
-                <h1 className="display" style={{ fontSize: 28 }}>Digital Vault</h1>
-                {/* Trust Indicator */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#00e5a0', marginTop: 4 }}>
-                  <ShieldCheck size={13} />
-                  <span>Encrypted in your browser — we cannot read this</span>
-                </div>
-              </div>
+          {/* Header */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '32px' }}>
+            <div>
+              <h1 style={{ fontSize: '28px', fontWeight: 700, color: '#ffffff', marginBottom: '4px' }}>
+                My Vault
+              </h1>
+              <p style={{ color: '#64748b', fontSize: '14px' }}>
+                {assets?.length || 0} encrypted items stored securely
+              </p>
             </div>
             {!showForm && (
-              <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} onClick={() => { 
-                if (!hasDEK()) {
-                  setShowUnlockModal(true);
-                  return; // Don't open form if vault is locked
-                }
-                setShowForm(false); 
-                setEditingId(null); 
-                setFormData({ platform: '', username: '', url: '', password: '', notes: '', instruction: 'delete' }); 
-                setShowForm(true); 
-                scrollToForm(); 
-              }}
-                style={{ padding: '12px 20px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg, #00e5a0, #4f9eff)', color: '#001a12', fontWeight: 700, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Plus style={{ width: 16, height: 16 }} /> Add Asset
+              <motion.button 
+                whileHover={{ scale: 1.02 }} 
+                whileTap={{ scale: 0.97 }} 
+                onClick={() => { 
+                  if (!hasDEK()) {
+                    setShowUnlockModal(true);
+                    return;
+                  }
+                  setShowForm(false); 
+                  setEditingId(null); 
+                  setFormData({ platform: '', username: '', url: '', password: '', notes: '', instruction: 'delete' }); 
+                  setShowForm(true); 
+                  scrollToForm(); 
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '12px 20px',
+                  background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                  border: 'none',
+                  borderRadius: '8px',
+                  color: '#ffffff',
+                  fontWeight: 500,
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                  transition: 'all 150ms'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.background = 'linear-gradient(135deg, #2563eb, #7c3aed)';
+                  e.target.style.transform = 'translateY(-1px)';
+                  e.target.style.boxShadow = '0 10px 25px -5px rgba(59, 130, 246, 0.25)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.background = 'linear-gradient(135deg, #3b82f6, #8b5cf6)';
+                  e.target.style.transform = 'translateY(0)';
+                  e.target.style.boxShadow = 'none';
+                }}
+              >
+                <Plus size={16} />
+                Add Entry
               </motion.button>
             )}
           </div>
-        </motion.div>
 
-        {assets && assets.length > 0 && (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, background: 'rgba(0,229,160,0.04)', border: '1px solid rgba(0,229,160,0.15)', borderRadius: 14, padding: '12px 18px', marginBottom: 24 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <div style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--pulse)', boxShadow: '0 0 8px var(--pulse)' }} />
-                <span style={{ fontSize: 12, color: 'var(--pulse)', fontWeight: 600 }}>AES-256 Encrypted</span>
-              </div>
-              <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{assets.length} item{assets.length !== 1 ? 's' : ''} secured</span>
-            </div>
-            <span style={{ fontSize: 11, color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>Zero-knowledge vault</span>
+          {/* Category Tabs */}
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', overflowX: 'auto', paddingBottom: '8px' }}>
+            {['All', 'Passwords', 'Documents', 'Notes', 'Financial', 'Medical'].map((category) => (
+              <button
+                key={category}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  transition: 'all 150ms',
+                  border: 'none',
+                  background: category === 'All' ? 'rgba(59, 130, 246, 0.2)' : 'transparent',
+                  color: category === 'All' ? '#ffffff' : '#64748b',
+                  border: category === 'All' ? '1px solid rgba(59, 130, 246, 0.3)' : '1px solid transparent'
+                }}
+                onMouseEnter={(e) => {
+                  if (category !== 'All') {
+                    e.target.style.background = 'rgba(255, 255, 255, 0.04)';
+                    e.target.style.color = '#ffffff';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (category !== 'All') {
+                    e.target.style.background = 'transparent';
+                    e.target.style.color = '#64748b';
+                  }
+                }}
+              >
+                {category}
+              </button>
+            ))}
           </div>
-        )}
 
-        <AnimatePresence>
-          {showForm && (
-            <motion.div ref={formRef} initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} style={{ marginBottom: 32, overflow: 'hidden' }}>
-              <div style={{ background: 'var(--glass-1)', backdropFilter: 'blur(20px)', border: '1px solid var(--glass-border)', borderRadius: 24, padding: 28 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-                  <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-1)' }}>{editingId ? 'Edit Asset' : 'Secure New Asset'}</h3>
-                  <button onClick={() => { setShowForm(false); setEditingId(null); }} style={{ padding: 8, borderRadius: 10, background: 'none', border: 'none', cursor: 'pointer' }}>
-                    <X style={{ width: 18, height: 18, color: 'var(--text-3)' }} />
-                  </button>
+          {/* Search and Filter Bar */}
+          <div style={{ display: 'flex', gap: '16px', marginBottom: '24px' }}>
+            <div style={{ flex: 1, position: 'relative' }}>
+              <Search style={{
+                position: 'absolute',
+                left: '12px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                width: '16px',
+                height: '16px',
+                color: '#64748b'
+              }} />
+              <input 
+                style={{
+                  width: '100%',
+                  padding: '12px 12px 12px 40px',
+                  background: '#050d1a',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: '8px',
+                  color: '#ffffff',
+                  fontSize: '14px',
+                  outline: 'none',
+                  transition: 'all 150ms'
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#3b82f6';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = 'rgba(255,255,255,0.1)';
+                  e.target.style.boxShadow = 'none';
+                }}
+                placeholder="Search vault items..." 
+              />
+            </div>
+            <button style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '12px 16px',
+              background: '#050d1a',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: '8px',
+              color: '#64748b',
+              fontSize: '14px',
+              cursor: 'pointer',
+              transition: 'all 150ms'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.color = '#ffffff';
+              e.target.style.borderColor = 'rgba(255,255,255,0.2)';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.color = '#64748b';
+              e.target.style.borderColor = 'rgba(255,255,255,0.1)';
+            }}
+            >
+              <Filter size={16} />
+              Filter
+            </button>
+          </div>
+
+          {assets && assets.length > 0 && (
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'space-between', 
+              flexWrap: 'wrap', 
+              gap: '12px', 
+              background: 'rgba(0,229,160,0.04)', 
+              border: '1px solid rgba(0,229,160,0.15)', 
+              borderRadius: '12px', 
+              padding: '12px 18px', 
+              marginBottom: '24px' 
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ 
+                    width: '7px', 
+                    height: '7px', 
+                    borderRadius: '50%', 
+                    background: '#00e5a0', 
+                    boxShadow: '0 0 8px #00e5a0' 
+                  }} />
+                  <span style={{ fontSize: '12px', color: '#00e5a0', fontWeight: 600 }}>AES-256 Encrypted</span>
                 </div>
-                <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 18 }}>
-                  <div>
-                    <label>Platform Name</label>
-                    <input type="text" value={formData.platform} onChange={e => setFormData({...formData, platform: e.target.value})} placeholder="e.g. Google, Binance" required />
-                  </div>
-                  <div>
-                    <label>Username / ID</label>
-                    <input type="text" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} placeholder="Email or username" required />
-                  </div>
-                  <div>
-                    <label>Website URL (Optional)</label>
-                    <input type="text" value={formData.url} onChange={e => setFormData({...formData, url: e.target.value})} placeholder="https://..." />
-                  </div>
-                  <div>
-                    <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span>Secret Password / Key</span>
-                      {cryptoSupported && formData.password && hasDEK() && (
-                        <span style={{ fontSize: 10, color: 'var(--pulse)', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
-                          <Lock size={10} /> DEK Encrypted
-                        </span>
-                      )}
-                    </label>
-                    <input 
-                      type="password" 
-                      value={formData.password} 
-                      onChange={e => {
-                        setFormData({...formData, password: e.target.value});
-                        if (editingId) setPasswordChanged(e.target.value !== '');
-                      }}
-                      placeholder={hasDEK() ? "Enter the secure key" : "Unlock vault first to add assets"} 
-                      required 
-                      disabled={!hasDEK() && !editingId}
-                    />
-                    {(!hasDEK() && editingId && passwordChanged) ? (
-                      <p style={{ fontSize: 11, color: '#ffb830', marginTop: 6, marginBottom: 0 }}>
-                        ⚠️ Unlock vault to update password (required for client encryption)
-                      </p>
-                    ) : !hasDEK() && !editingId ? (
-                      <p style={{ fontSize: 11, color: '#ffb830', marginTop: 6, marginBottom: 0 }}>
-                        ⚠️ Please unlock your vault using the button above to enable encryption.
-                      </p>
-                    ) : (
-                      <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 6, marginBottom: 0 }}>
-                        This password will be encrypted in your browser before being sent to our servers.
-                      </p>
-                    )}
-                  </div>
-                  <div style={{ gridColumn: '1 / -1' }}>
-                    <label>Legacy Instruction</label>
-                    <select value={formData.instruction} onChange={e => setFormData({...formData, instruction: e.target.value})}>
-                      <option value="delete">Delete Account (Privacy)</option>
-                      <option value="share">Share with Beneficiaries</option>
-                      <option value="transfer">Transfer Ownership</option>
-                    </select>
-                  </div>
-                  <div style={{ gridColumn: '1 / -1' }}>
-                    <label>Asset Type</label>
-                    <select value={formData.assetType || 'general'} onChange={e => setFormData({...formData, assetType: e.target.value})}>
-                      <option value="general">General Account / Password</option>
-                      <option value="crypto_exchange">Crypto Exchange (Binance, Coinbase...)</option>
-                      <option value="crypto_wallet">Crypto Wallet (MetaMask, Trust Wallet...)</option>
-                      <option value="hardware_wallet">Hardware Wallet (Ledger, Trezor...)</option>
-                      <option value="seed_phrase">Seed Phrase / Recovery Words</option>
-                      <option value="private_key">Private Key</option>
-                    </select>
-                  </div>
-                  {formData.assetType && formData.assetType !== 'general' && (
-                    <>
-                      <div>
-                        <label>Cryptocurrency</label>
-                        <select value={formData.cryptocurrency || ''} onChange={e => setFormData({...formData, cryptocurrency: e.target.value})}>
-                          <option value="">Select crypto...</option>
-                          {['BTC','ETH','USDT','USDC','BNB','SOL','ADA','DOT','MATIC','AVAX','LINK','other'].map(c => (
-                            <option key={c} value={c}>{c}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label>Blockchain Network</label>
-                        <select value={formData.blockchain || ''} onChange={e => setFormData({...formData, blockchain: e.target.value})}>
-                          <option value="">Select blockchain...</option>
-                          {['Bitcoin','Ethereum','BSC','Polygon','Solana','Avalanche','Cardano','Polkadot','other'].map(b => (
-                            <option key={b} value={b}>{b}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div style={{ gridColumn: '1 / -1' }}>
-                        <label>Public Wallet Address (Optional)</label>
-                        <input type="text" value={formData.walletAddress || ''} onChange={e => setFormData({...formData, walletAddress: e.target.value})} placeholder="0x... or bc1... (public address only)" />
-                      </div>
-                      <div style={{ gridColumn: '1 / -1', background: 'rgba(255,184,48,0.06)', border: '1px solid rgba(255,184,48,0.2)', borderRadius: 10, padding: '12px 14px' }}>
-                        <p style={{ fontSize: 12, color: '#ffb830', margin: 0 }}>
-                          Security: Your seed phrase / private key is encrypted with AES-256 before storage. Never share your private key with anyone other than your designated beneficiaries.
-                        </p>
-                      </div>
-                    </>
-                  )}
-                  <div style={{ gridColumn: '1 / -1' }}>
-                    <label>Additional Notes</label>
-                    <textarea value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} placeholder="Instructions or context..." style={{ height: 80, resize: 'none' }} />
-                  </div>
-                  <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 12 }}>
-                    <motion.button type="submit" whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }} disabled={createMutation.isPending || updateMutation.isPending || (!hasDEK() && (passwordChanged || !editingId))}
-                      style={{ 
-                        flex: 1, padding: '14px 24px', borderRadius: 12, border: 'none', 
-                        background: (!hasDEK() && passwordChanged) ? 'var(--glass-2)' : 'linear-gradient(135deg, #4f9eff, #00e5a0)', 
-                        color: (!hasDEK() && passwordChanged) ? 'var(--text-2)' : '#001a12', 
-                        fontWeight: 700, fontSize: 14, 
-                        cursor: (createMutation.isPending || updateMutation.isPending || (!hasDEK() && (passwordChanged || !editingId))) ? 'not-allowed' : 'pointer', 
-                        opacity: (createMutation.isPending || updateMutation.isPending || (!hasDEK() && (passwordChanged || !editingId))) ? 0.6 : 1 
-                      }}>
-                      {createMutation.isPending || updateMutation.isPending ? 'Processing...' : editingId ? 'Update Asset' : 'Secure Asset'}
-                    </motion.button>
-                    <motion.button type="button" whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }} onClick={() => { setShowForm(false); setEditingId(null); }}
-                      style={{ padding: '14px 24px', borderRadius: 12, border: '1px solid var(--glass-border)', background: 'var(--glass-1)', color: 'var(--text-2)', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>
-                      Cancel
-                    </motion.button>
-                  </div>
-                </form>
+                <span style={{ fontSize: '12px', color: '#64748b' }}>
+                  {assets.length} item{assets.length !== 1 ? 's' : ''} secured
+                </span>
               </div>
-            </motion.div>
+              <span style={{ fontSize: '11px', color: '#64748b', fontFamily: 'monospace' }}>
+                Zero-knowledge vault
+              </span>
+            </div>
           )}
-        </AnimatePresence>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 20 }}>
-          {assets && assets.map((asset, idx) => {
-            const insStyle = getInstructionStyle(asset.instruction);
-            const decryptedPassword = showPasswords[asset._id];
-            return (
-              <motion.div key={asset._id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }}
-                style={{ background: 'var(--glass-1)', backdropFilter: 'blur(20px)', border: '1px solid var(--glass-border)', borderRadius: 20, padding: 24, transition: 'all 0.22s' }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--glass-border-hover)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--glass-border)'; e.currentTarget.style.transform = 'translateY(0)'; }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
-                  <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(79,158,255,0.1)', border: '1px solid rgba(79,158,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Shield style={{ width: 20, height: 20, color: 'var(--ion)' }} />
+          <AnimatePresence>
+            {showForm && (
+              <motion.div ref={formRef} initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} style={{ marginBottom: '32px', overflow: 'hidden' }}>
+                <div style={{ 
+                  background: '#050d1a', 
+                  backdropFilter: 'blur(20px)', 
+                  border: '1px solid rgba(255,255,255,0.1)', 
+                  borderRadius: '16px', 
+                  padding: '24px' 
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                    <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#ffffff' }}>
+                      {editingId ? 'Edit Asset' : 'Secure New Asset'}
+                    </h3>
+                    <button 
+                      onClick={() => { setShowForm(false); setEditingId(null); }} 
+                      style={{ 
+                        padding: '8px', 
+                        borderRadius: '8px', 
+                        background: 'none', 
+                        border: 'none', 
+                        cursor: 'pointer',
+                        color: '#64748b'
+                      }}
+                      onMouseEnter={(e) => e.target.style.color = '#ffffff'}
+                      onMouseLeave={(e) => e.target.style.color = '#64748b'}
+                    >
+                      <X style={{ width: '18px', height: '18px' }} />
+                    </button>
                   </div>
-                  <div style={{ display: 'flex', gap: 6 }}>
-                    {deleteConfirm === asset._id ? (
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <button onClick={() => { deleteMutation.mutate(asset._id); setDeleteConfirm(null); }}
-                          style={{ padding: '6px 12px', borderRadius: 8, background: 'rgba(255,77,109,0.15)', border: '1px solid rgba(255,77,109,0.3)', color: '#ff4d6d', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
-                          Confirm
-                        </button>
-                        <button onClick={() => setDeleteConfirm(null)}
-                          style={{ padding: '6px 12px', borderRadius: 8, background: 'var(--glass-1)', border: '1px solid var(--glass-border)', color: 'var(--text-2)', fontSize: 11, cursor: 'pointer' }}>
-                          Cancel
-                        </button>
-                      </div>
-                    ) : (
+                  <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '18px' }}>
+                    <div>
+                      <label style={{
+                        display: 'block',
+                        fontSize: '12px',
+                        fontWeight: 500,
+                        color: '#e2e8f0',
+                        marginBottom: '8px'
+                      }}>Platform Name</label>
+                      <input 
+                        type="text" 
+                        value={formData.platform} 
+                        onChange={e => setFormData({...formData, platform: e.target.value})} 
+                        placeholder="e.g. Google, Binance" 
+                        required 
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          background: '#030508',
+                          border: '1px solid rgba(255,255,255,0.1)',
+                          borderRadius: '8px',
+                          color: '#ffffff',
+                          fontSize: '14px',
+                          outline: 'none',
+                          transition: 'all 150ms'
+                        }}
+                        onFocus={(e) => {
+                          e.target.style.borderColor = '#3b82f6';
+                          e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+                        }}
+                        onBlur={(e) => {
+                          e.target.style.borderColor = 'rgba(255,255,255,0.1)';
+                          e.target.style.boxShadow = 'none';
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{
+                        display: 'block',
+                        fontSize: '12px',
+                        fontWeight: 500,
+                        color: '#e2e8f0',
+                        marginBottom: '8px'
+                      }}>Username / ID</label>
+                      <input 
+                        type="text" 
+                        value={formData.username} 
+                        onChange={e => setFormData({...formData, username: e.target.value})} 
+                        placeholder="Email or username" 
+                        required 
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          background: '#030508',
+                          border: '1px solid rgba(255,255,255,0.1)',
+                          borderRadius: '8px',
+                          color: '#ffffff',
+                          fontSize: '14px',
+                          outline: 'none',
+                          transition: 'all 150ms'
+                        }}
+                        onFocus={(e) => {
+                          e.target.style.borderColor = '#3b82f6';
+                          e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+                        }}
+                        onBlur={(e) => {
+                          e.target.style.borderColor = 'rgba(255,255,255,0.1)';
+                          e.target.style.boxShadow = 'none';
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{
+                        display: 'block',
+                        fontSize: '12px',
+                        fontWeight: 500,
+                        color: '#e2e8f0',
+                        marginBottom: '8px'
+                      }}>Website URL (Optional)</label>
+                      <input 
+                        type="text" 
+                        value={formData.url} 
+                        onChange={e => setFormData({...formData, url: e.target.value})} 
+                        placeholder="https://..." 
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          background: '#030508',
+                          border: '1px solid rgba(255,255,255,0.1)',
+                          borderRadius: '8px',
+                          color: '#ffffff',
+                          fontSize: '14px',
+                          outline: 'none',
+                          transition: 'all 150ms'
+                        }}
+                        onFocus={(e) => {
+                          e.target.style.borderColor = '#3b82f6';
+                          e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+                        }}
+                        onBlur={(e) => {
+                          e.target.style.borderColor = 'rgba(255,255,255,0.1)';
+                          e.target.style.boxShadow = 'none';
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{
+                        display: 'block',
+                        fontSize: '12px',
+                        fontWeight: 500,
+                        color: '#e2e8f0',
+                        marginBottom: '8px'
+                      }}>
+                        <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span>Secret Password / Key</span>
+                          {cryptoSupported && formData.password && hasDEK() && (
+                            <span style={{ fontSize: '10px', color: '#00e5a0', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}>
+                              <Lock size={10} /> DEK Encrypted
+                            </span>
+                          )}
+                        </span>
+                      </label>
+                      <input 
+                        type="password" 
+                        value={formData.password} 
+                        onChange={e => {
+                          setFormData({...formData, password: e.target.value});
+                          if (editingId) setPasswordChanged(e.target.value !== '');
+                        }}
+                        placeholder={hasDEK() ? "Enter the secure key" : "Unlock vault first to add assets"} 
+                        required 
+                        disabled={!hasDEK() && !editingId}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          background: '#030508',
+                          border: '1px solid rgba(255,255,255,0.1)',
+                          borderRadius: '8px',
+                          color: '#ffffff',
+                          fontSize: '14px',
+                          outline: 'none',
+                          transition: 'all 150ms',
+                          opacity: (!hasDEK() && !editingId) ? 0.5 : 1
+                        }}
+                        onFocus={(e) => {
+                          if (hasDEK() || editingId) {
+                            e.target.style.borderColor = '#3b82f6';
+                            e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+                          }
+                        }}
+                        onBlur={(e) => {
+                          e.target.style.borderColor = 'rgba(255,255,255,0.1)';
+                          e.target.style.boxShadow = 'none';
+                        }}
+                      />
+                      {(!hasDEK() && editingId && passwordChanged) ? (
+                        <p style={{ fontSize: '11px', color: '#ffb830', marginTop: '6px', marginBottom: 0 }}>
+                          â ï¸ Unlock vault to update password (required for client encryption)
+                        </p>
+                      ) : !hasDEK() && !editingId ? (
+                        <p style={{ fontSize: '11px', color: '#ffb830', marginTop: '6px', marginBottom: 0 }}>
+                          â ï¸ Please unlock your vault using the button above to enable encryption.
+                        </p>
+                      ) : (
+                        <p style={{ fontSize: '11px', color: '#64748b', marginTop: '6px', marginBottom: 0 }}>
+                          This password will be encrypted in your browser before being sent to our servers.
+                        </p>
+                      )}
+                    </div>
+                    <div style={{ gridColumn: '1 / -1' }}>
+                      <label style={{
+                        display: 'block',
+                        fontSize: '12px',
+                        fontWeight: 500,
+                        color: '#e2e8f0',
+                        marginBottom: '8px'
+                      }}>Legacy Instruction</label>
+                      <select 
+                        value={formData.instruction} 
+                        onChange={e => setFormData({...formData, instruction: e.target.value})}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          background: '#030508',
+                          border: '1px solid rgba(255,255,255,0.1)',
+                          borderRadius: '8px',
+                          color: '#ffffff',
+                          fontSize: '14px',
+                          outline: 'none',
+                          transition: 'all 150ms'
+                        }}
+                        onFocus={(e) => {
+                          e.target.style.borderColor = '#3b82f6';
+                          e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+                        }}
+                        onBlur={(e) => {
+                          e.target.style.borderColor = 'rgba(255,255,255,0.1)';
+                          e.target.style.boxShadow = 'none';
+                        }}
+                      >
+                        <option value="delete">Delete Account (Privacy)</option>
+                        <option value="share">Share with Beneficiaries</option>
+                        <option value="transfer">Transfer Ownership</option>
+                      </select>
+                    </div>
+                    <div style={{ gridColumn: '1 / -1' }}>
+                      <label style={{
+                        display: 'block',
+                        fontSize: '12px',
+                        fontWeight: 500,
+                        color: '#e2e8f0',
+                        marginBottom: '8px'
+                      }}>Asset Type</label>
+                      <select 
+                        value={formData.assetType || 'general'} 
+                        onChange={e => setFormData({...formData, assetType: e.target.value})}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          background: '#030508',
+                          border: '1px solid rgba(255,255,255,0.1)',
+                          borderRadius: '8px',
+                          color: '#ffffff',
+                          fontSize: '14px',
+                          outline: 'none',
+                          transition: 'all 150ms'
+                        }}
+                        onFocus={(e) => {
+                          e.target.style.borderColor = '#3b82f6';
+                          e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+                        }}
+                        onBlur={(e) => {
+                          e.target.style.borderColor = 'rgba(255,255,255,0.1)';
+                          e.target.style.boxShadow = 'none';
+                        }}
+                      >
+                        <option value="general">General Account / Password</option>
+                        <option value="crypto_exchange">Crypto Exchange (Binance, Coinbase...)</option>
+                        <option value="crypto_wallet">Crypto Wallet (MetaMask, Trust Wallet...)</option>
+                        <option value="hardware_wallet">Hardware Wallet (Ledger, Trezor...)</option>
+                        <option value="seed_phrase">Seed Phrase / Recovery Words</option>
+                        <option value="private_key">Private Key</option>
+                      </select>
+                    </div>
+                    {formData.assetType && formData.assetType !== 'general' && (
                       <>
-                        <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={() => handleEdit(asset)}
-                          style={{ padding: 8, borderRadius: 10, border: '1px solid var(--glass-border)', background: 'var(--glass-1)', cursor: 'pointer' }}>
-                          <Pencil style={{ width: 14, height: 14, color: 'var(--text-2)' }} />
-                        </motion.button>
-                        <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setDeleteConfirm(asset._id)}
-                          style={{ padding: 8, borderRadius: 10, border: '1px solid var(--glass-border)', background: 'var(--glass-1)', cursor: 'pointer' }}>
-                          <Trash2 style={{ width: 14, height: 14, color: 'var(--danger)' }} />
-                        </motion.button>
+                        <div>
+                          <label style={{
+                            display: 'block',
+                            fontSize: '12px',
+                            fontWeight: 500,
+                            color: '#e2e8f0',
+                            marginBottom: '8px'
+                          }}>Cryptocurrency</label>
+                          <select 
+                            value={formData.cryptocurrency || ''} 
+                            onChange={e => setFormData({...formData, cryptocurrency: e.target.value})}
+                            style={{
+                              width: '100%',
+                              padding: '12px 16px',
+                              background: '#030508',
+                              border: '1px solid rgba(255,255,255,0.1)',
+                              borderRadius: '8px',
+                              color: '#ffffff',
+                              fontSize: '14px',
+                              outline: 'none',
+                              transition: 'all 150ms'
+                            }}
+                            onFocus={(e) => {
+                              e.target.style.borderColor = '#3b82f6';
+                              e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+                            }}
+                            onBlur={(e) => {
+                              e.target.style.borderColor = 'rgba(255,255,255,0.1)';
+                              e.target.style.boxShadow = 'none';
+                            }}
+                          >
+                            <option value="">Select crypto...</option>
+                            {['BTC','ETH','USDT','USDC','BNB','SOL','ADA','DOT','MATIC','AVAX','LINK','other'].map(c => (
+                              <option key={c} value={c}>{c}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label style={{
+                            display: 'block',
+                            fontSize: '12px',
+                            fontWeight: 500,
+                            color: '#e2e8f0',
+                            marginBottom: '8px'
+                          }}>Blockchain Network</label>
+                          <select 
+                            value={formData.blockchain || ''} 
+                            onChange={e => setFormData({...formData, blockchain: e.target.value})}
+                            style={{
+                              width: '100%',
+                              padding: '12px 16px',
+                              background: '#030508',
+                              border: '1px solid rgba(255,255,255,0.1)',
+                              borderRadius: '8px',
+                              color: '#ffffff',
+                              fontSize: '14px',
+                              outline: 'none',
+                              transition: 'all 150ms'
+                            }}
+                            onFocus={(e) => {
+                              e.target.style.borderColor = '#3b82f6';
+                              e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+                            }}
+                            onBlur={(e) => {
+                              e.target.style.borderColor = 'rgba(255,255,255,0.1)';
+                              e.target.style.boxShadow = 'none';
+                            }}
+                          >
+                            <option value="">Select blockchain...</option>
+                            {['Bitcoin','Ethereum','BSC','Polygon','Solana','Avalanche','Cardano','Polkadot','other'].map(b => (
+                              <option key={b} value={b}>{b}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div style={{ gridColumn: '1 / -1' }}>
+                          <label style={{
+                            display: 'block',
+                            fontSize: '12px',
+                            fontWeight: 500,
+                            color: '#e2e8f0',
+                            marginBottom: '8px'
+                          }}>Public Wallet Address (Optional)</label>
+                          <input 
+                            type="text" 
+                            value={formData.walletAddress || ''} 
+                            onChange={e => setFormData({...formData, walletAddress: e.target.value})} 
+                            placeholder="0x... or bc1... (public address only)" 
+                            style={{
+                              width: '100%',
+                              padding: '12px 16px',
+                              background: '#030508',
+                              border: '1px solid rgba(255,255,255,0.1)',
+                              borderRadius: '8px',
+                              color: '#ffffff',
+                              fontSize: '14px',
+                              outline: 'none',
+                              transition: 'all 150ms'
+                            }}
+                            onFocus={(e) => {
+                              e.target.style.borderColor = '#3b82f6';
+                              e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+                            }}
+                            onBlur={(e) => {
+                              e.target.style.borderColor = 'rgba(255,255,255,0.1)';
+                              e.target.style.boxShadow = 'none';
+                            }}
+                          />
+                        </div>
+                        <div style={{ 
+                          gridColumn: '1 / -1', 
+                          background: 'rgba(255,184,48,0.06)', 
+                          border: '1px solid rgba(255,184,48,0.2)', 
+                          borderRadius: '8px', 
+                          padding: '12px 14px' 
+                        }}>
+                          <p style={{ fontSize: '12px', color: '#ffb830', margin: 0 }}>
+                            Security: Your seed phrase / private key is encrypted with AES-256 before storage. Never share your private key with anyone other than your designated beneficiaries.
+                          </p>
+                        </div>
                       </>
                     )}
-                  </div>
-                </div>
-                <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-1)', marginBottom: 14 }}>{asset.platform}</h3>
-                {asset.assetType && asset.assetType !== 'general' && (
-                  <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 6, background: 'rgba(255,184,48,0.1)', border: '1px solid rgba(255,184,48,0.2)', color: '#ffb830', fontWeight: 600 }}>
-                      {asset.assetType.replace(/_/g, ' ').toUpperCase()}
-                    </span>
-                    {asset.cryptocurrency && (
-                      <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 6, background: 'rgba(79,158,255,0.1)', border: '1px solid rgba(79,158,255,0.2)', color: '#4f9eff', fontWeight: 600 }}>
-                        {asset.cryptocurrency}
-                      </span>
-                    )}
-                    {asset.blockchain && (
-                      <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 6, background: 'rgba(124,92,252,0.1)', border: '1px solid rgba(124,92,252,0.2)', color: '#7c5cfc', fontWeight: 600 }}>
-                        {asset.blockchain}
-                      </span>
-                    )}
-                  </div>
-                )}
-                <div style={{ marginBottom: 10 }}>
-                  <span style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Identity</span>
-                  <p style={{ fontSize: 14, color: 'var(--text-1)', marginTop: 4 }}>{asset.username}</p>
-                </div>
-                <div style={{ marginBottom: 14 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Secure Key</span>
-                    {asset.clientEncrypted && (
-                      <span style={{ fontSize: 9, color: 'var(--pulse)', display: 'flex', alignItems: 'center', gap: 3, fontWeight: 600, background: 'rgba(0,229,160,0.1)', padding: '2px 6px', borderRadius: 4, border: '1px solid rgba(0,229,160,0.2)' }}>
-                        <Lock size={8} /> Client Encrypted
-                      </span>
-                    )}
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 14, color: 'var(--text-1)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {decryptedPassword || '•••••••••••'}
-                    </span>
-                    <button onClick={() => handleShowPassword(asset._id, asset.password)} style={{ padding: 6, background: 'none', border: 'none', cursor: 'pointer' }}>
-                      {decryptedPassword ? <EyeOff style={{ width: 16, height: 16, color: 'var(--text-2)' }} /> : <Eye style={{ width: 16, height: 16, color: 'var(--text-2)' }} />}
-                    </button>
-                    {decryptedPassword && (
-                      <button
-                        onClick={async () => {
-                          try {
-                            await navigator.clipboard.writeText(decryptedPassword);
-                            toast.success('Copied! Auto-clears in 30s', { duration: 2500 });
-                            setTimeout(async () => {
-                              try {
-                                const c = await navigator.clipboard.readText();
-                                if (c === decryptedPassword) await navigator.clipboard.writeText('');
-                              } catch { return; }
-                            }, 30000);
-                          } catch { toast.error('Copy failed'); }
+                    <div style={{ gridColumn: '1 / -1' }}>
+                      <label style={{
+                        display: 'block',
+                        fontSize: '12px',
+                        fontWeight: 500,
+                        color: '#e2e8f0',
+                        marginBottom: '8px'
+                      }}>Additional Notes</label>
+                      <textarea 
+                        value={formData.notes} 
+                        onChange={e => setFormData({...formData, notes: e.target.value})} 
+                        placeholder="Instructions or context..." 
+                        style={{ 
+                          height: '80px', 
+                          resize: 'none',
+                          width: '100%',
+                          padding: '12px 16px',
+                          background: '#030508',
+                          border: '1px solid rgba(255,255,255,0.1)',
+                          borderRadius: '8px',
+                          color: '#ffffff',
+                          fontSize: '14px',
+                          outline: 'none',
+                          transition: 'all 150ms',
+                          fontFamily: 'inherit'
                         }}
-                        style={{ padding: 6, background: 'none', border: 'none', cursor: 'pointer' }}
+                        onFocus={(e) => {
+                          e.target.style.borderColor = '#3b82f6';
+                          e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+                        }}
+                        onBlur={(e) => {
+                          e.target.style.borderColor = 'rgba(255,255,255,0.1)';
+                          e.target.style.boxShadow = 'none';
+                        }}
+                      />
+                    </div>
+                    <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '12px' }}>
+                      <motion.button 
+                        type="submit" 
+                        whileHover={{ scale: 1.01 }} 
+                        whileTap={{ scale: 0.98 }} 
+                        disabled={createMutation.isPending || updateMutation.isPending || (!hasDEK() && (passwordChanged || !editingId))}
+                        style={{ 
+                          flex: 1, 
+                          padding: '14px 24px', 
+                          borderRadius: '8px', 
+                          border: 'none', 
+                          background: (!hasDEK() && passwordChanged) ? '#050d1a' : 'linear-gradient(135deg, #4f9eff, #00e5a0)', 
+                          color: (!hasDEK() && passwordChanged) ? '#64748b' : '#001a12', 
+                          fontWeight: 600, 
+                          fontSize: '14px', 
+                          cursor: (createMutation.isPending || updateMutation.isPending || (!hasDEK() && (passwordChanged || !editingId))) ? 'not-allowed' : 'pointer', 
+                          opacity: (createMutation.isPending || updateMutation.isPending || (!hasDEK() && (passwordChanged || !editingId))) ? 0.6 : 1,
+                          transition: 'all 150ms'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!(createMutation.isPending || updateMutation.isPending || (!hasDEK() && (passwordChanged || !editingId)))) {
+                            e.target.style.background = 'linear-gradient(135deg, #3b82f6, #00e5a0)';
+                            e.target.style.transform = 'translateY(-1px)';
+                            e.target.style.boxShadow = '0 10px 25px -5px rgba(79, 158, 255, 0.25)';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!(createMutation.isPending || updateMutation.isPending || (!hasDEK() && (passwordChanged || !editingId)))) {
+                            e.target.style.background = 'linear-gradient(135deg, #4f9eff, #00e5a0)';
+                            e.target.style.transform = 'translateY(0)';
+                            e.target.style.boxShadow = 'none';
+                          }
+                        }}
                       >
-                        <Copy style={{ width: 14, height: 14, color: 'var(--text-3)' }} />
-                      </button>
-                    )}
-                  </div>
-                </div>
-                <div style={{ paddingTop: 14, borderTop: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: insStyle.color, background: insStyle.bg, border: `1px solid ${insStyle.border}`, borderRadius: 8, padding: '4px 10px', display: 'flex', alignItems: 'center', gap: 5 }}>
-                    <Lock style={{ width: 12, height: 12 }} /> {asset.instruction}
-                  </span>
-                  {asset.url && (
-                    <motion.a whileHover={{ scale: 1.1 }} href={asset.url.startsWith('http') ? asset.url : `https://${asset.url}`} target="_blank" rel="noopener noreferrer"
-                      style={{ color: 'var(--text-3)', display: 'flex' }}>
-                      <ExternalLink style={{ width: 16, height: 16 }} />
-                    </motion.a>
-                  )}
+                        {createMutation.isPending || updateMutation.isPending ? 'Processing...' : editingId ? 'Update Asset' : 'Secure Asset'}
+                      </motion.button>
+                      <motion.button 
+                        type="button" 
+                        whileHover={{ scale: 1.01 }} 
+                        whileTap={{ scale: 0.98 }} 
+                        onClick={() => { setShowForm(false); setEditingId(null); }}
+                        style={{ 
+                          padding: '14px 24px', 
+                          borderRadius: '8px', 
+                          border: '1px solid rgba(255,255,255,0.1)', 
+                          background: '#050d1a', 
+                          color: '#e2e8f0', 
+                          fontWeight: 500, 
+                          fontSize: '14px', 
+                          cursor: 'pointer',
+                          transition: 'all 150ms'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.target.style.background = 'rgba(255,255,255,0.04)';
+                          e.target.style.color = '#ffffff';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.background = '#050d1a';
+                          e.target.style.color = '#e2e8f0';
+                        }}
+                      >
+                        Cancel
+                      </motion.button>
+                    </div>
+                  </form>
                 </div>
               </motion.div>
-            );
-          })}
-        </div>
+            )}
+          </AnimatePresence>
 
-        {(!assets || assets.length === 0) && !showForm && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ textAlign: 'center', padding: '80px 20px', background: 'var(--glass-1)', backdropFilter: 'blur(20px)', border: '1px solid var(--glass-border)', borderRadius: 32 }}>
-            <Shield style={{ width: 64, height: 64, color: 'var(--text-3)', margin: '0 auto 20px' }} />
-            <h3 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-1)', marginBottom: 10 }}>Your Vault is Empty</h3>
-            <p style={{ fontSize: 14, color: 'var(--text-2)', marginBottom: 28, maxWidth: 400, margin: '0 auto 28px' }}>Secure your digital legacy. Add accounts, keys, and sensitive information.</p>
-            <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => { 
-              if (!hasDEK()) {
-                setShowUnlockModal(true);
-                return; // Don't open form if vault is locked
-              }
-              setShowForm(true); 
-              scrollToForm(); 
-            }}
-              style={{ padding: '14px 32px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg, #4f9eff, #00e5a0)', color: '#001a12', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
-              <Plus style={{ width: 16, height: 16, display: 'inline', marginRight: 8 }} /> Secure First Asset
-            </motion.button>
-          </motion.div>
-        )}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' }}>
+            {assets && assets.map((asset, idx) => {
+              const insStyle = getInstructionStyle(asset.instruction);
+              const decryptedPassword = showPasswords[asset._id];
+              
+              // Get appropriate icon based on asset type
+              const getAssetIcon = () => {
+                if (asset.assetType?.includes('crypto')) return <Wallet size={20} />;
+                if (asset.assetType?.includes('key') || asset.assetType?.includes('seed')) return <Key size={20} />;
+                if (asset.assetType?.includes('document')) return <FileText size={20} />;
+                if (asset.assetType?.includes('financial')) return <CreditCard size={20} />;
+                return <Shield size={20} />;
+              };
+              
+              return (
+                <motion.div 
+                  key={asset._id} 
+                  initial={{ opacity: 0, y: 16 }} 
+                  animate={{ opacity: 1, y: 0 }} 
+                  transition={{ delay: idx * 0.05 }}
+                  style={{
+                    background: '#050d1a',
+                    border: '1px solid rgba(255,255,255,0.04)',
+                    borderRadius: '12px',
+                    padding: '20px',
+                    transition: 'all 200ms'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.borderColor = 'rgba(59, 130, 246, 0.2)';
+                    e.target.style.transform = 'translateY(-2px)';
+                    e.target.style.boxShadow = '0 20px 40px -10px rgba(59, 130, 246, 0.1)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.borderColor = 'rgba(255,255,255,0.04)';
+                    e.target.style.transform = 'translateY(0)';
+                    e.target.style.boxShadow = 'none';
+                  }}
+                >
+                  {/* Header with icon and actions */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                    <div style={{
+                      width: '48px',
+                      height: '48px',
+                      borderRadius: '12px',
+                      background: 'rgba(59, 130, 246, 0.1)',
+                      border: '1px solid rgba(59, 130, 246, 0.15)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#3b82f6'
+                    }}>
+                      {getAssetIcon()}
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      {deleteConfirm === asset._id ? (
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button 
+                            onClick={() => { deleteMutation.mutate(asset._id); setDeleteConfirm(null); }}
+                            style={{
+                              padding: '6px 12px',
+                              borderRadius: '6px',
+                              background: 'rgba(239, 68, 68, 0.1)',
+                              border: '1px solid rgba(239, 68, 68, 0.2)',
+                              color: '#ef4444',
+                              fontSize: '12px',
+                              fontWeight: 500,
+                              cursor: 'pointer',
+                              transition: 'all 150ms'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.target.style.background = 'rgba(239, 68, 68, 0.2)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.target.style.background = 'rgba(239, 68, 68, 0.1)';
+                            }}
+                          >
+                            Confirm
+                          </button>
+                          <button 
+                            onClick={() => setDeleteConfirm(null)}
+                            style={{
+                              padding: '6px 12px',
+                              borderRadius: '6px',
+                              background: 'rgba(255, 255, 255, 0.04)',
+                              border: '1px solid rgba(255, 255, 255, 0.1)',
+                              color: '#64748b',
+                              fontSize: '12px',
+                              cursor: 'pointer',
+                              transition: 'all 150ms'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.target.style.background = 'rgba(255, 255, 255, 0.08)';
+                              e.target.style.color = '#ffffff';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.target.style.background = 'rgba(255, 255, 255, 0.04)';
+                              e.target.style.color = '#64748b';
+                            }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <motion.button 
+                            whileHover={{ scale: 1.1 }} 
+                            whileTap={{ scale: 0.9 }} 
+                            onClick={() => handleEdit(asset)}
+                            style={{
+                              padding: '8px',
+                              borderRadius: '8px',
+                              background: 'rgba(255, 255, 255, 0.04)',
+                              border: '1px solid rgba(255, 255, 255, 0.1)',
+                              color: '#64748b',
+                              cursor: 'pointer',
+                              transition: 'all 150ms'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.target.style.color = '#ffffff';
+                              e.target.style.background = 'rgba(255, 255, 255, 0.08)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.target.style.color = '#64748b';
+                              e.target.style.background = 'rgba(255, 255, 255, 0.04)';
+                            }}
+                          >
+                            <Pencil size={16} />
+                          </motion.button>
+                          <motion.button 
+                            whileHover={{ scale: 1.05 }} 
+                            whileTap={{ scale: 0.95 }} 
+                            onClick={() => setDeleteConfirm(asset._id)}
+                            style={{
+                              padding: '8px',
+                              borderRadius: '8px',
+                              background: 'rgba(255, 255, 255, 0.04)',
+                              border: '1px solid rgba(255, 255, 255, 0.1)',
+                              color: '#64748b',
+                              cursor: 'pointer',
+                              transition: 'all 150ms'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.target.style.color = '#ef4444';
+                              e.target.style.background = 'rgba(239, 68, 68, 0.04)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.target.style.color = '#64748b';
+                              e.target.style.background = 'rgba(255, 255, 255, 0.04)';
+                            }}
+                          >
+                            <Trash2 size={16} />
+                          </motion.button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Platform name */}
+                  <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#ffffff', marginBottom: '12px' }}>
+                    {asset.platform}
+                  </h3>
+
+                  {/* Category tags */}
+                  {asset.assetType && asset.assetType !== 'general' && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
+                      <span style={{
+                        padding: '4px 8px',
+                        borderRadius: '6px',
+                        background: 'rgba(251, 146, 60, 0.1)',
+                        border: '1px solid rgba(251, 146, 60, 0.2)',
+                        color: '#fb923c',
+                        fontSize: '10px',
+                        fontWeight: 500,
+                        textTransform: 'uppercase'
+                      }}>
+                        {asset.assetType.replace(/_/g, ' ')}
+                      </span>
+                      {asset.cryptocurrency && (
+                        <span style={{
+                          padding: '4px 8px',
+                          borderRadius: '6px',
+                          background: 'rgba(59, 130, 246, 0.1)',
+                          border: '1px solid rgba(59, 130, 246, 0.2)',
+                          color: '#3b82f6',
+                          fontSize: '10px',
+                          fontWeight: 500
+                        }}>
+                          {asset.cryptocurrency}
+                        </span>
+                      )}
+                      {asset.blockchain && (
+                        <span style={{
+                          padding: '4px 8px',
+                          borderRadius: '6px',
+                          background: 'rgba(139, 92, 246, 0.1)',
+                          border: '1px solid rgba(139, 92, 246, 0.2)',
+                          color: '#8b5cf6',
+                          fontSize: '10px',
+                          fontWeight: 500
+                        }}>
+                          {asset.blockchain}
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Username */}
+                  <div style={{ marginBottom: '16px' }}>
+                    <span style={{
+                      fontSize: '10px',
+                      color: '#64748b',
+                      fontWeight: 500,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.1em'
+                    }}>
+                      Username
+                    </span>
+                    <p style={{ fontSize: '14px', color: '#ffffff', marginTop: '4px', margin: 0 }}>
+                      {asset.username}
+                    </p>
+                  </div>
+                  
+                  {/* Password field */}
+                  <div style={{ marginBottom: '16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                      <span style={{
+                        fontSize: '10px',
+                        color: '#64748b',
+                        fontWeight: 500,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.1em'
+                      }}>
+                        Password
+                      </span>
+                      {asset.clientEncrypted && (
+                        <span style={{
+                          fontSize: '10px',
+                          color: '#22c55e',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          fontWeight: 500,
+                          background: 'rgba(34, 197, 94, 0.1)',
+                          padding: '2px 6px',
+                          borderRadius: '4px',
+                          border: '1px solid rgba(34, 197, 94, 0.2)'
+                        }}>
+                          <Lock size={10} /> Client Encrypted
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
+                      <span style={{
+                        fontFamily: 'monospace',
+                        fontSize: '14px',
+                        color: '#ffffff',
+                        flex: 1,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        {decryptedPassword || 'â¢â¢â¢â¢â¢â¢â¢â¢â¢â¢'}
+                      </span>
+                      <button 
+                        onClick={() => handleShowPassword(asset._id, asset.password)} 
+                        style={{
+                          padding: '6px',
+                          color: '#64748b',
+                          cursor: 'pointer',
+                          transition: 'all 150ms',
+                          background: 'none',
+                          border: 'none',
+                          borderRadius: '4px'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.target.style.color = '#ffffff';
+                          e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.04)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.color = '#64748b';
+                          e.target.style.backgroundColor = 'transparent';
+                        }}
+                      >
+                        {decryptedPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                      {decryptedPassword && (
+                        <button
+                          onClick={async () => {
+                            try {
+                              await navigator.clipboard.writeText(decryptedPassword);
+                              toast.success('Copied! Auto-clears in 30s', { duration: 2500 });
+                              setTimeout(async () => {
+                                try {
+                                  const c = await navigator.clipboard.readText();
+                                  if (c === decryptedPassword) await navigator.clipboard.writeText('');
+                                } catch { return; }
+                              }, 30000);
+                            } catch { toast.error('Copy failed'); }
+                          }}
+                          style={{
+                            padding: '6px',
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            color: '#64748b',
+                            transition: 'all 150ms',
+                            borderRadius: '4px'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.target.style.color = '#ffffff';
+                            e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.04)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.target.style.color = '#64748b';
+                            e.target.style.backgroundColor = 'transparent';
+                          }}
+                        >
+                          <Copy size={14} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div style={{ 
+                    paddingTop: '16px', 
+                    borderTop: '1px solid rgba(255,255,255,0.04)', 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center' 
+                  }}>
+                    <span style={{ 
+                      fontSize: '12px', 
+                      fontWeight: 600, 
+                      color: insStyle.color, 
+                      background: insStyle.bg, 
+                      border: `1px solid ${insStyle.border}`, 
+                      borderRadius: '6px', 
+                      padding: '4px 10px', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '6px' 
+                    }}>
+                      <Lock style={{ width: 12, height: 12 }} /> 
+                      {asset.instruction}
+                    </span>
+                    {asset.url && (
+                      <motion.a 
+                        whileHover={{ scale: 1.1 }} 
+                        href={asset.url.startsWith('http') ? asset.url : `https://${asset.url}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        style={{ 
+                          color: '#64748b', 
+                          display: 'flex',
+                          textDecoration: 'none',
+                          padding: '6px',
+                          borderRadius: '4px',
+                          transition: 'all 150ms'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.target.style.color = '#ffffff';
+                          e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.04)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.color = '#64748b';
+                          e.target.style.backgroundColor = 'transparent';
+                        }}
+                      >
+                        <ExternalLink style={{ width: 16, height: 16 }} />
+                      </motion.a>
+                    )}
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+
+          {(!assets || assets.length === 0) && !showForm && (
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              style={{ 
+                textAlign: 'center', 
+                padding: '80px 20px', 
+                background: '#050d1a', 
+                backdropFilter: 'blur(20px)', 
+                border: '1px solid rgba(255,255,255,0.04)', 
+                borderRadius: '16px' 
+              }}
+            >
+              <Shield style={{ 
+                width: '64px', 
+                height: '64px', 
+                color: '#64748b', 
+                margin: '0 auto 20px' 
+              }} />
+              <h3 style={{ 
+                fontSize: '22px', 
+                fontWeight: 700, 
+                color: '#ffffff', 
+                marginBottom: '10px' 
+              }}>
+                Your Vault is Empty
+              </h3>
+              <p style={{ 
+                fontSize: '14px', 
+                color: '#64748b', 
+                marginBottom: '28px', 
+                maxWidth: '400px', 
+                margin: '0 auto 28px' 
+              }}>
+                Secure your digital legacy. Add accounts, keys, and sensitive information.
+              </p>
+              <motion.button 
+                whileHover={{ scale: 1.04 }} 
+                whileTap={{ scale: 0.96 }} 
+                onClick={() => { 
+                  if (!hasDEK()) {
+                    setShowUnlockModal(true);
+                    return;
+                  }
+                  setShowForm(true); 
+                  scrollToForm(); 
+                }}
+                style={{ 
+                  padding: '14px 32px', 
+                  borderRadius: '8px', 
+                  border: 'none', 
+                  background: 'linear-gradient(135deg, #4f9eff, #00e5a0)', 
+                  color: '#001a12', 
+                  fontWeight: 600, 
+                  fontSize: '14px', 
+                  cursor: 'pointer',
+                  transition: 'all 150ms'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.background = 'linear-gradient(135deg, #3b82f6, #00e5a0)';
+                  e.target.style.transform = 'translateY(-1px)';
+                  e.target.style.boxShadow = '0 10px 25px -5px rgba(79, 158, 255, 0.25)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.background = 'linear-gradient(135deg, #4f9eff, #00e5a0)';
+                  e.target.style.transform = 'translateY(0)';
+                  e.target.style.boxShadow = 'none';
+                }}
+              >
+                <Plus style={{ 
+                  width: 16, 
+                  height: 16, 
+                  display: 'inline', 
+                  marginRight: '8px',
+                  verticalAlign: 'middle'
+                }} /> 
+                Secure First Asset
+              </motion.button>
+            </motion.div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -1,637 +1,966 @@
-import { useState, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { FileText, Plus, ArrowLeft, Upload, Shield, Home, Car, FileCheck, Building, Trash2, Download, AlertCircle, Lock } from 'lucide-react';
+import { 
+  FileText, ArrowLeft, Upload, Cloud, Download, Trash2, 
+  CheckCircle, AlertCircle, Loader2, Eye, EyeOff, Search, Filter, 
+  FileCheck, FileWarning, FileX, Shield, Zap, Clock, Settings
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import toast from 'react-hot-toast';
-import { getMasterDEK, hasDEK, encryptText, isCryptoSupported } from '../utils/crypto';
+import Sidebar from '../components/Sidebar';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
-
-const documentTypes = [
-  { value: 'deed', label: 'Property Deed', icon: Home },
-  { value: 'title', label: 'Vehicle Title', icon: Car },
-  { value: 'will', label: 'Last Will & Testament', icon: FileText },
-  { value: 'trust', label: 'Trust Document', icon: Shield },
-  { value: 'poa', label: 'Power of Attorney', icon: FileCheck },
-  { value: 'insurance', label: 'Insurance Policy', icon: Shield },
-  { value: 'tax', label: 'Tax Records', icon: FileText },
-  { value: 'medical', label: 'Medical Directives', icon: FileCheck },
-  { value: 'financial', label: 'Financial Records', icon: Building },
-  { value: 'other', label: 'Other Legal Document', icon: FileText }
-];
-
-const originalLocations = [
-  { value: 'home_safe', label: 'Home Safe' },
-  { value: 'safe_deposit', label: 'Safe Deposit Box' },
-  { value: 'lawyer', label: 'With Lawyer' },
-  { value: 'accountant', label: 'With Accountant' },
-  { value: 'family_member', label: 'With Family Member' },
-  { value: 'other', label: 'Other Location' }
-];
 
 const LegalDocuments = () => {
   const { token } = useAuth();
   const queryClient = useQueryClient();
-  const [showForm, setShowForm] = useState(false);
-  const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const fileInputRef = useRef(null);
+  const [dragActive, setDragActive] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [cryptoSupported, setCryptoSupported] = useState(true);
-  const [showEncryptInfo, setShowEncryptInfo] = useState(false);
-  
-  const [formData, setFormData] = useState({
-    type: 'deed',
-    title: '',
-    propertyAddress: '',
-    parcelId: '',
-    originalLocationType: 'home_safe',
-    originalLocationDetails: '',
-    instructionsForBeneficiary: '',
-    notarized: false
-  });
-  const [files, setFiles] = useState([]);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [expandedScanResults, setExpandedScanResults] = useState(new Set());
 
-  useEffect(() => {
-    setCryptoSupported(isCryptoSupported());
-  }, []);
-
-  const { data: documents, isPending: isLoading } = useQuery({
+  // Fetch documents
+  const { data: documents = [], isPending: isLoading } = useQuery({
     queryKey: ['legal-documents'],
     queryFn: async () => {
       const { data } = await axios.get(`${API_BASE}/legal-documents`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      return data.data;
+      return data.data || [];
     },
     enabled: !!token,
   });
 
-  const createMutation = useMutation({
-    mutationFn: async (formDataWithFiles) => {
-      return axios.post(`${API_BASE}/legal-documents`, formDataWithFiles, {
-        headers: { Authorization: `Bearer ${token}` }
+  // Upload mutation
+  const uploadMutation = useMutation({
+    mutationFn: async (file) => {
+      const formData = new FormData();
+      formData.append('document', file);
+      
+      const response = await axios.post(`${API_BASE}/legal-documents`, formData, {
+        headers: { 
+          'Content-Type': 'multipart/form-data',
+          Authorization: `Bearer ${token}`
+        },
+        timeout: 60000
       });
+      
+      return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries(['legal-documents']);
-      setShowForm(false);
-      setFormData({
-        type: 'deed',
-        title: '',
-        propertyAddress: '',
-        parcelId: '',
-        originalLocationType: 'home_safe',
-        originalLocationDetails: '',
-        instructionsForBeneficiary: '',
-        notarized: false
-      });
-      setFiles([]);
-      toast.success('Document added to your legal binder!');
+      toast.success('Document uploaded successfully!');
     },
     onError: (error) => {
-      toast.error(error.response?.data?.message || 'Failed to add document');
+      console.error('Upload error:', error);
+      toast.error(error.response?.data?.message || 'Failed to upload document');
     }
   });
 
+  // Scan mutation
+  const scanMutation = useMutation({
+    mutationFn: async (documentId) => {
+      const response = await axios.post(`${API_BASE}/legal-documents/${documentId}/scan`, {}, {
+        headers: { Authorization: `Bearer ${token}` },
+        timeout: 30000
+      });
+      return response.data;
+    },
+    onSuccess: (data, documentId) => {
+      queryClient.invalidateQueries(['legal-documents']);
+      toast.success('OCR scan completed!');
+    },
+    onError: (error) => {
+      console.error('Scan error:', error);
+      toast.error(error.response?.data?.message || 'Failed to scan document');
+    }
+  });
+
+  // Delete mutation
   const deleteMutation = useMutation({
-    mutationFn: (id) => axios.delete(`${API_BASE}/legal-documents/${id}`, {
+    mutationFn: (documentId) => axios.delete(`${API_BASE}/legal-documents/${documentId}`, {
       headers: { Authorization: `Bearer ${token}` }
     }),
     onSuccess: () => {
-      toast.success('Document removed');
       queryClient.invalidateQueries(['legal-documents']);
+      toast.success('Document deleted');
+      setDeleteConfirm(null);
     },
     onError: () => {
-      toast.error('Failed to remove document');
+      toast.error('Failed to delete document');
     }
   });
 
-  // Encrypt file using DEK
-  const encryptFile = async (file) => {
-    if (!hasDEK()) {
-      throw new Error('Vault not unlocked. Please unlock your vault first.');
+  // Drag handlers
+  const handleDrag = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === 'dragenter' || e.type === 'dragover') {
+      setDragActive(true);
+    } else if (e.type === 'dragleave') {
+      setDragActive(false);
     }
-    
-    const dek = getMasterDEK();
-    const arrayBuffer = await file.arrayBuffer();
-    
-    // Generate IV
-    const iv = window.crypto.getRandomValues(new Uint8Array(12));
-    
-    // Encrypt file content
-    const encrypted = await window.crypto.subtle.encrypt(
-      { name: 'AES-GCM', iv },
-      dek,
-      arrayBuffer
-    );
-    
-    // Combine IV and encrypted data
-    const combined = new Uint8Array(iv.length + encrypted.byteLength);
-    combined.set(iv);
-    combined.set(new Uint8Array(encrypted), iv.length);
-    
-    // Return as Blob
-    return {
-      blob: new Blob([combined]),
-      iv: btoa(String.fromCharCode(...iv))
-    };
   };
 
-  const handleSubmit = async (e) => {
+  const handleDrop = (e) => {
     e.preventDefault();
-    setUploading(true);
+    e.stopPropagation();
+    setDragActive(false);
     
-    // Check if vault is unlocked for encryption
-    if (!hasDEK()) {
-      toast.error('Please unlock your vault first to enable encryption');
-      setUploading(false);
-      setShowEncryptInfo(true);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFileUpload(e.dataTransfer.files[0]);
+    }
+  };
+
+  // File upload handler
+  const handleFileUpload = async (file) => {
+    // Validate file type
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/tiff'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Please upload a PDF, JPEG, PNG, or TIFF file');
       return;
     }
-    
-    try {
-      const data = new FormData();
-      data.append('type', formData.type);
-      data.append('title', formData.title);
-      data.append('propertyAddress', formData.propertyAddress);
-      data.append('parcelId', formData.parcelId);
-      data.append('originalLocation', JSON.stringify({
-        type: formData.originalLocationType,
-        details: formData.originalLocationDetails
-      }));
-      
-      // Encrypt instructions if provided
-      if (formData.instructionsForBeneficiary) {
-        const dek = getMasterDEK();
-        const encryptedInstructions = await encryptText(formData.instructionsForBeneficiary, dek);
-        data.append('instructionsForBeneficiary', encryptedInstructions);
-        data.append('instructionsEncrypted', 'true');
-      } else {
-        data.append('instructionsForBeneficiary', '');
-      }
-      
-      data.append('notarized', formData.notarized);
-      data.append('clientEncrypted', 'true');
-      
-      // Encrypt and append files
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const { blob, iv } = await encryptFile(file);
-        data.append('attachments', blob, file.name);
-        data.append(`attachmentIv_${i}`, iv);
-      }
-      data.append('attachmentCount', files.length.toString());
 
-      await createMutation.mutateAsync(data);
-    } catch (err) {
-      console.error('Upload error:', err);
-      toast.error(err.message || 'Failed to upload document');
+    // Validate file size (10MB max)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('File size must be less than 10MB');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      await uploadMutation.mutateAsync(file);
     } finally {
       setUploading(false);
     }
   };
 
-  const handleFileChange = (e) => {
-    const selectedFiles = Array.from(e.target.files);
-    if (selectedFiles.length > 5) {
-      toast.error('Maximum 5 files allowed');
-      return;
+  // File select handler
+  const handleFileSelect = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      handleFileUpload(e.target.files[0]);
     }
-    setFiles(selectedFiles);
   };
 
-  const getDocumentIcon = (type) => {
-    const docType = documentTypes.find(t => t.value === type);
-    const Icon = docType?.icon || FileText;
-    return Icon;
+  // Scan document
+  const handleScan = (documentId) => {
+    scanMutation.mutate(documentId);
   };
 
-  if (isLoading) return (
-    <div className="page spatial-bg" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div className="stars" />
-      <div style={{ textAlign: 'center' }}>
-        <div className="spinner" />
-        <p style={{ color: 'var(--text-2)', marginTop: 16, fontSize: 14 }}>Loading legal binder...</p>
+  // Delete document
+  const handleDelete = (documentId) => {
+    deleteMutation.mutate(documentId);
+  };
+
+  // Toggle scan results
+  const toggleScanResults = (documentId) => {
+    const newExpanded = new Set(expandedScanResults);
+    if (newExpanded.has(documentId)) {
+      newExpanded.delete(documentId);
+    } else {
+      newExpanded.add(documentId);
+    }
+    setExpandedScanResults(newExpanded);
+  };
+
+  // Get file icon
+  const getFileIcon = (mimeType) => {
+    if (mimeType === 'application/pdf') {
+      return <FileText size={24} style={{ color: '#dc2626' }} />;
+    }
+    return <FileText size={24} style={{ color: '#3b5bdb' }} />;
+  };
+
+  // Get status badge
+  const getStatusBadge = (status) => {
+    const statusConfig = {
+      PENDING: { color: '#6b7280', bg: 'rgba(107, 114, 128, 0.1)', text: 'Pending Review' },
+      PROCESSING: { color: '#3b5bdb', bg: 'rgba(59, 91, 219, 0.1)', text: 'Scanning...' },
+      VERIFIED: { color: '#10b981', bg: 'rgba(16, 185, 129, 0.1)', text: 'Verified' },
+      REJECTED: { color: '#ef4444', bg: 'rgba(239, 68, 68, 0.1)', text: 'Rejected' }
+    };
+
+    const config = statusConfig[status] || statusConfig.PENDING;
+    
+    return (
+      <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+        status === 'PENDING' ? 'bg-slate-500/20 text-slate-400 border border-slate-500/20' :
+        status === 'PROCESSING' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/20 animate-pulse' :
+        status === 'VERIFIED' ? 'bg-green-500/20 text-green-400 border border-green-500/20' :
+        'bg-red-500/20 text-red-400 border border-red-500/20'
+      }`}>
+        {status === 'PROCESSING' && <Loader2 size={10} className="inline animate-spin mr-1" />}
+        {status === 'VERIFIED' && <CheckCircle size={10} className="inline mr-1" />}
+        {status === 'REJECTED' && <AlertCircle size={10} className="inline mr-1" />}
+        {config.text}
+      </span>
+    );
+  };
+
+  // Format file size
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  // Format date
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric' 
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <div style={{ display: 'flex' }}>
+        <Sidebar />
+        <div style={{
+          marginLeft: '240px',
+          minHeight: '100vh',
+          background: '#030508',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{
+              width: '48px',
+              height: '48px',
+              border: '4px solid rgba(255,255,255,0.1)',
+              borderTop: '4px solid #3b82f6',
+              borderRadius: '50%',
+              animation: 'spin 1s linear infinite',
+              margin: '0 auto 16px'
+            }} />
+            <p style={{ color: '#64748b', fontSize: 14 }}>Loading documents...</p>
+          </div>
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
 
   return (
-    <div className="page spatial-bg">
-      <div className="stars" />
-      <div className="container">
-        <Link to="/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: 'var(--text-2)', marginBottom: 20, textDecoration: 'none', fontWeight: 600, fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-          <ArrowLeft size={14} /> Back to Dashboard
-        </Link>
-
-        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 8 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-              <div style={{ width: 48, height: 48, borderRadius: 14, background: 'linear-gradient(135deg, rgba(79,158,255,0.3), rgba(0,229,160,0.3))', border: '1px solid rgba(79,158,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <FileText style={{ width: 22, height: 22, color: '#4f9eff' }} />
+    <div style={{ display: 'flex' }}>
+      <Sidebar />
+      <div style={{
+        marginLeft: '240px',
+        minHeight: '100vh',
+        background: '#030508',
+        flex: 1,
+        padding: '32px'
+      }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+          {/* Page Header */}
+          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
+            <Link 
+              to="/dashboard" 
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                color: '#64748b',
+                marginBottom: '32px',
+                fontSize: '14px',
+                fontWeight: 500,
+                textDecoration: 'none',
+                transition: 'all 150ms'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.color = '#ffffff';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.color = '#64748b';
+              }}
+            >
+              <ArrowLeft size={14} /> Back to Dashboard
+            </Link>
+            
+            <div style={{ textAlign: 'center', marginBottom: '48px' }}>
+              <div style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '8px 20px',
+                borderRadius: '20px',
+                border: '1px solid rgba(59, 130, 246, 0.25)',
+                background: 'rgba(59, 130, 246, 0.08)',
+                color: '#60a5fa',
+                fontSize: '14px',
+                fontWeight: 500,
+                marginBottom: '24px'
+              }}>
+                <span style={{
+                  position: 'relative',
+                  display: 'flex',
+                  height: '8px',
+                  width: '8px'
+                }}>
+                  <span style={{
+                    position: 'absolute',
+                    display: 'inline-flex',
+                    height: '100%',
+                    width: '100%',
+                    borderRadius: '50%',
+                    background: '#60a5fa',
+                    opacity: 0.75,
+                    animation: 'ping 1s cubic-bezier(0, 0, 0.2, 1) infinite'
+                  }}/>
+                  <span style={{
+                    position: 'relative',
+                    display: 'inline-flex',
+                    borderRadius: '50%',
+                    height: '8px',
+                    width: '8px',
+                    background: '#60a5fa'
+                  }}/>
+                </span>
+                AI-Powered OCR Notarization
               </div>
-              <div>
-                <h1 className="display" style={{ fontSize: 28 }}>Legal Binder</h1>
-                <p style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 2 }}>Property deeds, titles, and important documents</p>
-              </div>
+              
+              <h1 style={{
+                fontSize: '48px',
+                fontWeight: 700,
+                background: 'linear-gradient(to bottom right, #ffffff, #e2e8f0, #94a3b8)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+                marginBottom: '16px'
+              }}>
+                Legal Document Vault
+              </h1>
+              <p style={{
+                color: '#64748b',
+                fontSize: '18px',
+                maxWidth: '600px',
+                margin: '0 auto'
+              }}>
+                Upload, scan, and notarize your legal documents with advanced AI-powered OCR technology
+              </p>
             </div>
-            <motion.button 
-              whileHover={{ scale: 1.02 }} 
-              whileTap={{ scale: 0.98 }}
-              onClick={() => setShowForm(!showForm)}
-              style={{ padding: '12px 20px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg, #4f9eff, #00e5a0)', color: '#001a12', fontWeight: 700, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
+          </motion.div>
+
+          {/* Search and Filter Bar */}
+          <div style={{ display: 'flex', gap: '16px', marginBottom: '32px' }}>
+            <div style={{ flex: 1, position: 'relative' }}>
+              <Search style={{
+                position: 'absolute',
+                left: '12px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                width: '16px',
+                height: '16px',
+                color: '#64748b'
+              }} />
+              <input 
+                style={{
+                  width: '100%',
+                  padding: '12px 12px 12px 40px',
+                  background: '#050d1a',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: '8px',
+                  color: '#ffffff',
+                  fontSize: '14px',
+                  outline: 'none',
+                  transition: 'all 150ms'
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#3b82f6';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = 'rgba(255,255,255,0.1)';
+                  e.target.style.boxShadow = 'none';
+                }}
+                placeholder="Search documents..." 
+              />
+            </div>
+            <button style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '12px 16px',
+              background: '#050d1a',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: '8px',
+              color: '#64748b',
+              fontSize: '14px',
+              cursor: 'pointer',
+              transition: 'all 150ms'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.color = '#ffffff';
+              e.target.style.borderColor = 'rgba(255,255,255,0.2)';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.color = '#64748b';
+              e.target.style.borderColor = 'rgba(255,255,255,0.1)';
+            }}
             >
-              <Plus style={{ width: 16, height: 16 }} /> {showForm ? 'Cancel' : 'Add Document'}
-            </motion.button>
+              <Filter size={16} />
+              Filter
+            </button>
           </div>
-        </motion.div>
 
-        {/* Encryption Status */}
-        <motion.div 
-          initial={{ opacity: 0 }} 
-          animate={{ opacity: 1 }}
-          style={{ 
-            marginTop: 16, 
-            padding: '12px 16px', 
-            background: hasDEK() ? 'rgba(0,229,160,0.1)' : 'rgba(255,184,48,0.1)', 
-            border: `1px solid ${hasDEK() ? 'rgba(0,229,160,0.3)' : 'rgba(255,184,48,0.3)'}`,
-            borderRadius: 12,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 12
-          }}
-        >
-          <Lock size={18} style={{ color: hasDEK() ? '#00e5a0' : '#ffb830', flexShrink: 0 }} />
-          <div style={{ flex: 1 }}>
-            <p style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.5 }}>
-              {hasDEK() ? (
-                <><strong style={{ color: '#00e5a0' }}>DEK Encryption Active:</strong> Documents will be encrypted with your Data Encryption Key before upload.</>
-              ) : (
-                <><strong style={{ color: '#ffb830' }}>Vault Locked:</strong> Please unlock your vault in the Vault page first to enable DEK encryption for documents.</>
-              )}
-            </p>
-          </div>
-        </motion.div>
-
-        {/* Disclaimer */}
-        <motion.div 
-          initial={{ opacity: 0 }} 
-          animate={{ opacity: 1 }}
-          style={{ 
-            marginTop: 12, 
-            padding: '12px 16px', 
-            background: 'rgba(255,184,48,0.1)', 
-            border: '1px solid rgba(255,184,48,0.3)',
-            borderRadius: 12,
-            display: 'flex',
-            alignItems: 'flex-start',
-            gap: 12
-          }}
-        >
-          <AlertCircle size={18} style={{ color: '#ffb830', flexShrink: 0, marginTop: 2 }} />
-          <div>
-            <p style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.5 }}>
-              <strong style={{ color: '#ffb830' }}>Important:</strong> Scans are reference copies only. 
-              Legal proof may require certified copies or official records depending on your jurisdiction. 
-              Always note where the original documents are stored.
-            </p>
-          </div>
-        </motion.div>
-
-        {/* Add Document Form */}
-        <AnimatePresence>
-          {showForm && (
-            <motion.div 
-              initial={{ opacity: 0, height: 0 }} 
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              style={{ marginTop: 24 }}
+          {/* Upload Zone */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            transition={{ delay: 0.1 }}
+            style={{ marginBottom: '48px' }}
+          >
+            <div 
+              style={{
+                border: '2px dashed',
+                borderColor: dragActive ? 'rgba(59, 130, 246, 0.6)' : 'rgba(59, 130, 246, 0.3)',
+                borderRadius: '16px',
+                padding: '48px',
+                textAlign: 'center',
+                cursor: 'pointer',
+                transition: 'all 200ms',
+                background: dragActive ? 'rgba(59, 130, 246, 0.05)' : 'rgba(59, 130, 246, 0.02)'
+              }}
+              onDragEnter={handleDrag}
+              onDragLeave={handleDrag}
+              onDragOver={handleDrag}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
+              onMouseEnter={(e) => {
+                if (!dragActive) {
+                  e.target.style.borderColor = 'rgba(59, 130, 246, 0.4)';
+                  e.target.style.background = 'rgba(59, 130, 246, 0.03)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!dragActive) {
+                  e.target.style.borderColor = 'rgba(59, 130, 246, 0.3)';
+                  e.target.style.background = 'rgba(59, 130, 246, 0.02)';
+                }
+              }}
             >
-              <div style={{ background: 'var(--glass-1)', backdropFilter: 'blur(20px)', border: '1px solid var(--glass-border)', borderRadius: 24, padding: 28 }}>
-                <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 24 }}>Add Legal Document</h2>
-                <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 20 }}>
-                    <div>
-                      <label>Document Type</label>
-                      <select 
-                        value={formData.type} 
-                        onChange={e => setFormData({...formData, type: e.target.value})}
-                        style={{ width: '100%', padding: '12px', borderRadius: 10, border: '1px solid var(--glass-border)', background: 'var(--glass-2)', color: 'var(--text-1)' }}
-                      >
-                        {documentTypes.map(type => (
-                          <option key={type.value} value={type.value}>{type.label}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label>Document Title</label>
-                      <input 
-                        type="text" 
-                        placeholder="e.g., Primary Residence Deed"
-                        value={formData.title}
-                        onChange={e => setFormData({...formData, title: e.target.value})}
-                        required
-                        style={{ width: '100%', padding: '12px', borderRadius: 10, border: '1px solid var(--glass-border)', background: 'var(--glass-2)', color: 'var(--text-1)' }}
-                      />
-                    </div>
-                  </div>
-
-                  {(formData.type === 'deed' || formData.type === 'title') && (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 20 }}>
-                      <div>
-                        <label>Property Address</label>
-                        <input 
-                          type="text" 
-                          placeholder="Full property address"
-                          value={formData.propertyAddress}
-                          onChange={e => setFormData({...formData, propertyAddress: e.target.value})}
-                          style={{ width: '100%', padding: '12px', borderRadius: 10, border: '1px solid var(--glass-border)', background: 'var(--glass-2)', color: 'var(--text-1)' }}
-                        />
-                      </div>
-                      <div>
-                        <label>Parcel ID / APN</label>
-                        <input 
-                          type="text" 
-                          placeholder="Assessor's Parcel Number"
-                          value={formData.parcelId}
-                          onChange={e => setFormData({...formData, parcelId: e.target.value})}
-                          style={{ width: '100%', padding: '12px', borderRadius: 10, border: '1px solid var(--glass-border)', background: 'var(--glass-2)', color: 'var(--text-1)' }}
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 20 }}>
-                    <div>
-                      <label>Original Document Location</label>
-                      <select 
-                        value={formData.originalLocationType} 
-                        onChange={e => setFormData({...formData, originalLocationType: e.target.value})}
-                        style={{ width: '100%', padding: '12px', borderRadius: 10, border: '1px solid var(--glass-border)', background: 'var(--glass-2)', color: 'var(--text-1)' }}
-                      >
-                        {originalLocations.map(loc => (
-                          <option key={loc.value} value={loc.value}>{loc.label}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label>Location Details</label>
-                      <input 
-                        type="text" 
-                        placeholder="e.g., Safe combination: 12-34-56"
-                        value={formData.originalLocationDetails}
-                        onChange={e => setFormData({...formData, originalLocationDetails: e.target.value})}
-                        style={{ width: '100%', padding: '12px', borderRadius: 10, border: '1px solid var(--glass-border)', background: 'var(--glass-2)', color: 'var(--text-1)' }}
-                      />
-                    </div>
-                  </div>
-
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png,.tiff"
+                onChange={handleFileSelect}
+                style={{ display: 'none' }}
+              />
+              
+              {uploading ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+                  <div style={{
+                    width: '48px',
+                    height: '48px',
+                    border: '4px solid rgba(255,255,255,0.1)',
+                    borderTop: '4px solid #3b82f6',
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite'
+                  }} />
                   <div>
-                    <label>Instructions for Beneficiary</label>
-                    <textarea 
-                      placeholder="Step-by-step instructions for your beneficiary to obtain certified copies or access the original..."
-                      value={formData.instructionsForBeneficiary}
-                      onChange={e => setFormData({...formData, instructionsForBeneficiary: e.target.value})}
-                      rows={4}
-                      style={{ width: '100%', padding: '12px', borderRadius: 10, border: '1px solid var(--glass-border)', background: 'var(--glass-2)', color: 'var(--text-1)', resize: 'vertical' }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-                      <input 
-                        type="checkbox" 
-                        checked={formData.notarized}
-                        onChange={e => setFormData({...formData, notarized: e.target.checked})}
-                      />
-                      <span>This document is notarized</span>
-                    </label>
-                  </div>
-
-                  <div>
-                    <label>Upload Scans (PDF, JPG, PNG - Max 5 files, 10MB each)</label>
-                    <div style={{ 
-                      border: '2px dashed var(--glass-border)', 
-                      borderRadius: 12, 
-                      padding: '24px', 
-                      textAlign: 'center',
-                      background: 'var(--glass-2)'
+                    <p style={{
+                      fontSize: '18px',
+                      fontWeight: 600,
+                      color: '#ffffff',
+                      marginBottom: '8px'
                     }}>
-                      <input 
-                        type="file" 
-                        multiple 
-                        accept=".pdf,.jpg,.jpeg,.png,.tiff"
-                        onChange={handleFileChange}
-                        style={{ display: 'none' }}
-                        id="file-upload"
-                      />
-                      <label htmlFor="file-upload" style={{ cursor: 'pointer' }}>
-                        <Upload style={{ width: 32, height: 32, color: 'var(--text-2)', margin: '0 auto 12px' }} />
-                        <p style={{ color: 'var(--text-2)', fontSize: 14 }}>
-                          {files.length > 0 
-                            ? `${files.length} file(s) selected` 
-                            : 'Click to upload files'}
-                        </p>
-                      </label>
-                    </div>
+                      Uploading document...
+                    </p>
+                    <p style={{ fontSize: '14px', color: '#64748b' }}>
+                      Please wait while we process your file
+                    </p>
                   </div>
-
-                  <motion.button 
-                    type="submit" 
-                    whileHover={{ scale: hasDEK() ? 1.01 : 1 }} 
-                    whileTap={{ scale: hasDEK() ? 0.98 : 1 }} 
-                    disabled={uploading || createMutation.isPending || !hasDEK()}
-                    style={{ 
-                      padding: '14px 24px', 
-                      borderRadius: 12, 
-                      border: !hasDEK() ? '2px solid rgba(255,184,48,0.5)' : 'none', 
-                      background: !hasDEK() ? 'rgba(255,184,48,0.15)' : uploading ? 'var(--glass-2)' : 'linear-gradient(135deg, #4f9eff, #00e5a0)', 
-                      color: !hasDEK() ? '#ffb830' : '#001a12', 
-                      fontWeight: 700, 
-                      fontSize: 14, 
-                      cursor: (uploading || !hasDEK()) ? 'not-allowed' : 'pointer', 
-                      opacity: 1
-                    }}
+                </div>
+              ) : (
+                <div>
+                  <div style={{
+                    width: '80px',
+                    height: '80px',
+                    margin: '0 auto 24px',
+                    borderRadius: '16px',
+                    background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(139, 92, 246, 0.2))',
+                    border: '1px solid rgba(59, 130, 246, 0.15)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'transform 200ms'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.transform = 'scale(1.1)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.transform = 'scale(1)';
+                  }}
                   >
-                    {!hasDEK() ? '🔒 Unlock Vault First' : uploading ? 'Encrypting & Uploading...' : 'Add to Legal Binder'}
-                  </motion.button>
-                </form>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+                    <Upload style={{ width: '40px', height: '40px', color: '#3b82f6' }} />
+                  </div>
+                  
+                  <h3 style={{
+                    fontSize: '20px',
+                    fontWeight: 600,
+                    color: '#ffffff',
+                    marginBottom: '12px'
+                  }}>
+                    Upload Legal Document
+                  </h3>
+                  <p style={{
+                    color: '#64748b',
+                    fontSize: '14px',
+                    marginBottom: '16px'
+                  }}>
+                    Drag & drop your document here or click to browse
+                  </p>
+                  
+                  {/* OCR Feature Badge */}
+                  <div style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '6px 12px',
+                    borderRadius: '20px',
+                    background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(139, 92, 246, 0.2))',
+                    border: '1px solid rgba(59, 130, 246, 0.3)',
+                    color: '#60a5fa',
+                    fontSize: '12px',
+                    fontWeight: 500,
+                    marginBottom: '16px'
+                  }}>
+                    <Eye style={{ width: '12px', height: '12px' }} />
+                    AI OCR Scanning Enabled
+                  </div>
+                  
+                  <p style={{ color: '#475569', fontSize: '12px' }}>
+                    PDF, JPG, PNG, TIFF supported · Max 10MB
+                  </p>
+                </div>
+              )}
+            </div>
+          </motion.div>
 
-        {/* Documents List */}
-        <div style={{ marginTop: 32 }}>
-          {!documents || documents.length === 0 ? (
+          {/* Documents List */}
+          {documents.length > 0 && (
             <motion.div 
               initial={{ opacity: 0 }} 
               animate={{ opacity: 1 }} 
-              style={{ textAlign: 'center', padding: '60px 20px', background: 'var(--glass-1)', backdropFilter: 'blur(20px)', border: '1px solid var(--glass-border)', borderRadius: 24 }}
+              transition={{ delay: 0.2 }}
             >
-              <FileText style={{ width: 48, height: 48, color: 'var(--text-3)', margin: '0 auto 16px' }} />
-              <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-1)', marginBottom: 8 }}>No Documents Added</h3>
-              <p style={{ fontSize: 14, color: 'var(--text-2)', maxWidth: 400, margin: '0 auto' }}>
-                Add property deeds, vehicle titles, wills, and other important legal documents. 
-                Include where originals are stored.
-              </p>
-            </motion.div>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 20 }}>
-              <AnimatePresence>
-                {documents.map((doc, idx) => {
-                  const Icon = getDocumentIcon(doc.type);
-                  return (
-                    <motion.div 
-                      key={doc._id} 
-                      initial={{ opacity: 0, y: 20 }} 
-                      animate={{ opacity: 1, y: 0 }} 
-                      transition={{ delay: idx * 0.05 }}
-                      style={{ 
-                        background: 'var(--glass-1)', 
-                        backdropFilter: 'blur(20px)', 
-                        border: '1px solid var(--glass-border)', 
-                        borderRadius: 20, 
-                        padding: 24 
+              <h2 style={{
+                fontSize: '24px',
+                fontWeight: 700,
+                color: '#ffffff',
+                marginBottom: '32px'
+              }}>
+                Your Documents ({documents.length})
+              </h2>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                <AnimatePresence>
+                  {documents.map((doc, index) => (
+                    <motion.div
+                      key={doc._id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ delay: index * 0.05 }}
+                      style={{
+                        background: '#050d1a',
+                        border: '1px solid rgba(255,255,255,0.04)',
+                        borderRadius: '12px',
+                        padding: '24px',
+                        transition: 'all 200ms'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.target.style.borderColor = 'rgba(59, 130, 246, 0.2)';
+                        e.target.style.transform = 'translateY(-2px)';
+                        e.target.style.boxShadow = '0 20px 40px -10px rgba(59, 130, 246, 0.1)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.borderColor = 'rgba(255,255,255,0.04)';
+                        e.target.style.transform = 'translateY(0)';
+                        e.target.style.boxShadow = 'none';
                       }}
                     >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
-                        <div style={{ 
-                          width: 44, 
-                          height: 44, 
-                          borderRadius: 12, 
-                          background: 'rgba(79,158,255,0.15)', 
-                          border: '1px solid rgba(79,158,255,0.25)', 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          justifyContent: 'center' 
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', marginBottom: '16px' }}>
+                        {/* File icon */}
+                        <div style={{
+                          width: '48px',
+                          height: '48px',
+                          borderRadius: '12px',
+                          background: 'rgba(59, 130, 246, 0.1)',
+                          border: '1px solid rgba(59, 130, 246, 0.15)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0
                         }}>
-                          <Icon style={{ width: 20, height: 20, color: '#4f9eff' }} />
+                          {getFileIcon(doc.mimeType)}
                         </div>
-                        {deleteConfirm === doc._id ? (
-                          <div style={{ display: 'flex', gap: 6 }}>
-                            <button 
-                              onClick={() => { deleteMutation.mutate(doc._id); setDeleteConfirm(null); }}
-                              style={{ padding: '5px 10px', borderRadius: 7, background: 'rgba(255,77,109,0.15)', border: '1px solid rgba(255,77,109,0.3)', color: '#ff4d6d', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
-                            >
-                              Delete
-                            </button>
-                            <button 
-                              onClick={() => setDeleteConfirm(null)}
-                              style={{ padding: '5px 10px', borderRadius: 7, background: 'var(--glass-1)', border: '1px solid var(--glass-border)', color: 'var(--text-2)', fontSize: 11, cursor: 'pointer' }}
-                            >
-                              Cancel
-                            </button>
+                        
+                        {/* Document info */}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                            <h3 style={{
+                              fontSize: '18px',
+                              fontWeight: 600,
+                              color: '#ffffff',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap'
+                            }}>
+                              {doc.title || doc.originalName || 'Untitled Document'}
+                            </h3>
+                            {getStatusBadge(doc.status || 'PENDING')}
                           </div>
-                        ) : (
-                          <motion.button 
-                            whileHover={{ scale: 1.1 }} 
-                            whileTap={{ scale: 0.9 }} 
-                            onClick={() => setDeleteConfirm(doc._id)}
-                            style={{ padding: 8, borderRadius: 10, border: '1px solid rgba(255,77,109,0.2)', background: 'rgba(255,77,109,0.08)', cursor: 'pointer' }}
-                          >
-                            <Trash2 style={{ width: 14, height: 14, color: 'var(--danger)' }} />
-                          </motion.button>
-                        )}
-                      </div>
-
-                      <h4 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-1)', marginBottom: 8 }}>{doc.title}</h4>
-                      <p style={{ fontSize: 12, color: 'var(--text-2)', textTransform: 'capitalize', marginBottom: 12 }}>
-                        {documentTypes.find(t => t.value === doc.type)?.label || doc.type}
-                      </p>
-
-                      {doc.propertyAddress && (
-                        <p style={{ fontSize: 12, color: 'var(--text-2)', marginBottom: 8 }}>
-                          <strong>Address:</strong> {doc.propertyAddress}
-                        </p>
-                      )}
-
-                      {doc.originalLocation && (
-                        <p style={{ fontSize: 12, color: 'var(--text-2)', marginBottom: 8 }}>
-                          <strong>Original:</strong> {originalLocations.find(l => l.value === doc.originalLocation.type)?.label} - {doc.originalLocation.details}
-                        </p>
-                      )}
-
-                      <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-                        {doc.attachments?.some(a => a.encrypted) && (
-                          <span style={{ 
-                            fontSize: 11, 
-                            color: '#4f9eff', 
-                            background: 'rgba(79,158,255,0.1)', 
-                            border: '1px solid rgba(79,158,255,0.2)', 
-                            padding: '3px 8px', 
-                            borderRadius: 6,
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 4
-                          }}>
-                            <Lock size={12} /> Encrypted before upload
-                          </span>
-                        )}
-                        {doc.notarized && (
-                          <span style={{ 
-                            fontSize: 11, 
-                            color: '#00e5a0', 
-                            background: 'rgba(0,229,160,0.1)', 
-                            border: '1px solid rgba(0,229,160,0.2)', 
-                            padding: '3px 8px', 
-                            borderRadius: 6,
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 4
-                          }}>
-                            <FileCheck size={12} /> Notarized
-                          </span>
-                        )}
-                      </div>
-
-                      {doc.attachments && doc.attachments.length > 0 && (
-                        <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--glass-border)' }}>
-                          <p style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 8 }}>Attachments:</p>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                            {doc.attachments.map((att, i) => (
-                              <a 
-                                key={i}
-                                href={`${API_BASE}/legal-documents/${doc._id}/attachments/${att._id}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                style={{ 
-                                  fontSize: 12, 
-                                  fontWeight: 600,
-                                  color: '#4f9eff', 
-                                  display: 'flex', 
-                                  alignItems: 'center', 
-                                  gap: 6,
-                                  padding: '8px 12px',
-                                  background: 'rgba(79,158,255,0.15)',
-                                  border: '1px solid rgba(79,158,255,0.3)',
-                                  borderRadius: 8,
-                                  textDecoration: 'none',
-                                  transition: 'all 0.2s'
+                          
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '14px', color: '#64748b', marginBottom: '16px' }}>
+                            <span>{formatFileSize(doc.size || 0)}</span>
+                            <span>Uploaded {formatDate(doc.createdAt)}</span>
+                          </div>
+                          
+                          {/* Action buttons */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                            <motion.button
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.98 }}
+                              onClick={() => handleScan(doc._id)}
+                              disabled={scanMutation.isPending}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                padding: '8px 16px',
+                                background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                                border: 'none',
+                                borderRadius: '8px',
+                                color: '#ffffff',
+                                fontSize: '14px',
+                                fontWeight: 500,
+                                cursor: scanMutation.isPending ? 'not-allowed' : 'pointer',
+                                transition: 'all 150ms',
+                                opacity: scanMutation.isPending ? 0.7 : 1
+                              }}
+                              onMouseEnter={(e) => {
+                                if (!scanMutation.isPending) {
+                                  e.target.style.background = 'linear-gradient(135deg, #2563eb, #7c3aed)';
+                                  e.target.style.transform = 'translateY(-1px)';
+                                  e.target.style.boxShadow = '0 10px 25px -5px rgba(59, 130, 246, 0.25)';
+                                }
+                              }}
+                              onMouseLeave={(e) => {
+                                if (!scanMutation.isPending) {
+                                  e.target.style.background = 'linear-gradient(135deg, #3b82f6, #8b5cf6)';
+                                  e.target.style.transform = 'translateY(0)';
+                                  e.target.style.boxShadow = 'none';
+                                }
+                              }}
+                            >
+                              {scanMutation.isPending && scanMutation.variables === doc._id ? (
+                                <div style={{
+                                  width: '14px',
+                                  height: '14px',
+                                  border: '2px solid transparent',
+                                  borderTop: '2px solid #ffffff',
+                                  borderRadius: '50%',
+                                  animation: 'spin 1s linear infinite'
+                                }} />
+                              ) : (
+                                <Eye size={14} />
+                              )}
+                              Scan with OCR
+                            </motion.button>
+                            
+                            <motion.button
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.98 }}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                padding: '8px 12px',
+                                background: 'rgba(255, 255, 255, 0.04)',
+                                border: '1px solid rgba(255, 255, 255, 0.1)',
+                                color: '#e2e8f0',
+                                fontSize: '14px',
+                                fontWeight: 500,
+                                borderRadius: '8px',
+                                cursor: 'pointer',
+                                transition: 'all 150ms'
+                              }}
+                              onMouseEnter={(e) => {
+                                e.target.style.color = '#ffffff';
+                                e.target.style.background = 'rgba(255, 255, 255, 0.08)';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.target.style.color = '#e2e8f0';
+                                e.target.style.background = 'rgba(255, 255, 255, 0.04)';
+                              }}
+                            >
+                              <Download size={14} />
+                              Download
+                            </motion.button>
+                            
+                            {deleteConfirm === doc._id ? (
+                              <div style={{ display: 'flex', gap: '8px' }}>
+                                <motion.button
+                                  whileHover={{ scale: 1.02 }}
+                                  whileTap={{ scale: 0.98 }}
+                                  onClick={() => handleDelete(doc._id)}
+                                  style={{
+                                    padding: '8px 12px',
+                                    borderRadius: '6px',
+                                    background: 'rgba(239, 68, 68, 0.1)',
+                                    border: '1px solid rgba(239, 68, 68, 0.2)',
+                                    color: '#ef4444',
+                                    fontSize: '14px',
+                                    fontWeight: 500,
+                                    cursor: 'pointer',
+                                    transition: 'all 150ms'
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.target.style.background = 'rgba(239, 68, 68, 0.2)';
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.target.style.background = 'rgba(239, 68, 68, 0.1)';
+                                  }}
+                                >
+                                  Confirm
+                                </motion.button>
+                                <motion.button
+                                  whileHover={{ scale: 1.02 }}
+                                  whileTap={{ scale: 0.98 }}
+                                  onClick={() => setDeleteConfirm(null)}
+                                  style={{
+                                    padding: '8px 12px',
+                                    borderRadius: '6px',
+                                    background: 'rgba(255, 255, 255, 0.04)',
+                                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                                    color: '#64748b',
+                                    fontSize: '14px',
+                                    cursor: 'pointer',
+                                    transition: 'all 150ms'
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.target.style.color = '#ffffff';
+                                    e.target.style.background = 'rgba(255, 255, 255, 0.08)';
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.target.style.color = '#64748b';
+                                    e.target.style.background = 'rgba(255, 255, 255, 0.04)';
+                                  }}
+                                >
+                                  Cancel
+                                </motion.button>
+                              </div>
+                            ) : (
+                              <motion.button
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                                onClick={() => setDeleteConfirm(doc._id)}
+                                style={{
+                                  padding: '8px',
+                                  borderRadius: '8px',
+                                  background: 'rgba(255, 255, 255, 0.04)',
+                                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                                  color: '#64748b',
+                                  cursor: 'pointer',
+                                  transition: 'all 150ms'
                                 }}
                                 onMouseEnter={(e) => {
-                                  e.currentTarget.style.background = 'rgba(79,158,255,0.25)';
-                                  e.currentTarget.style.borderColor = 'rgba(79,158,255,0.5)';
+                                  e.target.style.color = '#ef4444';
+                                  e.target.style.background = 'rgba(239, 68, 68, 0.04)';
                                 }}
                                 onMouseLeave={(e) => {
-                                  e.currentTarget.style.background = 'rgba(79,158,255,0.15)';
-                                  e.currentTarget.style.borderColor = 'rgba(79,158,255,0.3)';
+                                  e.target.style.color = '#64748b';
+                                  e.target.style.background = 'rgba(255, 255, 255, 0.04)';
                                 }}
                               >
-                                <Download size={14} />
-                                {att.originalName}
-                              </a>
-                            ))}
+                                <Trash2 size={14} />
+                              </motion.button>
+                            )}
                           </div>
+                        </div>
+                      </div>
+                      
+                      {/* Scan results */}
+                      {doc.scanResult && (
+                        <div style={{ 
+                          marginTop: '16px', 
+                          paddingTop: '16px', 
+                          borderTop: '1px solid rgba(255,255,255,0.04)' 
+                        }}>
+                          <motion.button
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => toggleScanResults(doc._id)}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              padding: '8px 12px',
+                              borderRadius: '8px',
+                              border: '1px solid rgba(255,255,255,0.1)',
+                              background: 'rgba(255,255,255,0.02)',
+                              color: '#e2e8f0',
+                              fontSize: '13px',
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                              marginBottom: expandedScanResults.has(doc._id) ? '12px' : '0',
+                              transition: 'all 150ms'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.target.style.background = 'rgba(255,255,255,0.04)';
+                              e.target.style.color = '#ffffff';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.target.style.background = 'rgba(255,255,255,0.02)';
+                              e.target.style.color = '#e2e8f0';
+                            }}
+                          >
+                            {expandedScanResults.has(doc._id) ? <EyeOff size={14} /> : <Eye size={14} />}
+                            {expandedScanResults.has(doc._id) ? 'Hide' : 'Show'} Scan Results
+                          </motion.button>
+                          
+                          <AnimatePresence>
+                            {expandedScanResults.has(doc._id) && (
+                              <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                style={{
+                                  marginTop: '16px',
+                                  padding: '16px',
+                                  background: 'rgba(255,255,255,0.02)',
+                                  borderRadius: '8px',
+                                  border: '1px solid rgba(255,255,255,0.05)'
+                                }}
+                              >
+                                <div style={{ marginBottom: '12px' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                                    <p style={{ fontSize: '14px', fontWeight: 600, color: '#ffffff' }}>
+                                      Extracted Text
+                                    </p>
+                                    <span style={{
+                                      fontSize: '12px',
+                                      padding: '2px 8px',
+                                      background: 'rgba(34, 197, 94, 0.1)',
+                                      color: '#22c55e',
+                                      borderRadius: '12px'
+                                    }}>
+                                      {doc.scanResult.confidence}% confidence
+                                    </span>
+                                  </div>
+                                  <p style={{
+                                    fontSize: '14px',
+                                    color: '#64748b',
+                                    whiteSpace: 'pre-wrap',
+                                    lineHeight: '1.6'
+                                  }}>
+                                    {doc.scanResult.extractedText || 'No text extracted'}
+                                  </p>
+                                </div>
+                                
+                                {doc.scanResult.notaryDetected && (
+                                  <div style={{
+                                    padding: '12px',
+                                    background: 'rgba(34, 197, 94, 0.1)',
+                                    border: '1px solid rgba(34, 197, 94, 0.3)',
+                                    borderRadius: '6px'
+                                  }}>
+                                    <p style={{ fontSize: '13px', color: '#22c55e', fontWeight: 600, margin: 0 }}>
+                                      Notary seal/signature detected
+                                    </p>
+                                  </div>
+                                )}
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
                         </div>
                       )}
                     </motion.div>
-                  );
-                })}
-              </AnimatePresence>
-            </div>
+                  ))}
+                </AnimatePresence>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Empty State */}
+          {documents.length === 0 && (
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              transition={{ delay: 0.2 }}
+              style={{ 
+                textAlign: 'center', 
+                padding: '80px 40px', 
+                background: '#050d1a', 
+                backdropFilter: 'blur(20px)', 
+                border: '1px solid rgba(255,255,255,0.04)', 
+                borderRadius: '16px' 
+              }}
+            >
+              <FileText style={{ 
+                width: '64px', 
+                height: '64px', 
+                color: '#64748b', 
+                margin: '0 auto 24px' 
+              }} />
+              <h3 style={{ 
+                fontSize: '20px', 
+                fontWeight: 700, 
+                color: '#ffffff', 
+                marginBottom: '12px' 
+              }}>
+                No documents uploaded yet
+              </h3>
+              <p style={{ 
+                fontSize: '16px', 
+                color: '#64748b', 
+                maxWidth: '400px', 
+                margin: '0 auto 32px' 
+              }}>
+                Upload your first legal document to get started with AI-powered OCR scanning and verification
+              </p>
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => fileInputRef.current?.click()}
+                style={{
+                  padding: '12px 24px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                  color: '#ffffff',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  transition: 'all 150ms'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.background = 'linear-gradient(135deg, #2563eb, #7c3aed)';
+                  e.target.style.transform = 'translateY(-1px)';
+                  e.target.style.boxShadow = '0 10px 25px -5px rgba(59, 130, 246, 0.25)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.background = 'linear-gradient(135deg, #3b82f6, #8b5cf6)';
+                  e.target.style.transform = 'translateY(0)';
+                  e.target.style.boxShadow = 'none';
+                }}
+              >
+                <Upload size={16} />
+                Upload First Document
+              </motion.button>
+            </motion.div>
           )}
         </div>
       </div>

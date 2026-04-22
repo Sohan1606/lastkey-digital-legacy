@@ -46,7 +46,14 @@
 - MongoDB 6.0+
 - OpenAI API Key (optional, for AI features)
 - Stripe Account (optional, for payments)
+- Redis (optional, falls back to node-cron)
 - **FREE_MODE** - Run without external services (emails logged to console)
+
+### **System Requirements**
+- **Memory**: Minimum 4GB RAM, 8GB recommended
+- **Storage**: Minimum 10GB free space
+- **OS**: Windows 10+, macOS 10.15+, Ubuntu 18.04+
+- **Network**: Stable internet connection for external services
 
 ### **Installation**
 
@@ -532,11 +539,218 @@ npm test -- tests/perfect-workflow.test.js  # Run perfect workflow tests only
 - `storagePath` is never exposed in API responses
 - Attachments have `sha256Hash` for integrity verification
 
+## **Performance Optimization**
+
+### **Database Optimization**
+- **Indexing**: All queries use optimized MongoDB indexes
+- **TTL Indexes**: Automatic cleanup of expired sessions and tokens
+- **Connection Pooling**: Efficient database connection management
+- **Query Optimization**: Lean queries with selective field projection
+
+### **Frontend Optimization**
+- **Code Splitting**: Lazy loading for non-critical components
+- **Bundle Optimization**: Tree shaking and minification
+- **Image Optimization**: WebP format with fallbacks
+- **Caching Strategy**: Service worker for offline functionality
+
+### **Security Performance**
+- **Rate Limiting**: In-memory rate limiting with Redis fallback
+- **Input Validation**: Comprehensive request sanitization
+- **CORS Configuration**: Secure cross-origin requests
+- **HTTPS Enforcement**: Secure communication channels
+
+## **Troubleshooting**
+
+### **Common Issues**
+
+#### **Database Connection Issues**
+```bash
+# Check MongoDB status
+mongod --version
+
+# Start MongoDB service
+sudo systemctl start mongod  # Linux
+brew services start mongodb-community  # macOS
+```
+
+#### **Port Conflicts**
+```bash
+# Check if ports are in use
+netstat -an | grep :5000  # Backend
+netstat -an | grep :5173  # Frontend
+
+# Kill processes using ports
+sudo kill -9 <PID>
+```
+
+#### **Environment Variable Issues**
+```bash
+# Verify environment variables
+cat server/.env
+cat client/.env
+
+# Check required variables
+echo $JWT_SECRET  # Should be 32+ characters
+```
+
+#### **Permission Issues**
+```bash
+# Fix file permissions
+chmod +x server/scripts/*.sh
+chmod -R 755 server/uploads/
+```
+
+### **Debug Mode**
+Enable debug logging for troubleshooting:
+```bash
+# server/.env
+DEBUG=lastkey:*
+NODE_ENV=development
+```
+
+### **Health Checks**
+```bash
+# Backend health
+curl http://localhost:5000/api/health
+
+# Database connectivity
+curl http://localhost:5000/api/health/db
+
+# Service status
+curl http://localhost:5000/api/health/services
+```
+
+## **Development Guide**
+
+### **Code Structure**
+```
+lastkey-digital-legacy/
+client/
+  src/
+    components/          # Reusable UI components
+      ui/               # Base UI components (ConfirmModal, SkeletonCard)
+    pages/              # Route components
+    contexts/           # React contexts (Auth, Theme)
+    utils/              # Helper functions
+    hooks/              # Custom React hooks
+server/
+  controllers/         # Route handlers
+  middleware/          # Custom middleware (auth, rate limiting)
+  models/             # Database schemas
+  routes/             # API route definitions
+  utils/              # Server utilities
+  jobs/               # Background jobs (cron tasks)
+  config/             # Configuration files
+```
+
+### **API Development**
+- **RESTful Design**: Standard HTTP methods and status codes
+- **Error Handling**: Consistent error response format
+- **Validation**: Input validation using express-validator
+- **Documentation**: JSDoc comments for all endpoints
+
+### **Frontend Development**
+- **Component-First**: Modular, reusable components
+- **State Management**: React Context + React Query
+- **Styling**: Inline styles with premium dark theme
+- **Animations**: Framer Motion for smooth transitions
+
+### **Testing**
+```bash
+# Run all tests
+npm test
+
+# Run specific test suites
+npm test -- --grep "Authentication"
+npm test -- --grep "Encryption"
+
+# Generate coverage report
+npm run test:coverage
+
+# Run E2E tests
+npm run test:e2e
+```
+
+## **Deployment Guide**
+
+### **Environment Setup**
+```bash
+# Production environment variables
+NODE_ENV=production
+MONGO_URI=mongodb://your-production-db
+JWT_SECRET=your-super-secure-production-secret
+REDIS_URL=redis://your-redis-instance
+```
+
+### **Docker Deployment**
+```dockerfile
+# Dockerfile (coming soon)
+FROM node:18-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+COPY . .
+EXPOSE 5000
+CMD ["npm", "start"]
+```
+
+### **Cloud Deployment**
+- **AWS**: EC2 + MongoDB Atlas + ElastiCache Redis
+- **Google Cloud**: Compute Engine + Cloud MongoDB + Memorystore
+- **Azure**: Virtual Machines + Cosmos DB + Redis Cache
+- **Heroku**: Dyno + mLab + Redis Cloud
+
+### **Monitoring**
+- **Application Monitoring**: New Relic or DataDog
+- **Error Tracking**: Sentry
+- **Performance Monitoring**: Vercel Analytics
+- **Database Monitoring**: MongoDB Atlas Monitoring
+
+## **Security Best Practices**
+
+### **Production Security**
+- **Environment Variables**: Never commit secrets to version control
+- **Database Security**: Use MongoDB Atlas with IP whitelisting
+- **API Security**: Implement API key authentication for services
+- **SSL/TLS**: Force HTTPS with valid certificates
+
+### **Data Protection**
+- **Encryption**: All sensitive data encrypted at rest and in transit
+- **Backup Strategy**: Automated daily backups with point-in-time recovery
+- **Access Control**: Principle of least privilege for all systems
+- **Audit Logging**: Comprehensive audit trails for all actions
+
+### **Compliance**
+- **GDPR**: Right to deletion and data portability
+- **CCPA**: California privacy compliance
+- **SOC 2**: Security controls and documentation
+- **HIPAA**: Healthcare data protection (if applicable)
+
 ## **Support**
 
 - **Email**: support@lastkey.com
 - **Documentation**: [docs.lastkey.com](https://docs.lastkey.com)
 - **Community**: [discord.gg/lastkey](https://discord.gg/lastkey)
+- **Bug Reports**: [github.com/Sohan1606/lastkey-digital-legacy/issues](https://github.com/Sohan1606/lastkey-digital-legacy/issues)
+- **Feature Requests**: [github.com/Sohan1606/lastkey-digital-legacy/discussions](https://github.com/Sohan1606/lastkey-digital-legacy/discussions)
+
+## **Roadmap**
+
+### **Upcoming Features**
+- [ ] **Mobile Apps** - iOS and Android native applications
+- [ ] **Blockchain Integration** - Decentralized storage options
+- [ ] **Video Messages** - AI-enhanced video legacy creation
+- [ ] **Collaborative Vault** - Shared family legacy spaces
+- [ ] **Advanced Analytics** - Legacy health insights and recommendations
+- [ ] **Enterprise Features** - Business succession planning tools
+
+### **Technical Improvements**
+- [ ] **GraphQL API** - More efficient data fetching
+- [ ] **Microservices Architecture** - Scalable service separation
+- [ ] **Real-time Collaboration** - Live editing and sharing
+- [ ] **Advanced Security** - Hardware security key support
+- [ ] **Performance Enhancements** - Caching and optimization
+- [ ] **Internationalization** - Multi-language support
 
 ---
 

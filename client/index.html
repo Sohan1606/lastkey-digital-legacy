@@ -3,17 +3,74 @@
   <head>
   <meta charset="UTF-8" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="icon" type="image/png" href="/favicon.png" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="shortcut icon" href="/favicon.ico" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>LastKey — Your love, outliving you.</title>
-  <meta name="description" content="LastKey is a Digital Afterlife Platform. Preserve your memories, protect your digital assets, and send time-locked messages to people you love most." />
-  <meta property="og:title" content="LastKey — Your love, outliving you." />
-  <meta property="og:description" content="The Digital Afterlife Platform. Where your voice, wisdom, and love are preserved forever." />
+  <title>LastKey - Digital Afterlife Platform | Your Love, Outliving You</title>
+  <meta name="description" content="Secure your digital legacy with LastKey. Preserve memories, protect assets, and send time-locked messages to loved ones. The ultimate digital afterlife platform." />
+  <meta name="keywords" content="digital legacy, afterlife, secure vault, beneficiary, time-locked messages, digital assets, estate planning, online legacy" />
+  <meta name="robots" content="index, follow" />
+  <meta name="language" content="English" />
+  <meta name="author" content="LastKey" />
+  <meta property="og:title" content="LastKey - Digital Afterlife Platform | Your Love, Outliving You" />
+  <meta property="og:description" content="Secure your digital legacy with LastKey. Preserve memories, protect assets, and send time-locked messages to loved ones." />
   <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://lastkey.app/" />
+  <meta property="og:image" content="/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:site_name" content="LastKey" />
+  <meta property="og:locale" content="en_US" />
   <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:url" content="https://lastkey.app/" />
+  <meta name="twitter:title" content="LastKey - Digital Afterlife Platform | Your Love, Outliving You" />
+  <meta name="twitter:description" content="Secure your digital legacy with LastKey. Preserve memories, protect assets, and send time-locked messages to loved ones." />
+  <meta name="twitter:image" content="/twitter-image.png" />
+  <meta name="twitter:creator" content="@lastkeyapp" />
   <meta name="theme-color" content="#030508" />
+  <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+  <meta http-equiv="X-Frame-Options" content="DENY" />
+  <meta http-equiv="X-XSS-Protection" content="1; mode=block" />
+  <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
   <link rel="canonical" href="https://lastkey.app" />
+  <link rel="dns-prefetch" href="//fonts.googleapis.com" />
+  <link rel="dns-prefetch" href="//fonts.gstatic.com" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preload" href="/src/main.jsx" as="script" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="manifest" href="/manifest.json" />
+  
+  <!-- Critical CSS -->
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+      background: #030508;
+      color: #ffffff;
+      overflow-x: hidden;
+    }
+    
+    #root {
+      min-height: 100vh;
+    }
+    
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid rgba(255, 255, 255, 0.1);
+      border-top: 4px solid #4f9eff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
 </head>
   <body>
     <div id="root"></div>

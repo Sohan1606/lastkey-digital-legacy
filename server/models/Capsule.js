@@ -79,4 +79,10 @@ const capsuleSchema = new mongoose.Schema({
   timestamps: true
 });
 
+// Indexes for performance
+capsuleSchema.index({ userId: 1, unlockAt: 1 });
+capsuleSchema.index({ isReleased: 1, unlockAt: 1 });
+capsuleSchema.index({ triggerType: 1, unlockAt: 1 });
+capsuleSchema.index({ isFinalMessage: 1, recipient: 1 });
+
 module.exports = mongoose.model('Capsule', capsuleSchema);

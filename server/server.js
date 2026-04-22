@@ -464,36 +464,15 @@ process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+  console.error(' Unhandled Rejection at:', promise, 'reason:', reason);
   gracefulShutdown('unhandledRejection');
 });
 
 process.on('uncaughtException', (error) => {
-  console.error('❌ Uncaught Exception:', error);
+  console.error(' Uncaught Exception:', error);
   gracefulShutdown('uncaughtException');
 });
 
-// Centralized error handler
-app.use((err, req, res, next) => {
-  const isDev = env.NODE_ENV !== 'production';
-
-  const logEntry = {
-    message: err.message,
-    path: req.path,
-    method: req.method,
-    ip: req.ip,
-    timestamp: new Date().toISOString()
-  };
-
-  if (isDev) console.error('Error:', err);
-  else console.error('Error:', logEntry);
-
-  const statusCode = err.statusCode || err.status || 500;
-  const message = isDev ? err.message : 'An error occurred. Please try again later.';
-
-  return res.status(statusCode).json({
-    success: false,
-    message,
-    ...(isDev && { stack: err.stack })
-  });
-});
+// Global error handling middleware
+const { globalErrorHandler } = require('./middleware/errorMiddleware');
+app.use(globalErrorHandler);

@@ -13,13 +13,13 @@ export const initSocket = (token) => {
   });
 
   socket.on('connect', () => {
-    if (import.meta.env.DEV) console.log('⚡ Connected:', socket.id);
+    // Socket connected
     // Room joining is now automatic on server-side based on JWT
     // No need to emit 'join-room' anymore
   });
 
   socket.on('connect_error', (err) => {
-    console.error('Socket connection error:', err.message);
+    // Socket connection error
     if (err.message.includes('auth')) {
       toast.error('Authentication failed. Please log in again.');
     }
@@ -29,7 +29,7 @@ export const initSocket = (token) => {
   socket.on('dms-update', handleDMSUpdate);
 
   socket.on('disconnect', () => {
-    if (import.meta.env.DEV) console.log('🔌 Disconnected');
+    // Socket disconnected
   });
 
   return socket;
@@ -43,7 +43,7 @@ export const disconnectSocket = () => {
 };
 
 const handleDMSUpdate = (data) => {
-  if (import.meta.env.DEV) console.log('💡 DMS:', data);
+  // DMS update received
   const { status, remainingMinutes, message } = data;
 
   switch (status) {
@@ -65,7 +65,7 @@ const handleDMSUpdate = (data) => {
       });
       break;
     default:
-      if (import.meta.env.DEV) console.warn('Unknown status:', status);
+      // Unknown status received
   }
 };
 

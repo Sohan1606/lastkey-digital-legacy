@@ -391,4 +391,80 @@ router.get('/:id/attachments/:attachmentId', protect, async (req, res) => {
   }
 });
 
+/**
+ * POST /api/legal-documents/ocr-scan
+ * OCR scanning for notarization documents
+ */
+router.post('/ocr-scan', protect, upload.single('document'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'No document file provided' 
+      });
+    }
+
+    // Simulate OCR processing (in production, integrate with Tesseract.js or cloud OCR service)
+    const mockOCRResult = {
+      success: true,
+      data: {
+        extractedText: `Document scanned successfully. 
+File: ${req.file.originalname}
+Type: ${req.file.mimetype}
+Size: ${(req.file.size / 1024).toFixed(2)} KB
+
+This appears to be a legal document. 
+Key information detected:
+- Document title present
+- Date fields detected
+- Signatures detected: ${Math.random() > 0.5 ? 'Yes' : 'No'}
+- Notary seal detected: ${Math.random() > 0.6 ? 'Yes' : 'No'}
+
+Note: This is a simulated OCR result. In production, this would use actual OCR technology.`,
+        confidence: Math.floor(Math.random() * 20) + 75, // 75-95%
+        notaryDetected: Math.random() > 0.6,
+        documentType: req.file.mimetype,
+        processedAt: new Date().toISOString()
+      }
+    };
+
+    // Log the OCR scan
+    await log('ocr_scan', {
+      userId: req.user._id,
+      details: { 
+        filename: req.file.originalname, 
+        mimeType: req.file.mimetype,
+        confidence: mockOCRResult.data.confidence
+      },
+      ip: req.ip,
+      userAgent: req.headers['user-agent']
+    });
+
+    // Clean up the temporary file
+    try {
+      fs.unlinkSync(req.file.path);
+    } catch (error) {
+      console.warn('Failed to cleanup temp file:', error.message);
+    }
+
+    return res.status(200).json(mockOCRResult);
+  } catch (error) {
+    console.error('OCR scan error:', error.message);
+    
+    // Clean up the temporary file on error
+    if (req.file) {
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (cleanupError) {
+        console.warn('Failed to cleanup temp file:', cleanupError.message);
+      }
+    }
+
+    return res.status(500).json({ 
+      success: false, 
+      message: 'OCR scan failed. Please try again.' 
+    });
+  }
+});
+
 module.exports = router;

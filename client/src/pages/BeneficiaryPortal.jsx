@@ -61,7 +61,7 @@ const Stepper = ({ currentStep, steps }) => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        marginBottom: 32,
+        marginBottom: '32px',
         padding: '0 20px'
       }}
     >
@@ -71,11 +71,11 @@ const Stepper = ({ currentStep, steps }) => {
 
         return (
           <div key={step.id} style={{ display: 'flex', alignItems: 'center' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
               <div
                 style={{
-                  width: 40,
-                  height: 40,
+                  width: '40px',
+                  height: '40px',
                   borderRadius: '50%',
                   background: isCompleted
                     ? '#00e5a0'
@@ -88,18 +88,18 @@ const Stepper = ({ currentStep, steps }) => {
                   justifyContent: 'center',
                   color: isCompleted ? '#001a12' : isActive ? '#00e5a0' : 'rgba(255,255,255,0.5)',
                   fontWeight: 600,
-                  fontSize: 14
+                  fontSize: '14px'
                 }}
               >
                 {isCompleted ? <CheckCircle size={20} /> : step.icon}
               </div>
               <span
                 style={{
-                  fontSize: 11,
+                  fontSize: '11px',
                   color: isActive ? '#00e5a0' : 'rgba(255,255,255,0.5)',
                   fontWeight: isActive ? 600 : 400,
                   textAlign: 'center',
-                  maxWidth: 90
+                  maxWidth: '90px'
                 }}
               >
                 {step.label}
@@ -109,11 +109,11 @@ const Stepper = ({ currentStep, steps }) => {
             {index < steps.length - 1 && (
               <div
                 style={{
-                  width: 40,
-                  height: 2,
+                  width: '40px',
+                  height: '2px',
                   background: index < currentIndex ? '#00e5a0' : 'rgba(255,255,255,0.1)',
                   margin: '0 8px',
-                  marginBottom: 20
+                  marginBottom: '20px'
                 }}
               />
             )}
@@ -604,13 +604,13 @@ const BeneficiaryPortal = () => {
       </div>
 
       <h1 style={{ fontSize: 28, fontWeight: 800, marginBottom: 12 }}>Beneficiary Portal</h1>
-      <p style={{ fontSize: 15, color: 'var(--text-2)', marginBottom: 28, lineHeight: 1.6 }}>
+      <p style={{ fontSize: 15, color: '#64748b', marginBottom: 28, lineHeight: 1.6 }}>
         Enter your email to verify your beneficiary status and access legacy content when it becomes available.
       </p>
 
       <form onSubmit={checkStatus} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div style={{ position: 'relative' }}>
-          <Mail size={18} style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)' }} />
+          <Mail size={18} style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
           <input
             type="email"
             placeholder="your@email.com"
@@ -621,9 +621,9 @@ const BeneficiaryPortal = () => {
               width: '100%',
               padding: '16px 16px 16px 48px',
               borderRadius: 12,
-              border: '1px solid var(--glass-border)',
-              background: 'var(--glass-2)',
-              color: 'var(--text-1)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              background: '#030508',
+              color: '#ffffff',
               fontSize: 15
             }}
           />
@@ -654,7 +654,7 @@ const BeneficiaryPortal = () => {
           <ArrowRight size={18} />
         </motion.button>
 
-        <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 6, lineHeight: 1.5 }}>
+        <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 6, lineHeight: 1.5 }}>
           In FREE_MODE, OTP codes are printed to the server console.
         </p>
       </form>
@@ -680,10 +680,10 @@ const BeneficiaryPortal = () => {
           <Key size={28} style={{ color: '#4f9eff' }} />
         </div>
         <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 8 }}>Enter Verification Code</h2>
-        <p style={{ fontSize: 14, color: 'var(--text-2)', lineHeight: 1.6 }}>
+        <p style={{ fontSize: 14, color: '#64748b', lineHeight: 1.6 }}>
           We sent a 6-digit code to <strong>{email}</strong>.
           <br />
-          <span style={{ color: 'var(--text-3)' }}>(Check console in FREE_MODE)</span>
+          <span style={{ color: '#94a3b8' }}>(Check console in FREE_MODE)</span>
         </p>
       </div>
 
@@ -699,9 +699,9 @@ const BeneficiaryPortal = () => {
             width: '100%',
             padding: '16px',
             borderRadius: 12,
-            border: '1px solid var(--glass-border)',
-            background: 'var(--glass-2)',
-            color: 'var(--text-1)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            background: '#030508',
+            color: '#ffffff',
             fontSize: 24,
             textAlign: 'center',
             letterSpacing: 8,
@@ -732,7 +732,7 @@ const BeneficiaryPortal = () => {
         <button
           type="button"
           onClick={() => setStep('check')}
-          style={{ background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 14, cursor: 'pointer', padding: 8 }}
+          style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: 14, cursor: 'pointer', padding: 8 }}
         >
           ← Back
         </button>
@@ -760,7 +760,7 @@ const BeneficiaryPortal = () => {
         </div>
 
         <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 8 }}>Complete Your Enrollment</h2>
-        <p style={{ fontSize: 14, color: 'var(--text-2)', lineHeight: 1.6 }}>
+        <p style={{ fontSize: 14, color: '#64748b', lineHeight: 1.6 }}>
           Set an unlock secret and encryption keys. You’ll use this to decrypt legacy data when it’s triggered.
           <br />
           <br />
@@ -772,7 +772,7 @@ const BeneficiaryPortal = () => {
 
       <form onSubmit={completeEnrollment} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         <div>
-          <label style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 6, color: 'var(--text-2)' }}>
+          <label style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 6, color: '#64748b' }}>
             Create Unlock Secret
           </label>
           <div style={{ position: 'relative' }}>
@@ -787,9 +787,9 @@ const BeneficiaryPortal = () => {
                 width: '100%',
                 padding: '14px 48px 14px 16px',
                 borderRadius: 10,
-                border: '1px solid var(--glass-border)',
-                background: 'var(--glass-2)',
-                color: 'var(--text-1)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                background: '#030508',
+                color: '#ffffff',
                 fontSize: 15
               }}
             />
@@ -804,19 +804,19 @@ const BeneficiaryPortal = () => {
                 background: 'none',
                 border: 'none',
                 cursor: 'pointer',
-                color: 'var(--text-3)'
+                color: '#94a3b8'
               }}
             >
               {showSecret ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
-          <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 6 }}>
+          <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 6 }}>
             You’ll need this later to unlock decryption keys in the Beneficiary Portal.
           </p>
         </div>
 
         <div>
-          <label style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 6, color: 'var(--text-2)' }}>
+          <label style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 6, color: '#64748b' }}>
             Confirm Unlock Secret
           </label>
           <input
@@ -829,9 +829,9 @@ const BeneficiaryPortal = () => {
               width: '100%',
               padding: '14px 16px',
               borderRadius: 10,
-              border: '1px solid var(--glass-border)',
-              background: 'var(--glass-2)',
-              color: 'var(--text-1)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              background: '#030508',
+              color: '#ffffff',
               fontSize: 15
             }}
           />
@@ -861,7 +861,7 @@ const BeneficiaryPortal = () => {
         <button
           type="button"
           onClick={() => setStep('check')}
-          style={{ background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 14, cursor: 'pointer', padding: 8 }}
+          style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: 14, cursor: 'pointer', padding: 8 }}
         >
           ← Back
         </button>
@@ -888,13 +888,13 @@ const BeneficiaryPortal = () => {
           <CheckCircle size={28} style={{ color: '#00e5a0' }} />
         </div>
         <h2 style={{ fontSize: 24, fontWeight: 900, marginBottom: 8 }}>Legacy Available</h2>
-        <p style={{ fontSize: 14, color: 'var(--text-2)', lineHeight: 1.6 }}>
+        <p style={{ fontSize: 14, color: '#64748b', lineHeight: 1.6 }}>
           Guardian Protocol has been triggered. Enter your unlock secret to request access and unlock the vault.
         </p>
       </div>
 
       <form onSubmit={loginAndRequestAccess} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-        <label style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 6, color: 'var(--text-2)' }}>
+        <label style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 6, color: '#64748b' }}>
           Unlock Secret
         </label>
         <div style={{ position: 'relative' }}>
@@ -908,9 +908,9 @@ const BeneficiaryPortal = () => {
               width: '100%',
               padding: '14px 48px 14px 16px',
               borderRadius: 10,
-              border: '1px solid var(--glass-border)',
-              background: 'var(--glass-2)',
-              color: 'var(--text-1)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              background: '#030508',
+              color: '#ffffff',
               fontSize: 15
             }}
           />
@@ -925,7 +925,7 @@ const BeneficiaryPortal = () => {
               background: 'none',
               border: 'none',
               cursor: 'pointer',
-              color: 'var(--text-3)'
+              color: '#94a3b8'
             }}
           >
             {showSecret ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -955,7 +955,7 @@ const BeneficiaryPortal = () => {
         <button
           type="button"
           onClick={() => setStep('check')}
-          style={{ background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 14, cursor: 'pointer', padding: 8 }}
+          style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: 14, cursor: 'pointer', padding: 8 }}
         >
           ← Back
         </button>
@@ -966,17 +966,17 @@ const BeneficiaryPortal = () => {
   const renderAssetsTab = () => (
     <div style={{ display: 'grid', gap: 12 }}>
       {assets.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-3)' }}>
+        <div style={{ textAlign: 'center', padding: 40, color: '#94a3b8' }}>
           <Lock size={32} style={{ marginBottom: 12, opacity: 0.5 }} />
           <p>No assets available</p>
         </div>
       ) : (
         assets.map((asset) => (
-          <div key={asset._id} style={{ background: 'var(--glass-2)', border: '1px solid var(--glass-border)', borderRadius: 12, padding: 16 }}>
+          <div key={asset._id} style={{ background: '#030508', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: 16 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', marginBottom: 12 }}>
               <div>
                 <h4 style={{ fontSize: 15, fontWeight: 800, marginBottom: 4 }}>{asset.platform}</h4>
-                <p style={{ fontSize: 12, color: 'var(--text-3)' }}>{asset.username}</p>
+                <p style={{ fontSize: 12, color: '#94a3b8' }}>{asset.username}</p>
               </div>
               {asset.instruction && (
                 <span
@@ -1036,7 +1036,7 @@ const BeneficiaryPortal = () => {
               </div>
             )}
 
-            {asset.notes && <p style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 8 }}>{asset.notes}</p>}
+            {asset.notes && <p style={{ fontSize: 12, color: '#64748b', marginTop: 8 }}>{asset.notes}</p>}
           </div>
         ))
       )}
@@ -1046,15 +1046,15 @@ const BeneficiaryPortal = () => {
   const renderCapsulesTab = () => (
     <div style={{ display: 'grid', gap: 12 }}>
       {capsules.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-3)' }}>
+        <div style={{ textAlign: 'center', padding: 40, color: '#94a3b8' }}>
           <Clock size={32} style={{ marginBottom: 12, opacity: 0.5 }} />
           <p>No capsules available</p>
         </div>
       ) : (
         capsules.map((capsule) => (
-          <div key={capsule._id} style={{ background: 'var(--glass-2)', border: '1px solid var(--glass-border)', borderRadius: 12, padding: 16 }}>
+          <div key={capsule._id} style={{ background: '#030508', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: 16 }}>
             <h4 style={{ fontSize: 15, fontWeight: 800, marginBottom: 8 }}>{capsule.title}</h4>
-            <p style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 12, lineHeight: 1.55 }}>
+            <p style={{ fontSize: 13, color: '#64748b', marginBottom: 12, lineHeight: 1.55 }}>
               {capsule.content}
             </p>
           </div>
@@ -1071,7 +1071,7 @@ const BeneficiaryPortal = () => {
           border: '1px solid rgba(255,184,48,0.25)',
           borderRadius: 12,
           padding: 12,
-          color: 'var(--text-2)',
+          color: '#64748b',
           fontSize: 12,
           lineHeight: 1.5,
           marginBottom: 6
@@ -1081,32 +1081,32 @@ const BeneficiaryPortal = () => {
       </div>
 
       {documents.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-3)' }}>
+        <div style={{ textAlign: 'center', padding: 40, color: '#94a3b8' }}>
           <FileText size={32} style={{ marginBottom: 12, opacity: 0.5 }} />
           <p>No documents available</p>
         </div>
       ) : (
         documents.map((doc) => (
-          <div key={doc._id} style={{ background: 'var(--glass-2)', border: '1px solid var(--glass-border)', borderRadius: 12, padding: 16 }}>
+          <div key={doc._id} style={{ background: '#030508', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: 16 }}>
             <div style={{ marginBottom: 10 }}>
               <h4 style={{ fontSize: 15, fontWeight: 900, marginBottom: 4 }}>{doc.title}</h4>
-              <p style={{ fontSize: 12, color: 'var(--text-3)', textTransform: 'capitalize' }}>{doc.type}</p>
+              <p style={{ fontSize: 12, color: '#94a3b8', textTransform: 'capitalize' }}>{doc.type}</p>
             </div>
 
             {doc.propertyAddress && (
-              <p style={{ fontSize: 12, color: 'var(--text-2)', marginBottom: 8 }}>
+              <p style={{ fontSize: 12, color: '#64748b', marginBottom: 8 }}>
                 <strong>Property:</strong> {doc.propertyAddress}
               </p>
             )}
 
             {doc.originalLocation?.type && (
-              <p style={{ fontSize: 12, color: 'var(--text-2)', marginBottom: 8 }}>
+              <p style={{ fontSize: 12, color: '#64748b', marginBottom: 8 }}>
                 <strong>Original Location:</strong> {doc.originalLocation.type} — {doc.originalLocation.details}
               </p>
             )}
 
             {doc.instructionsForBeneficiary && (
-              <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 8, padding: 10, marginBottom: 12, fontSize: 12, color: 'var(--text-2)' }}>
+              <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 8, padding: 10, marginBottom: 12, fontSize: 12, color: '#64748b' }}>
                 <strong style={{ color: '#ffb830' }}>Instructions:</strong>
                 <br />
                 {doc.instructionsForBeneficiary}
@@ -1114,8 +1114,8 @@ const BeneficiaryPortal = () => {
             )}
 
             {doc.attachments?.length > 0 && (
-              <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--glass-border)' }}>
-                <p style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 8, fontWeight: 800 }}>
+              <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                <p style={{ fontSize: 11, color: '#94a3b8', marginBottom: 8, fontWeight: 800 }}>
                   ATTACHMENTS ({doc.attachments.length})
                 </p>
 
@@ -1144,7 +1144,7 @@ const BeneficiaryPortal = () => {
                             {att.originalName || att.filename}
                           </p>
                           <div style={{ display: 'flex', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
-                            <span style={{ fontSize: 10, color: 'var(--text-3)' }}>{friendlySize}</span>
+                            <span style={{ fontSize: 10, color: '#94a3b8' }}>{friendlySize}</span>
                             {att.encrypted ? (
                               <span style={{ fontSize: 10, color: '#00e5a0', display: 'flex', alignItems: 'center', gap: 4 }}>
                                 <Lock size={10} /> Encrypted
@@ -1229,7 +1229,7 @@ const BeneficiaryPortal = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', marginBottom: 16 }}>
         <div>
           <h2 style={{ fontSize: 24, fontWeight: 950, marginBottom: 6 }}>Legacy Access Portal</h2>
-          <p style={{ fontSize: 13, color: 'var(--text-2)' }}>
+          <p style={{ fontSize: 13, color: '#64748b' }}>
             Session active{sessionExpiresAt ? ` • Expires: ${new Date(sessionExpiresAt).toLocaleString()}` : ''} • {assets.length} assets • {capsules.length} capsules • {documents.length} docs
           </p>
         </div>
@@ -1241,7 +1241,7 @@ const BeneficiaryPortal = () => {
             borderRadius: 10,
             border: '1px solid rgba(255,255,255,0.12)',
             background: 'rgba(255,255,255,0.06)',
-            color: 'var(--text-2)',
+            color: '#64748b',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
@@ -1256,7 +1256,7 @@ const BeneficiaryPortal = () => {
         </button>
       </div>
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 18, borderBottom: '1px solid var(--glass-border)', paddingBottom: 12 }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 18, borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: 12 }}>
         {[
           { id: 'assets', label: 'Assets', icon: Lock, count: assets.length },
           { id: 'capsules', label: 'Capsules', icon: Clock, count: capsules.length },
@@ -1271,7 +1271,7 @@ const BeneficiaryPortal = () => {
               borderRadius: 10,
               border: 'none',
               background: activeTab === tab.id ? 'rgba(0,229,160,0.15)' : 'transparent',
-              color: activeTab === tab.id ? '#00e5a0' : 'var(--text-2)',
+              color: activeTab === tab.id ? '#00e5a0' : '#64748b',
               fontSize: 13,
               fontWeight: 900,
               cursor: 'pointer',
@@ -1286,8 +1286,8 @@ const BeneficiaryPortal = () => {
             {tab.count > 0 && (
               <span
                 style={{
-                  background: activeTab === tab.id ? '#00e5a0' : 'var(--glass-2)',
-                  color: activeTab === tab.id ? '#001a12' : 'var(--text-2)',
+                  background: activeTab === tab.id ? '#00e5a0' : '#030508',
+                  color: activeTab === tab.id ? '#001a12' : '#64748b',
                   padding: '2px 6px',
                   borderRadius: 10,
                   fontSize: 10,
@@ -1317,8 +1317,26 @@ const BeneficiaryPortal = () => {
   ];
 
   return (
-    <div className="page spatial-bg" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-      <div className="stars" />
+    <div style={{ 
+      minHeight: '100vh', 
+      display: 'flex', 
+      alignItems: 'center', 
+      justifyContent: 'center', 
+      padding: '24px',
+      background: '#030508',
+      position: 'relative',
+      overflow: 'hidden'
+    }}>
+      {/* Background stars effect */}
+      <div style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: 'radial-gradient(circle at 20% 50%, rgba(79, 158, 255, 0.1) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(124, 92, 252, 0.1) 0%, transparent 50%)',
+        pointerEvents: 'none'
+      }} />
 
       <motion.div
         initial={{ opacity: 0, y: 30 }}
@@ -1326,11 +1344,14 @@ const BeneficiaryPortal = () => {
         style={{
           width: '100%',
           maxWidth: step === 'access' ? 980 : 640,
-          background: 'var(--glass-1)',
+          background: '#050d1a',
           backdropFilter: 'blur(20px)',
-          border: '1px solid var(--glass-border)',
-          borderRadius: 28,
-          padding: step === 'access' ? 28 : 40
+          border: '1px solid rgba(255,255,255,0.1)',
+          borderRadius: '20px',
+          padding: step === 'access' ? '32px' : '40px',
+          position: 'relative',
+          zIndex: 1,
+          boxShadow: '0 20px 40px -10px rgba(0, 0, 0, 0.3)'
         }}
       >
         {step !== 'access' && <Stepper currentStep={step} steps={stepperSteps} />}

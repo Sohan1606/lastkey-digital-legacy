@@ -1,205 +1,432 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, User, LogOut, ChevronDown } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import BrandMark from './BrandMark';
-import ThemeToggle from './ThemeToggle';
+import React, { useState, useRef, useEffect } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
+import Logo from './Logo'
 
-const Navbar = ({ variant = 'app' }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const { user, logout } = useAuth();
-  const location = useLocation();
-  const navigate = useNavigate();
+const PUBLIC_ROUTES = [
+  '/', '/login', '/signin', '/register', '/signup',
+  '/verify-email', '/forgot-password', '/pricing',
+  '/privacy', '/terms', '/trust'
+]
 
-  const publicRoutes = ['/', '/login', '/register', '/forgot-password', '/reset-password', '/verify-email', '/privacy', '/terms', '/trust', '/pricing', '/beneficiary-portal'];
+export default function Navbar() {
+  const location = useLocation()
+  const navigate = useNavigate()
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const dropdownRef = useRef(null)
 
-  const isPublic = publicRoutes.includes(location.pathname);
-  const isPublicAuthed = isPublic && user;
-  const isApp = !isPublic || user;
+  const isPublicRoute = 
+    PUBLIC_ROUTES.includes(location.pathname) ||
+    location.pathname.startsWith('/reset-password') ||
+    location.pathname.startsWith('/beneficiary')
 
-  const navItems = {
-    public: [
-      { label: 'Security', href: '/trust' },
-      ...(process.env.VITE_FEATURE_PAYMENTS === 'true' ? [{ label: 'Pricing', href: '/pricing' }] : []),
-      { label: 'Beneficiary Portal', href: '/beneficiary-portal' },
-    ],
-    app: [
-      { label: 'Dashboard', href: '/dashboard' },
-      { label: 'Vault', href: '/vault' },
-      { label: 'Beneficiaries', href: '/beneficiaries' },
-      { label: 'Capsules', href: '/capsules' },
-      ...(process.env.VITE_FEATURE_AI === 'true' ? [{ label: 'AI', href: '/ai' }] : []),
-      ...(process.env.VITE_FEATURE_PAYMENTS === 'true' ? [{ label: 'Pricing', href: '/pricing' }] : []),
-      { label: 'Legal Documents', href: '/legal-documents' },
-      { label: 'Settings', href: '/settings' },
-    ]
-  };
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && 
+          !dropdownRef.current.contains(event.target)) {
+        setUserMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
-  const handleLogout = () => {
-    logout();
-    setIsOpen(false);
-    setUserMenuOpen(false);
-    navigate('/');
-  };
+  useEffect(() => {
+    function handleEscapeKey(event) {
+      if (event.key === 'Escape') {
+        setUserMenuOpen(false)
+      }
+    }
+    document.addEventListener('keydown', handleEscapeKey)
+    return () => document.removeEventListener('keydown', handleEscapeKey)
+  }, [])
 
+  const scrollToSection = (id) => {
+    if (location.pathname !== '/') {
+      navigate('/')
+      setTimeout(() => {
+        document.getElementById(id)
+          ?.scrollIntoView({ behavior: 'smooth' })
+      }, 300)
+    } else {
+      document.getElementById(id)
+        ?.scrollIntoView({ behavior: 'smooth' })
+    }
+  }
+
+  const handleSignOut = () => {
+    localStorage.clear()
+    sessionStorage.clear()
+    delete axios.defaults.headers.common['Authorization']
+    setUserMenuOpen(false)
+    navigate('/')
+  }
+
+  const user = JSON.parse(localStorage.getItem('user') || '{}')
+  const userName = user?.name || user?.email || 'User'
+  const userInitials = userName
+    .split(' ')
+    .map(n => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2)
+
+  // PUBLIC NAVBAR
+  if (isPublicRoute) {
+    return (
+      <nav style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 50,
+        background: 'rgba(3,5,8,0.88)',
+        backdropFilter: 'blur(12px)',
+        borderBottom: '1px solid rgba(255,255,255,0.05)',
+        height: '64px'
+      }}>
+        <div style={{
+          maxWidth: '1280px',
+          margin: '0 auto',
+          padding: '0 24px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          height: '100%'
+        }}>
+          {/* Left: Logo */}
+          <Logo size="sm" darkMode={true} />
+
+          {/* Center: Navigation Links (hidden below md) */}
+          <div style={{
+            display: 'none',
+            alignItems: 'center',
+            gap: '32px'
+          }} className="md:flex">
+            <button
+              onClick={() => scrollToSection('features')}
+              style={{
+                fontSize: '14px',
+                color: '#94a3b8',
+                fontWeight: 500,
+                cursor: 'pointer',
+                transition: 'color 150ms'
+              }}
+              onMouseEnter={(e) => e.target.style.color = '#ffffff'}
+              onMouseLeave={(e) => e.target.style.color = '#94a3b8'}
+            >
+              Features
+            </button>
+            <button
+              onClick={() => scrollToSection('how-it-works')}
+              style={{
+                fontSize: '14px',
+                color: '#94a3b8',
+                fontWeight: 500,
+                cursor: 'pointer',
+                transition: 'color 150ms'
+              }}
+              onMouseEnter={(e) => e.target.style.color = '#ffffff'}
+              onMouseLeave={(e) => e.target.style.color = '#94a3b8'}
+            >
+              How It Works
+            </button>
+            <button
+              onClick={() => scrollToSection('pricing')}
+              style={{
+                fontSize: '14px',
+                color: '#94a3b8',
+                fontWeight: 500,
+                cursor: 'pointer',
+                transition: 'color 150ms'
+              }}
+              onMouseEnter={(e) => e.target.style.color = '#ffffff'}
+              onMouseLeave={(e) => e.target.style.color = '#94a3b8'}
+            >
+              Pricing
+            </button>
+            <button
+              onClick={() => scrollToSection('security')}
+              style={{
+                fontSize: '14px',
+                color: '#94a3b8',
+                fontWeight: 500,
+                cursor: 'pointer',
+                transition: 'color 150ms'
+              }}
+              onMouseEnter={(e) => e.target.style.color = '#ffffff'}
+              onMouseLeave={(e) => e.target.style.color = '#94a3b8'}
+            >
+              Security
+            </button>
+          </div>
+
+          {/* Right: Auth Buttons */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px'
+          }}>
+            <button
+              onClick={() => navigate('/login')}
+              style={{
+                padding: '10px 20px',
+                fontSize: '14px',
+                fontWeight: 500,
+                borderRadius: '8px',
+                border: '1px solid rgba(255,255,255,0.15)',
+                color: 'rgba(255,255,255,0.8)',
+                cursor: 'pointer',
+                transition: 'all 200ms'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.color = '#ffffff'
+                e.target.style.borderColor = 'rgba(255,255,255,0.3)'
+                e.target.style.backgroundColor = 'rgba(255,255,255,0.04)'
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.color = 'rgba(255,255,255,0.8)'
+                e.target.style.borderColor = 'rgba(255,255,255,0.15)'
+                e.target.style.backgroundColor = 'transparent'
+              }}
+            >
+              Sign In
+            </button>
+            <button
+              onClick={() => navigate('/register')}
+              style={{
+                padding: '10px 20px',
+                fontSize: '14px',
+                fontWeight: 500,
+                borderRadius: '8px',
+                border: 'none',
+                background: 'linear-gradient(135deg, #2563eb, #9333ea)',
+                color: '#ffffff',
+                cursor: 'pointer',
+                transition: 'all 200ms'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.background = 'linear-gradient(135deg, #3b82f6, #a855f7)'
+                e.target.style.boxShadow = '0 10px 25px -5px rgba(59, 130, 246, 0.25)'
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.background = 'linear-gradient(135deg, #2563eb, #9333ea)'
+                e.target.style.boxShadow = 'none'
+              }}
+            >
+              Get Started
+            </button>
+          </div>
+        </div>
+      </nav>
+    )
+  }
+
+  // AUTHENTICATED NAVBAR
   return (
-    <nav className="navbar" style={{
+    <nav style={{
       position: 'fixed',
       top: 0,
       left: 0,
       right: 0,
-      zIndex: 1000,
-      backdropFilter: 'blur(20px)',
-      background: 'rgba(255,255,255,0.1)',
-      borderBottom: '1px solid rgba(255,255,255,0.1)',
-      padding: '1rem 2rem'
+      zIndex: 50,
+      background: 'rgba(3,5,8,0.88)',
+      backdropFilter: 'blur(12px)',
+      borderBottom: '1px solid rgba(255,255,255,0.05)',
+      height: '64px'
     }}>
-      <div style={{ maxWidth: '1400px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
-        {/* Brand */}
-        <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none' }}>
-          <BrandMark size={28} />
-          <span style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--text-1)' }}>LastKey</span>
-        </Link>
+      <div style={{
+        maxWidth: '1280px',
+        margin: '0 auto',
+        padding: '0 24px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        height: '100%'
+      }}>
+        {/* Left: Logo */}
+        <Logo size="sm" darkMode={true} />
 
-        {/* Desktop Nav */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
-          {variant === 'public' && navItems.public.map(item => (
-            <Link key={item.href} to={item.href} style={{ color: 'var(--text-1)', textDecoration: 'none', fontWeight: 500 }}>
-              {item.label}
-            </Link>
-          ))}
+        {/* Right: User Dropdown */}
+        <div ref={dropdownRef} style={{ position: 'relative' }}>
+          <button
+            onClick={() => setUserMenuOpen(!userMenuOpen)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              padding: '8px 12px',
+              borderRadius: '12px',
+              transition: 'background-color 150ms',
+              cursor: 'pointer'
+            }}
+            onMouseEnter={(e) => e.target.style.backgroundColor = 'rgba(255,255,255,0.04)'}
+            onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+          >
+            {/* Avatar */}
+            <div style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <span style={{
+                color: '#ffffff',
+                fontSize: '14px',
+                fontWeight: 'bold'
+              }}>
+                {userInitials}
+              </span>
+            </div>
+            
+            {/* Name */}
+            <span style={{
+              fontSize: '14px',
+              fontWeight: 500,
+              color: '#ffffff'
+            }}>
+              {userName}
+            </span>
+            
+            {/* Chevron */}
+            <svg 
+              style={{
+                width: '16px',
+                height: '16px',
+                color: '#94a3b8',
+                transition: 'transform 150ms',
+                transform: userMenuOpen ? 'rotate(180deg)' : 'rotate(0deg)'
+              }}
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
 
-          {variant === 'public-authed' && (
-            <>
-              <Link to="/dashboard" style={{ color: 'var(--text-1)', textDecoration: 'none', fontWeight: 500 }}>
-                Go to Dashboard
-              </Link>
-              <button onClick={handleLogout} style={{ background: 'none', border: 'none', color: 'var(--text-1)', cursor: 'pointer' }}>
-                Sign Out
+          {/* Dropdown Menu */}
+          {userMenuOpen && (
+            <div style={{
+              position: 'absolute',
+              right: 0,
+              top: '100%',
+              marginTop: '8px',
+              width: '208px',
+              background: '#0b1629',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: '16px',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+              padding: '8px 0',
+              zIndex: 50,
+              overflow: 'hidden'
+            }}>
+              <button
+                onClick={() => {
+                  navigate('/settings')
+                  setUserMenuOpen(false)
+                }}
+                style={{
+                  width: '100%',
+                  textAlign: 'left',
+                  padding: '10px 16px',
+                  fontSize: '14px',
+                  color: '#cbd5e1',
+                  cursor: 'pointer',
+                  transition: 'all 150ms',
+                  border: 'none',
+                  background: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.color = '#ffffff'
+                  e.target.style.backgroundColor = 'rgba(255,255,255,0.04)'
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.color = '#cbd5e1'
+                  e.target.style.backgroundColor = 'transparent'
+                }}
+              >
+                <span style={{ fontSize: '16px' }}>ÿ</span>
+                <span>Profile Settings</span>
               </button>
-            </>
-          )}
-
-          {variant === 'app' && (
-            <>
-              {navItems.app.map(item => (
-                <Link key={item.href} to={item.href} style={{ color: 'var(--text-1)', textDecoration: 'none', fontWeight: 500 }}>
-                  {item.label}
-                </Link>
-              ))}
-              <div style={{ position: 'relative' }}>
-                <button 
-                  onClick={() => setUserMenuOpen(!userMenuOpen)}
-                  style={{ background: 'none', border: 'none', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-1)', cursor: 'pointer' }}
-                >
-                  <User size={20} />
-                  <ChevronDown size={16} style={{ transition: 'transform 0.2s', transform: userMenuOpen ? 'rotate(180deg)' : 'rotate(0deg)' }} />
-                </button>
-                <AnimatePresence>
-                  {userMenuOpen && (
-                    <motion.div 
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      style={{
-                        position: 'absolute',
-                        top: '100%',
-                        right: 0,
-                        background: 'var(--glass-1)',
-                        backdropFilter: 'blur(20px)',
-                        border: '1px solid var(--glass-border)',
-                        borderRadius: '12px',
-                        padding: '0.5rem',
-                        minWidth: '160px',
-                        boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
-                      }}
-                    >
-                      <button 
-                        onClick={handleLogout}
-                        style={{ width: '100%', textAlign: 'left', padding: '0.75rem 1rem', border: 'none', background: 'none', borderRadius: '8px', cursor: 'pointer', color: 'var(--text-1)' }}
-                      >
-                        <LogOut size={16} style={{ marginRight: '0.5rem', display: 'inline' }} />
-                        Sign Out
-                      </button>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            </>
+              
+              <button
+                onClick={() => {
+                  navigate('/activity-logs')
+                  setUserMenuOpen(false)
+                }}
+                style={{
+                  width: '100%',
+                  textAlign: 'left',
+                  padding: '10px 16px',
+                  fontSize: '14px',
+                  color: '#cbd5e1',
+                  cursor: 'pointer',
+                  transition: 'all 150ms',
+                  border: 'none',
+                  background: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.color = '#ffffff'
+                  e.target.style.backgroundColor = 'rgba(255,255,255,0.04)'
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.color = '#cbd5e1'
+                  e.target.style.backgroundColor = 'transparent'
+                }}
+              >
+                <span style={{ fontSize: '16px' }}>ð</span>
+                <span>Activity Logs</span>
+              </button>
+              
+              {/* Divider */}
+              <div style={{
+                height: '1px',
+                background: 'rgba(255,255,255,0.06)',
+                margin: '4px 0'
+              }} />
+              
+              <button
+                onClick={handleSignOut}
+                style={{
+                  width: '100%',
+                  textAlign: 'left',
+                  padding: '10px 16px',
+                  fontSize: '14px',
+                  color: '#f87171',
+                  cursor: 'pointer',
+                  transition: 'all 150ms',
+                  border: 'none',
+                  background: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.color = '#ef4444'
+                  e.target.style.backgroundColor = 'rgba(239, 68, 68, 0.06)'
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.color = '#f87171'
+                  e.target.style.backgroundColor = 'transparent'
+                }}
+              >
+                <span style={{ fontSize: '16px' }}>Þ</span>
+                <span>Sign Out</span>
+              </button>
+            </div>
           )}
         </div>
-
-        {/* Mobile Menu Button */}
-        <button 
-          onClick={() => setIsOpen(!isOpen)}
-          style={{ 
-            display: '(max-width: 768px)' ? 'block' : 'none', 
-            background: 'none', border: 'none', cursor: 'pointer' 
-          }}
-          className="mobile-menu"
-        >
-          {isOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
-
-        {/* Mobile Menu */}
-        <AnimatePresence>
-          {isOpen && (
-            <motion.div 
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              style={{
-                position: 'fixed',
-                top: '100%',
-                left: 0,
-                right: 0,
-                background: 'var(--glass-1)',
-                backdropFilter: 'blur(20px)',
-                borderTop: '1px solid var(--glass-border)',
-                padding: '1rem 2rem'
-              }}
-            >
-              {variant === 'public' && navItems.public.map(item => (
-                <Link 
-                  key={item.href} 
-                  to={item.href} 
-                  onClick={() => setIsOpen(false)}
-                  style={{ display: 'block', color: 'var(--text-1)', textDecoration: 'none', marginBottom: '1rem', fontWeight: 500 }}
-                >
-                  {item.label}
-                </Link>
-              ))}
-              {variant === 'app' && (
-                <div>
-                  {navItems.app.map(item => (
-                    <Link 
-                      key={item.href} 
-                      to={item.href} 
-                      onClick={() => setIsOpen(false)}
-                      style={{ display: 'block', color: 'var(--text-1)', textDecoration: 'none', marginBottom: '1rem', fontWeight: 500 }}
-                    >
-                      {item.label}
-                    </Link>
-                  ))}
-                  <button 
-                    onClick={handleLogout}
-                    style={{ width: '100%', textAlign: 'left', padding: '0.75rem', border: 'none', background: 'none', borderRadius: '8px', color: 'var(--danger)', cursor: 'pointer', marginTop: '1rem' }}
-                  >
-                    Sign Out
-                  </button>
-                </div>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <ThemeToggle />
       </div>
     </nav>
-  );
-};
-
-export default Navbar;
+  )
+}
 

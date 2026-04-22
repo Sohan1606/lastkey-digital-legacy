@@ -41,12 +41,11 @@ function AppContent() {
 
   // Determine navbar variant
   const publicRoutes = [
-    '/', '/login', '/register', '/forgot-password', '/reset-password', 
+    '/', '/signin', '/signup', '/forgot-password', '/reset-password', 
     '/verify-email', '/privacy', '/terms', '/trust', '/pricing', '/beneficiary-portal'
   ];
   const isPublicRoute = publicRoutes.includes(location.pathname);
-  const variant = isPublicRoute && !user ? 'public' : 
-                  isPublicRoute && user ? 'public-authed' : 'app';
+  const variant = isPublicRoute ? 'public' : 'app';
 
   return (
     <>
@@ -58,8 +57,8 @@ function AppContent() {
       }>
         <Routes>
           <Route path="/" element={<Landing />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
+          <Route path="/signin" element={<Login />} />
+          <Route path="/signup" element={<Register />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />

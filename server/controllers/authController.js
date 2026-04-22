@@ -24,13 +24,10 @@ const redactSensitive = (obj) => {
 
 exports.register = async (req, res, next) => {
   try {
-    // Log without sensitive data (S3)
-    console.log('📝 Registration request received:', redactSensitive(req.body));
     const { name, email, password } = req.body;
 
     // Validation
     if (!name || !email || !password) {
-      console.log('❌ Registration validation failed: missing fields');
       return res.status(400).json({
         status: 'fail',
         message: 'Please provide name, email, and password'
@@ -40,8 +37,7 @@ exports.register = async (req, res, next) => {
     // Check if user exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      console.log('❌ Registration failed: Email already exists');
-      return res.status(400).json({
+        return res.status(400).json({
         status: 'fail',
         message: 'Email already registered'
       });
@@ -49,7 +45,6 @@ exports.register = async (req, res, next) => {
 
     // Create user
     const newUser = await User.create({ name, email, password });
-    console.log('✅ User created successfully:', newUser.email);
 
     // Generate email verification token
     const verificationToken = crypto.randomBytes(32).toString('hex');
@@ -119,9 +114,7 @@ exports.register = async (req, res, next) => {
       message: 'Registration successful! Please check your email to verify your account.'
     });
   } catch (error) {
-    console.error('❌ Registration error:', error.message);
-    console.error('Stack:', error.stack);
-    if (!res.headersSent) {
+        if (!res.headersSent) {
       res.status(400).json({
         status: 'fail',
         message: error.message
@@ -132,11 +125,9 @@ exports.register = async (req, res, next) => {
 
 exports.login = async (req, res, next) => {
   try {
-    console.log('🔑 Login request received:', req.body.email);
     const { email, password } = req.body;
 
     if (!email || !password) {
-      console.log('❌ Login validation failed: missing email or password');
       return res.status(400).json({
         status: 'fail',
         message: 'Please provide email and password'
@@ -146,7 +137,6 @@ exports.login = async (req, res, next) => {
     // Find user and select password
     const user = await User.findOne({ email }).select('+password');
     if (!user) {
-      console.log('❌ Login failed: Invalid credentials');
       return res.status(401).json({
         status: 'fail',
         message: 'Invalid credentials'
@@ -155,7 +145,6 @@ exports.login = async (req, res, next) => {
 
     const isPasswordCorrect = await user.comparePassword(password);
     if (!isPasswordCorrect) {
-      console.log('❌ Login failed: Invalid credentials');
       return res.status(401).json({
         status: 'fail',
         message: 'Invalid credentials'
@@ -165,7 +154,6 @@ exports.login = async (req, res, next) => {
     // Update lastActive
     user.lastActive = Date.now();
     await user.save();
-    console.log('Login successful:', email);
 
     // Log login event
     await log('login', { 
@@ -193,7 +181,6 @@ exports.login = async (req, res, next) => {
       }
     });
   } catch (error) {
-    console.error('❌ Login error:', error.message);
     res.status(400).json({
       status: 'fail',
       message: error.message
@@ -230,14 +217,12 @@ exports.verifyEmail = async (req, res, next) => {
     user.emailVerificationExpiry = undefined;
     await user.save();
 
-    console.log('✅ Email verified successfully:', user.email);
 
     res.status(200).json({
       status: 'success',
       message: 'Email verified successfully! You can now use all features of LastKey.'
     });
   } catch (error) {
-    console.error('❌ Email verification error:', error);
     res.status(400).json({
       status: 'fail',
       message: error.message
@@ -320,7 +305,6 @@ exports.forgotPassword = async (req, res, next) => {
       message: 'If an account exists with this email, a password reset link has been sent.'
     });
   } catch (error) {
-    console.error('❌ Forgot password error:', error);
     res.status(400).json({
       status: 'fail',
       message: error.message
@@ -357,7 +341,6 @@ exports.resetPassword = async (req, res, next) => {
     user.resetPasswordExpiry = undefined;
     await user.save();
 
-    console.log('✅ Password reset successful:', user.email);
 
     // Generate new token
     const jwtToken = signToken(user._id);

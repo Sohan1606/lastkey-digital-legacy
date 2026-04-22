@@ -10,9 +10,10 @@ import GuardianProtocolPanel from '../components/GuardianProtocolPanel';
 import ActivityFeed from '../components/ActivityFeed';
 import LegacyTimeline from '../components/LegacyTimeline';
 import LegacyReadinessScore from '../components/LegacyReadinessScore';
+import Sidebar from '../components/Sidebar';
 import { 
   Users, Lock, Clock, Sparkles, Zap, Award, BarChart3,
-  Loader2, Mic, Calendar, BookOpen, Trophy, Heart
+  Loader2, Mic, Calendar, BookOpen, Trophy, Heart, Package, FileText
 } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
@@ -37,6 +38,19 @@ const Dashboard = () => {
   const queryClient = useQueryClient();
   const [dmsStatus, setDmsStatus] = useState({ status: 'active', remainingMinutes: 30 });
   const [isPremium, setIsPremium] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Check for mobile screen size
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Fetch user stats and premium status
   const { data: stats, isLoading: statsLoading } = useQuery({
@@ -156,8 +170,8 @@ const Dashboard = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       setDmsStatus({ status: res.data.user?.triggerStatus || 'active', remainingMinutes: res.data.user?.inactivityDuration || 30 });
-      toast.success('✋ I\'m Here — Timer Reset', {
-        icon: '👋',
+      toast.success('â I\'m Here â Timer Reset', {
+        icon: 'ð',
         style: {
           background: 'linear-gradient(135deg, #00e5a0, #4f9eff)',
           color: 'white',
@@ -193,146 +207,615 @@ const Dashboard = () => {
     low: 'from-gray-500 to-gray-700'
   };
 
-  return (
-    <div className="page spatial-bg">
-      <div className="stars" />
-      <div className="dashboard-grid" style={{ maxWidth: 1280, margin: '0 auto', padding: '28px 24px 80px', display: 'grid', gridTemplateColumns: 'clamp(240px, 25vw, 300px) 1fr', gap: 24, alignItems: 'start' }}>
+  // Get time of day for greeting
+  const getTimeOfDay = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'morning';
+    if (hour < 17) return 'afternoon';
+    return 'evening';
+  };
 
-        {/* ── SIDEBAR ── */}
-        <div className="dashboard-sidebar" style={{ position: 'sticky', top: 96, display: 'flex', flexDirection: 'column', gap: 18 }}>
-          <GuardianProtocolPanel dmsStatus={dmsStatus} onPing={handlePing} isPremium={isPremium} lastActive={lastActive} />
+  const firstName = user?.name?.split(' ')[0] || 'there';
+
+  return (
+    <div style={{ display: 'flex' }}>
+      {/* Sidebar */}
+      <Sidebar />
+      
+      {/* Main Content Area */}
+      <div style={{
+        marginLeft: isMobile ? '0' : '240px',
+        minHeight: '100vh',
+        background: '#030508',
+        flex: 1,
+        transition: 'margin-left 0.3s ease-in-out'
+      }}>
+        {/* TOP - Header bar */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: isMobile ? '80px 16px 20px 16px' : '32px 32px 24px 32px',
+          borderBottom: '1px solid rgba(255,255,255,0.04)'
+        }}>
+          <div>
+            <h1 style={{
+              fontSize: '24px',
+              fontWeight: 600,
+              color: '#ffffff',
+              marginBottom: '4px'
+            }}>
+              {getTimeOfDay()}, {firstName} ð
+            </h1>
+            <p style={{
+              fontSize: '14px',
+              color: '#64748b',
+              margin: 0
+            }}>
+              {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' })} · Your vault is secure
+            </p>
+          </div>
+          <button 
+            onClick={handlePing}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '10px 16px',
+              background: 'rgba(34, 197, 94, 0.1)',
+              border: '1px solid rgba(34, 197, 94, 0.2)',
+              borderRadius: '8px',
+              color: '#22c55e',
+              fontSize: '14px',
+              fontWeight: 500,
+              cursor: 'pointer',
+              transition: 'all 150ms'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.background = 'rgba(34, 197, 94, 0.15)';
+              e.target.style.borderColor = 'rgba(34, 197, 94, 0.3)';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.background = 'rgba(34, 197, 94, 0.1)';
+              e.target.style.borderColor = 'rgba(34, 197, 94, 0.2)';
+            }}
+          >
+            Check In
+          </button>
         </div>
 
-        {/* ── MAIN ── */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
-
-          {/* Header */}
-          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
-            <p style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 4 }}>Welcome back</p>
-            <h1 className="display" style={{ fontSize: 28, display: 'flex', alignItems: 'center', gap: 10 }}>
-              {user?.name?.split(' ')[0]}'s Legacy Hub
-              {(user?.streak >= 3) && <span style={{ fontSize: 20, animation: 'float 3s ease-in-out infinite' }}>🔥</span>}
-            </h1>
-          </motion.div>
-
-          {/* Legacy Readiness Score */}
-          <LegacyReadinessScore 
-            assetCount={assetsData?.data?.length || 0}
-            beneficiaryCount={beneficiariesData?.data?.beneficiaries?.length || 0}
-            enrolledBeneficiaryCount={beneficiariesData?.data?.beneficiaries?.filter(b => b.enrollmentStatus === 'enrolled').length || 0}
-            capsuleCount={capsulesData?.data?.capsules?.length || 0}
-            documentCount={documentsData?.data?.length || 0}
-            vaultUnlocked={false}
-          />
-
-          {/* PRIMARY CTA — Send Final Message */}
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            style={{
-              background: 'linear-gradient(135deg, rgba(255,77,109,0.12), rgba(124,92,252,0.12))',
-              border: '1px solid rgba(255,77,109,0.25)',
-              borderRadius: 20,
-              padding: '20px 24px',
+        {/* MIDDLE - Stats row */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+          gap: '16px',
+          padding: '24px 32px'
+        }}>
+          {/* Vault Items */}
+          <div style={{
+            background: '#050d1a',
+            border: '1px solid rgba(255,255,255,0.04)',
+            borderRadius: '12px',
+            padding: '20px'
+          }}>
+            <div style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              cursor: 'pointer'
-            }}
-            onClick={() => navigate('/final-message')}
-            whileHover={{ scale: 1.01 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            <div>
-              <p style={{ fontSize: 11, color: 'rgba(255,77,109,0.8)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>
-                Your most important action
-              </p>
-              <h2 style={{ fontSize: 18, fontWeight: 800, color: '#f0f4ff', margin: 0 }}>
-                💌 Send Your Final Message
-              </h2>
-              <p style={{ fontSize: 13, color: 'var(--text-2)', margin: '4px 0 0' }}>
-                Write to your loved ones. Choose when they receive it.
-              </p>
+              marginBottom: '16px'
+            }}>
+              <span style={{
+                fontSize: '10px',
+                fontWeight: 600,
+                color: '#64748b',
+                textTransform: 'uppercase',
+                letterSpacing: '0.1em'
+              }}>
+                Vault Items
+              </span>
+              <div style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '8px',
+                background: 'rgba(59, 130, 246, 0.1)',
+                border: '1px solid rgba(59, 130, 246, 0.15)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Lock style={{ width: '16px', height: '16px', color: '#3b82f6' }} />
+              </div>
             </div>
-            <div style={{ flexShrink: 0, background: 'rgba(255,77,109,0.15)', border: '1px solid rgba(255,77,109,0.3)', borderRadius: 12, padding: '10px 16px', fontSize: 13, fontWeight: 700, color: '#ff4d6d' }}>
-              Start →
-            </div>
-          </motion.div>
-
-          {/* Quick Access */}
-          <div>
-            <p style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 14 }}>Quick Access</p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
-              {[
-                { label: 'Voice Messages', sub: 'AI-narrated farewell', path: '/voice-messages', color: '#7c5cfc', icon: '🎤' },
-                { label: 'Life Timeline', sub: 'Your visual story', path: '/life-timeline', color: '#4f9eff', icon: '📅' },
-                { label: 'Memoir AI', sub: 'Write your chapters', path: '/memoir-ai', color: '#00e5a0', icon: '📖' },
-                { label: 'Beneficiary Portal', sub: 'For loved ones to access legacy', path: '/beneficiary-portal', color: '#00e5a0', icon: '👥' },
-                { label: 'Setup Guide', sub: 'Complete onboarding', path: '/onboarding', color: '#a78bfa', icon: '⚡' },
-                { label: 'Activity Logs', sub: 'View your activity', path: '/activity-logs', color: '#4f9eff', icon: '📋' },
-              ].map((item, i) => (
-                <motion.button key={item.path} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-                  whileHover={{ y: -4, scale: 1.02 }} whileTap={{ scale: 0.97 }}
-                  onClick={() => navigate(item.path)}
-                  style={{ background: 'var(--glass-1)', backdropFilter: 'blur(20px)', border: '1px solid var(--glass-border)', borderRadius: 15, padding: '16px 14px', cursor: 'pointer', textAlign: 'left', transition: 'all 0.25s cubic-bezier(0.23,1,0.32,1)', position: 'relative', overflow: 'hidden' }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = item.color + '45'; e.currentTarget.style.background = item.color + '08'; e.currentTarget.style.boxShadow = `0 8px 30px rgba(0,0,0,0.35), 0 0 18px ${item.color}18`; }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--glass-border)'; e.currentTarget.style.background = 'var(--glass-1)'; e.currentTarget.style.boxShadow = 'none'; }}
-                >
-                  <div style={{ fontSize: 22, marginBottom: 8 }}>{item.icon}</div>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: '#f0f4ff', marginBottom: 2 }}>{item.label}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{item.sub}</div>
-                </motion.button>
-              ))}
-            </div>
-          </div>
-
-          {/* What happens if I'm gone */}
-          <div>
-            <p style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 14 }}>
-              What happens when you're gone
+            <p style={{
+              fontSize: '32px',
+              fontWeight: 700,
+              color: '#ffffff',
+              margin: '0 0 4px 0'
+            }}>
+              {assetsData?.data?.length || 0}
             </p>
-            <LegacyTimeline dmsStatus={dmsStatus} />
+            <p style={{
+              fontSize: '12px',
+              color: '#64748b',
+              margin: 0
+            }}>
+              encrypted & secured
+            </p>
           </div>
 
-          {/* AI Suggestions + Activity Feed */}
-          <div className="suggestions-feed-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: 20 }}>
-            <div>
-              <p style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 14 }}>AI Smart Suggestions</p>
+          {/* Beneficiaries */}
+          <div style={{
+            background: '#050d1a',
+            border: '1px solid rgba(255,255,255,0.04)',
+            borderRadius: '12px',
+            padding: '20px'
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '16px'
+            }}>
+              <span style={{
+                fontSize: '10px',
+                fontWeight: 600,
+                color: '#64748b',
+                textTransform: 'uppercase',
+                letterSpacing: '0.1em'
+              }}>
+                Beneficiaries
+              </span>
+              <div style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '8px',
+                background: 'rgba(139, 92, 246, 0.1)',
+                border: '1px solid rgba(139, 92, 246, 0.15)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Users style={{ width: '16px', height: '16px', color: '#8b5cf6' }} />
+              </div>
+            </div>
+            <p style={{
+              fontSize: '32px',
+              fontWeight: 700,
+              color: '#ffffff',
+              margin: '0 0 4px 0'
+            }}>
+              {beneficiariesData?.data?.beneficiaries?.length || 0}
+            </p>
+            <p style={{
+              fontSize: '12px',
+              color: '#64748b',
+              margin: 0
+            }}>
+              designated contacts
+            </p>
+          </div>
+
+          {/* Active Triggers */}
+          <div style={{
+            background: '#050d1a',
+            border: '1px solid rgba(255,255,255,0.04)',
+            borderRadius: '12px',
+            padding: '20px'
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '16px'
+            }}>
+              <span style={{
+                fontSize: '10px',
+                fontWeight: 600,
+                color: '#64748b',
+                textTransform: 'uppercase',
+                letterSpacing: '0.1em'
+              }}>
+                Active Triggers
+              </span>
+              <div style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '8px',
+                background: 'rgba(34, 197, 94, 0.1)',
+                border: '1px solid rgba(34, 197, 94, 0.15)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Zap style={{ width: '16px', height: '16px', color: '#22c55e' }} />
+              </div>
+            </div>
+            <p style={{
+              fontSize: '32px',
+              fontWeight: 700,
+              color: '#ffffff',
+              margin: '0 0 4px 0'
+            }}>
+              {dmsStatus.status === 'active' ? '1' : '0'}
+            </p>
+            <p style={{
+              fontSize: '12px',
+              color: '#64748b',
+              margin: 0
+            }}>
+              monitoring your account
+            </p>
+          </div>
+
+          {/* Documents */}
+          <div style={{
+            background: '#050d1a',
+            border: '1px solid rgba(255,255,255,0.04)',
+            borderRadius: '12px',
+            padding: '20px'
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '16px'
+            }}>
+              <span style={{
+                fontSize: '10px',
+                fontWeight: 600,
+                color: '#64748b',
+                textTransform: 'uppercase',
+                letterSpacing: '0.1em'
+              }}>
+                Documents
+              </span>
+              <div style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '8px',
+                background: 'rgba(251, 146, 60, 0.1)',
+                border: '1px solid rgba(251, 146, 60, 0.15)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <FileText style={{ width: '16px', height: '16px', color: '#fb923c' }} />
+              </div>
+            </div>
+            <p style={{
+              fontSize: '32px',
+              fontWeight: 700,
+              color: '#ffffff',
+              margin: '0 0 4px 0'
+            }}>
+              {documentsData?.data?.length || 0}
+            </p>
+            <p style={{
+              fontSize: '12px',
+              color: '#64748b',
+              margin: 0
+            }}>
+              verified documents
+            </p>
+          </div>
+        </div>
+
+        {/* BOTTOM - 2 column layout */}
+        <div style={{
+          display: 'flex',
+          gap: '24px',
+          padding: '0 32px 32px 32px'
+        }}>
+          {/* Left Column (60%) */}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            {/* Recent Activity */}
+            <div style={{
+              background: '#050d1a',
+              border: '1px solid rgba(255,255,255,0.04)',
+              borderRadius: '12px',
+              padding: '24px'
+            }}>
+              <h3 style={{
+                fontSize: '14px',
+                fontWeight: 600,
+                color: '#ffffff',
+                marginBottom: '16px'
+              }}>
+                Recent Activity
+              </h3>
+              <ActivityFeed />
+            </div>
+
+            {/* Guardian Protocol Panel */}
+            <div style={{
+              background: '#050d1a',
+              border: '1px solid rgba(255,255,255,0.04)',
+              borderRadius: '12px',
+              padding: '24px'
+            }}>
+              <h3 style={{
+                fontSize: '14px',
+                fontWeight: 600,
+                color: '#ffffff',
+                marginBottom: '16px'
+              }}>
+                Guardian Protocol
+              </h3>
+              <GuardianProtocolPanel dmsStatus={dmsStatus} onPing={handlePing} isPremium={isPremium} lastActive={lastActive} />
+            </div>
+
+            {/* Legacy Readiness Score */}
+            <div style={{
+              background: '#050d1a',
+              border: '1px solid rgba(255,255,255,0.04)',
+              borderRadius: '12px',
+              padding: '24px'
+            }}>
+              <h3 style={{
+                fontSize: '14px',
+                fontWeight: 600,
+                color: '#ffffff',
+                marginBottom: '16px'
+              }}>
+                Legacy Readiness
+              </h3>
+              <LegacyReadinessScore 
+                assetCount={assetsData?.data?.length || 0}
+                beneficiaryCount={beneficiariesData?.data?.beneficiaries?.length || 0}
+                enrolledBeneficiaryCount={beneficiariesData?.data?.beneficiaries?.filter(b => b.enrollmentStatus === 'enrolled').length || 0}
+                capsuleCount={capsulesData?.data?.capsules?.length || 0}
+                documentCount={documentsData?.data?.length || 0}
+                vaultUnlocked={false}
+              />
+            </div>
+          </div>
+
+          {/* Right Column (40%) */}
+          <div style={{ width: '320px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            {/* Security Status */}
+            <div style={{
+              background: '#050d1a',
+              border: '1px solid rgba(255,255,255,0.04)',
+              borderRadius: '12px',
+              padding: '24px'
+            }}>
+              <h3 style={{
+                fontSize: '14px',
+                fontWeight: 600,
+                color: '#ffffff',
+                marginBottom: '16px'
+              }}>
+                Security Status
+              </h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22c55e' }}></div>
+                  <span style={{ fontSize: '14px', color: '#e2e8f0' }}>Email Verified</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22c55e' }}></div>
+                  <span style={{ fontSize: '14px', color: '#e2e8f0' }}>Vault Encrypted</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#eab308' }}></div>
+                  <span style={{ fontSize: '14px', color: '#e2e8f0' }}>2FA Not Enabled</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22c55e' }}></div>
+                  <span style={{ fontSize: '14px', color: '#e2e8f0' }}>
+                    Last Check-in: {lastActive ? new Date(lastActive).toLocaleDateString() : 'Never'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div style={{
+              background: '#050d1a',
+              border: '1px solid rgba(255,255,255,0.04)',
+              borderRadius: '12px',
+              padding: '24px'
+            }}>
+              <h3 style={{
+                fontSize: '14px',
+                fontWeight: 600,
+                color: '#ffffff',
+                marginBottom: '16px'
+              }}>
+                Quick Actions
+              </h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <button 
+                  onClick={() => navigate('/vault')}
+                  style={{
+                    width: '100%',
+                    padding: '10px 16px',
+                    background: 'rgba(59, 130, 246, 0.1)',
+                    border: '1px solid rgba(59, 130, 246, 0.2)',
+                    borderRadius: '8px',
+                    color: '#3b82f6',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    transition: 'all 150ms'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.background = 'rgba(59, 130, 246, 0.15)';
+                    e.target.style.borderColor = 'rgba(59, 130, 246, 0.3)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.background = 'rgba(59, 130, 246, 0.1)';
+                    e.target.style.borderColor = 'rgba(59, 130, 246, 0.2)';
+                  }}
+                >
+                  + Add Vault Item
+                </button>
+                <button 
+                  onClick={() => navigate('/beneficiaries')}
+                  style={{
+                    width: '100%',
+                    padding: '10px 16px',
+                    background: 'rgba(139, 92, 246, 0.1)',
+                    border: '1px solid rgba(139, 92, 246, 0.2)',
+                    borderRadius: '8px',
+                    color: '#8b5cf6',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    transition: 'all 150ms'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.background = 'rgba(139, 92, 246, 0.15)';
+                    e.target.style.borderColor = 'rgba(139, 92, 246, 0.3)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.background = 'rgba(139, 92, 246, 0.1)';
+                    e.target.style.borderColor = 'rgba(139, 92, 246, 0.2)';
+                  }}
+                >
+                  + Add Beneficiary
+                </button>
+                <button 
+                  onClick={() => navigate('/final-message')}
+                  style={{
+                    width: '100%',
+                    padding: '10px 16px',
+                    background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                    border: 'none',
+                    borderRadius: '8px',
+                    color: '#ffffff',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    transition: 'all 150ms'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.opacity = '0.9';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.opacity = '1';
+                  }}
+                >
+                  Configure Trigger
+                </button>
+              </div>
+            </div>
+
+            {/* AI Suggestions */}
+            <div style={{
+              background: '#050d1a',
+              border: '1px solid rgba(255,255,255,0.04)',
+              borderRadius: '12px',
+              padding: '24px'
+            }}>
+              <h3 style={{
+                fontSize: '14px',
+                fontWeight: 600,
+                color: '#ffffff',
+                marginBottom: '16px'
+              }}>
+                AI Smart Suggestions
+              </h3>
               {suggestionsLoading ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {[1,2].map(i => <div key={i} className="skeleton" style={{ height: 110 }} />)}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {[1,2].map(i => (
+                    <div key={i} style={{
+                      height: '64px',
+                      background: '#1e293b',
+                      borderRadius: '8px',
+                      animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+                    }} />
+                  ))}
                 </div>
               ) : suggestions.length === 0 ? (
-                <div style={{ background: 'rgba(0,229,160,0.04)', border: '1px solid rgba(0,229,160,0.14)', borderRadius: 16, padding: 28, textAlign: 'center' }}>
-                  <div style={{ fontSize: 28, marginBottom: 8 }}>✨</div>
-                  <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--pulse)', margin: '0 0 4px' }}>Perfect Setup!</p>
-                  <p style={{ fontSize: 12, color: 'var(--text-3)', margin: 0 }}>Your digital legacy is fully optimized.</p>
+                <div style={{
+                  textAlign: 'center',
+                  padding: '32px 0'
+                }}>
+                  <div style={{ fontSize: '24px', marginBottom: '8px' }}>â¨</div>
+                  <p style={{
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    color: '#22c55e',
+                    marginBottom: '4px'
+                  }}>
+                    Perfect Setup!
+                  </p>
+                  <p style={{
+                    fontSize: '12px',
+                    color: '#64748b',
+                    margin: 0
+                  }}>
+                    Your digital legacy is fully optimized.
+                  </p>
                 </div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {suggestions.map((s, i) => {
-                    const c = { critical: '#ff4d6d', high: '#ffb830', medium: '#4f9eff', low: '#8899bb' }[s.priority] || '#8899bb';
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {suggestions.slice(0, 3).map((s, i) => {
+                    const colors = {
+                      critical: { border: '#ef4444', bg: 'rgba(239, 68, 68, 0.1)', text: '#ef4444' },
+                      high: { border: '#f97316', bg: 'rgba(249, 115, 22, 0.1)', text: '#f97316' },
+                      medium: { border: '#3b82f6', bg: 'rgba(59, 130, 246, 0.1)', text: '#3b82f6' },
+                      low: { border: '#64748b', bg: 'rgba(100, 116, 139, 0.1)', text: '#64748b' }
+                    };
+                    const color = colors[s.priority] || colors.low;
+                    
                     return (
-                      <motion.div key={s.id} initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.07 }}
-                        whileHover={{ x: 4 }}
-                        style={{ background: 'var(--glass-1)', backdropFilter: 'blur(20px)', borderRadius: 14, borderLeft: `3px solid ${c}`, border: `1px solid var(--glass-border)`, borderLeftColor: c, padding: '15px 18px', cursor: 'pointer', transition: 'all 0.22s' }}
+                      <div 
+                        key={s.id}
                         onClick={() => navigate('/' + s.action)}
-                        onMouseEnter={e => { e.currentTarget.style.background = c + '08'; e.currentTarget.style.borderColor = c + '35'; e.currentTarget.style.borderLeftColor = c; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = 'var(--glass-1)'; e.currentTarget.style.borderColor = 'var(--glass-border)'; e.currentTarget.style.borderLeftColor = c; }}
+                        style={{
+                          padding: '12px',
+                          borderRadius: '8px',
+                          border: `1px solid ${color.border}`,
+                          background: color.bg,
+                          color: color.text,
+                          cursor: 'pointer',
+                          transition: 'opacity 150ms'
+                        }}
+                        onMouseEnter={(e) => e.target.style.opacity = '0.8'}
+                        onMouseLeave={(e) => e.target.style.opacity = '1'}
                       >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 5 }}>
-                          <span style={{ fontSize: 13, fontWeight: 700, color: '#f0f4ff' }}>{s.title}</span>
-                          <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: c, background: c + '18', border: `1px solid ${c}28`, borderRadius: 6, padding: '2px 7px', flexShrink: 0, marginLeft: 8 }}>{s.priority}</span>
+                        <div style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'flex-start',
+                          marginBottom: '8px'
+                        }}>
+                          <span style={{
+                            fontSize: '10px',
+                            fontWeight: 600,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.1em'
+                          }}>
+                            {s.priority}
+                          </span>
                         </div>
-                        <p style={{ fontSize: 12, color: 'var(--text-2)', margin: '0 0 10px', lineHeight: 1.55 }}>{s.description}</p>
-                        <span style={{ fontSize: 11, color: c, fontWeight: 600 }}>Take action →</span>
-                      </motion.div>
+                        <p style={{
+                          fontSize: '14px',
+                          fontWeight: 500,
+                          marginBottom: '4px',
+                          margin: 0
+                        }}>
+                          {s.title}
+                        </p>
+                        <p style={{
+                          fontSize: '12px',
+                          opacity: 0.75,
+                          margin: 0,
+                          overflow: 'hidden',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical'
+                        }}>
+                          {s.description}
+                        </p>
+                      </div>
                     );
                   })}
                 </div>
               )}
             </div>
-            <ActivityFeed />
           </div>
         </div>
       </div>
