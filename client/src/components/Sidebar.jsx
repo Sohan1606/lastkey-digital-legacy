@@ -1,737 +1,188 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import Logo from './Logo';
-import {
-  BarChart3,
-  Lock,
-  Users,
-  Package,
-  Mic,
-  Calendar,
-  BookOpen,
-  MessageSquare,
-  FileText,
-  Bot,
-  ListChecks,
-  Settings,
-  LogOut,
-  Menu,
-  X
-} from 'lucide-react';
+import React from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
+import Logo from './Logo'
+import { useAuth } from '../contexts/AuthContext'
 
-export default function Sidebar() {
-  const location = useLocation();
-  const { user, logout } = useAuth();
-  const [isMobile, setIsMobile] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+const NAV_GROUPS = [
+  {
+    label: 'VAULT',
+    items: [
+      { icon: ' ', label: 'Dashboard', path: '/dashboard' },
+      { icon: ' ', label: 'Vault', path: '/vault' },
+      { icon: ' ', label: 'Beneficiaries', 
+        path: '/beneficiaries' },
+    ],
+  },
+  {
+    label: 'LEGACY',
+    items: [
+      { icon: ' ', label: 'Time Capsules', path: '/capsules' },
+      { icon: ' ', label: 'Voice Messages', 
+        path: '/voice-messages' },
+      { icon: ' ', label: 'Life Timeline', 
+        path: '/life-timeline' },
+      { icon: ' ', label: 'Memoir AI', path: '/memoir-ai' },
+      { icon: ' ', label: 'Final Message', 
+        path: '/final-message' },
+    ],
+  },
+  {
+    label: 'VERIFY',
+    items: [
+      { icon: ' ', label: 'Legal Documents', 
+        path: '/legal-documents' },
+      { icon: ' ', label: 'Activity Logs', 
+        path: '/activity-logs' },
+    ],
+  },
+  {
+    label: 'TOOLS',
+    items: [
+      { icon: ' ', label: 'AI Assistant', path: '/ai' },
+    ],
+  },
+]
 
-  const userName = user?.name || user?.email || 'User';
-  const userEmail = user?.email || 'user@example.com';
-  const userInitials = userName
+export default function Sidebar({ 
+  isOpen = true, 
+  onClose 
+}) {
+  const navigate = useNavigate()
+  const location = useLocation()
+  const { user, logout } = useAuth()
+
+  const handleSignOut = () => {
+    logout()
+    navigate('/')
+  }
+
+  const name = user?.name || user?.email || 'User'
+  const email = user?.email || ''
+  const initials = name
     .split(' ')
-    .map(n => n[0])
+    .map(n => n[0] || '')
     .join('')
     .toUpperCase()
-    .slice(0, 2);
+    .slice(0, 2)
 
-  // Check for mobile screen size
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
-  // Close sidebar when route changes on mobile
-  useEffect(() => {
-    if (isMobile) {
-      setIsSidebarOpen(false);
-    }
-  }, [location.pathname, isMobile]);
-
-  // Close sidebar when clicking outside on mobile
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (isMobile && isSidebarOpen && !e.target.closest('.sidebar-container') && !e.target.closest('.mobile-menu-button')) {
-        setIsSidebarOpen(false);
-      }
-    };
-
-    if (isMobile && isSidebarOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.body.style.overflow = 'unset';
-    };
-  }, [isMobile, isSidebarOpen]);
-
-  const handleLogout = () => {
-    logout();
-    if (isMobile) {
-      setIsSidebarOpen(false);
-    }
-  };
-
-  const toggleSidebar = () => {
-    setIsSidebarOpen(!isSidebarOpen);
-  };
+  const isActive = (path) => location.pathname === path
 
   return (
     <>
-      {/* Mobile Menu Button */}
-      {isMobile && (
-        <button
-          onClick={toggleSidebar}
-          className="mobile-menu-button"
-          style={{
-            position: 'fixed',
-            top: '16px',
-            left: '16px',
-            width: '44px',
-            height: '44px',
-            borderRadius: '12px',
-            background: '#050d1a',
-            border: '1px solid rgba(255,255,255,0.1)',
-            color: '#ffffff',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 50,
-            transition: 'all 150ms'
-          }}
-          onMouseEnter={(e) => {
-            e.target.style.background = 'rgba(255,255,255,0.1)';
-            e.target.style.borderColor = '#4f9eff';
-          }}
-          onMouseLeave={(e) => {
-            e.target.style.background = '#050d1a';
-            e.target.style.borderColor = 'rgba(255,255,255,0.1)';
-          }}
-        >
-          {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
-        </button>
-      )}
-
-      {/* Mobile Overlay */}
-      {isMobile && isSidebarOpen && (
+      {/* Mobile overlay - only render when sidebar is open */}
+      {isOpen && onClose && (
         <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0,0,0,0.5)',
-            zIndex: 45,
-            backdropFilter: 'blur(4px)'
-          }}
-          onClick={toggleSidebar}
+          className="fixed inset-0 bg-black/60 z-40 
+            lg:hidden"
+          onClick={onClose}
         />
       )}
 
       {/* Sidebar */}
-      <div
-        className="sidebar-container"
-        style={{
-          width: isMobile ? '280px' : '240px',
-          position: 'fixed',
-          left: isMobile ? (isSidebarOpen ? 0 : '-280px') : 0,
-          top: 0,
-          height: '100vh',
-          background: '#050d1a',
-          borderRight: isMobile ? 'none' : '1px solid rgba(255,255,255,0.04)',
-          borderLeft: isMobile && isSidebarOpen ? '1px solid rgba(255,255,255,0.1)' : 'none',
-          display: 'flex',
-          flexDirection: 'column',
-          zIndex: 46,
-          transition: isMobile ? 'left 0.3s ease-in-out, border-left 0.3s ease-in-out' : 'none',
-          boxShadow: isMobile && isSidebarOpen ? '4px 0 20px rgba(0,0,0,0.3)' : 'none'
-        }}>
-      {/* TOP - Logo area */}
-      <div style={{
-        padding: '20px 20px 20px 20px',
-        borderBottom: '1px solid rgba(255,255,255,0.04)'
-      }}>
-        <Logo size="sm" darkMode={true} />
-      </div>
-
-      {/* MIDDLE - Navigation */}
-      <div style={{
-        flex: 1,
-        overflowY: 'auto',
-        padding: '16px 0'
-      }}>
-        {/* Group: VAULT */}
-        <div>
-          <div style={{
-            padding: '20px 20px 6px 20px',
-            fontSize: '10px',
-            fontWeight: 600,
-            color: '#64748b',
-            textTransform: 'uppercase',
-            letterSpacing: '0.15em'
-          }}>
-            VAULT
-          </div>
-          
-          <Link
-            to="/dashboard"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              margin: '0 12px 2px 12px',
-              padding: '10px 12px',
-              borderRadius: '8px',
-              fontSize: '14px',
-              fontWeight: 500,
-              cursor: 'pointer',
-              marginBottom: '2px',
-              textDecoration: 'none',
-              color: location.pathname === '/dashboard' ? '#ffffff' : '#64748b',
-              background: location.pathname === '/dashboard' 
-                ? 'linear-gradient(to right, rgba(59, 130, 246, 0.18), rgba(124, 92, 252, 0.1))' 
-                : 'transparent',
-              border: location.pathname === '/dashboard' ? '1px solid rgba(59, 130, 246, 0.15)' : 'none'
-            }}
-            onMouseEnter={(e) => {
-              if (location.pathname !== '/dashboard') {
-                e.target.style.color = '#e2e8f0';
-                e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.04)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (location.pathname !== '/dashboard') {
-                e.target.style.color = '#64748b';
-                e.target.style.backgroundColor = 'transparent';
-              }
-            }}
-          >
-            <span style={{ fontSize: '16px' }}>ð</span>
-            <span style={{ flex: 1 }}>Dashboard</span>
-          </Link>
-          
-          <Link
-            to="/vault"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              margin: '0 12px 2px 12px',
-              padding: '10px 12px',
-              borderRadius: '8px',
-              fontSize: '14px',
-              fontWeight: 500,
-              cursor: 'pointer',
-              marginBottom: '2px',
-              textDecoration: 'none',
-              color: location.pathname === '/vault' ? '#ffffff' : '#64748b',
-              background: location.pathname === '/vault' 
-                ? 'linear-gradient(to right, rgba(59, 130, 246, 0.18), rgba(124, 92, 252, 0.1))' 
-                : 'transparent',
-              border: location.pathname === '/vault' ? '1px solid rgba(59, 130, 246, 0.15)' : 'none'
-            }}
-            onMouseEnter={(e) => {
-              if (location.pathname !== '/vault') {
-                e.target.style.color = '#e2e8f0';
-                e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.04)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (location.pathname !== '/vault') {
-                e.target.style.color = '#64748b';
-                e.target.style.backgroundColor = 'transparent';
-              }
-            }}
-          >
-            <span style={{ fontSize: '16px' }}>ð</span>
-            <span style={{ flex: 1 }}>Vault</span>
-          </Link>
-          
-          <Link
-            to="/beneficiaries"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              margin: '0 12px 2px 12px',
-              padding: '10px 12px',
-              borderRadius: '8px',
-              fontSize: '14px',
-              fontWeight: 500,
-              cursor: 'pointer',
-              marginBottom: '2px',
-              textDecoration: 'none',
-              color: location.pathname === '/beneficiaries' ? '#ffffff' : '#64748b',
-              background: location.pathname === '/beneficiaries' 
-                ? 'linear-gradient(to right, rgba(59, 130, 246, 0.18), rgba(124, 92, 252, 0.1))' 
-                : 'transparent',
-              border: location.pathname === '/beneficiaries' ? '1px solid rgba(59, 130, 246, 0.15)' : 'none'
-            }}
-            onMouseEnter={(e) => {
-              if (location.pathname !== '/beneficiaries') {
-                e.target.style.color = '#e2e8f0';
-                e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.04)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (location.pathname !== '/beneficiaries') {
-                e.target.style.color = '#64748b';
-                e.target.style.backgroundColor = 'transparent';
-              }
-            }}
-          >
-            <span style={{ fontSize: '16px' }}>ð</span>
-            <span style={{ flex: 1 }}>Beneficiaries</span>
-          </Link>
+      <aside
+        className={`
+          fixed left-0 top-0 h-screen w-[240px]
+          bg-[var(--bg-surface)] border-r border-[var(--border)]
+          flex flex-col z-50
+          transition-transform duration-300
+          ${isOpen 
+            ? 'translate-x-0' 
+            : '-translate-x-full lg:translate-x-0'}
+        `}
+      >
+        {/* Logo */}
+        <div className="px-5 pt-6 pb-5 
+          border-b border-[var(--border)] flex-shrink-0">
+          <Logo size="sm" darkMode={true} />
         </div>
 
-        {/* Group: LEGACY */}
-        <div>
-          <div style={{
-            padding: '20px 20px 6px 20px',
-            fontSize: '10px',
-            fontWeight: 600,
-            color: '#64748b',
-            textTransform: 'uppercase',
-            letterSpacing: '0.15em'
-          }}>
-            LEGACY
-          </div>
-          
-          <Link
-            to="/capsules"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              margin: '0 12px 2px 12px',
-              padding: '10px 12px',
-              borderRadius: '8px',
-              fontSize: '14px',
-              fontWeight: 500,
-              cursor: 'pointer',
-              marginBottom: '2px',
-              textDecoration: 'none',
-              color: location.pathname === '/capsules' ? '#ffffff' : '#64748b',
-              background: location.pathname === '/capsules' 
-                ? 'linear-gradient(to right, rgba(59, 130, 246, 0.18), rgba(124, 92, 252, 0.1))' 
-                : 'transparent',
-              border: location.pathname === '/capsules' ? '1px solid rgba(59, 130, 246, 0.15)' : 'none'
-            }}
-            onMouseEnter={(e) => {
-              if (location.pathname !== '/capsules') {
-                e.target.style.color = '#e2e8f0';
-                e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.04)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (location.pathname !== '/capsules') {
-                e.target.style.color = '#64748b';
-                e.target.style.backgroundColor = 'transparent';
-              }
-            }}
-          >
-            <span style={{ fontSize: '16px' }}>â¡</span>
-            <span style={{ flex: 1 }}>Time Capsules</span>
-          </Link>
-          
-          <Link
-            to="/voice-messages"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              margin: '0 12px 2px 12px',
-              padding: '10px 12px',
-              borderRadius: '8px',
-              fontSize: '14px',
-              fontWeight: 500,
-              cursor: 'pointer',
-              marginBottom: '2px',
-              textDecoration: 'none',
-              color: location.pathname === '/voice-messages' ? '#ffffff' : '#64748b',
-              background: location.pathname === '/voice-messages' 
-                ? 'linear-gradient(to right, rgba(59, 130, 246, 0.18), rgba(124, 92, 252, 0.1))' 
-                : 'transparent',
-              border: location.pathname === '/voice-messages' ? '1px solid rgba(59, 130, 246, 0.15)' : 'none'
-            }}
-            onMouseEnter={(e) => {
-              if (location.pathname !== '/voice-messages') {
-                e.target.style.color = '#e2e8f0';
-                e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.04)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (location.pathname !== '/voice-messages') {
-                e.target.style.color = '#64748b';
-                e.target.style.backgroundColor = 'transparent';
-              }
-            }}
-          >
-            <span style={{ fontSize: '16px' }}>ð</span>
-            <span style={{ flex: 1 }}>Voice Messages</span>
-          </Link>
-          
-          <Link
-            to="/life-timeline"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              margin: '0 12px 2px 12px',
-              padding: '10px 12px',
-              borderRadius: '8px',
-              fontSize: '14px',
-              fontWeight: 500,
-              cursor: 'pointer',
-              marginBottom: '2px',
-              textDecoration: 'none',
-              color: location.pathname === '/life-timeline' ? '#ffffff' : '#64748b',
-              background: location.pathname === '/life-timeline' 
-                ? 'linear-gradient(to right, rgba(59, 130, 246, 0.18), rgba(124, 92, 252, 0.1))' 
-                : 'transparent',
-              border: location.pathname === '/life-timeline' ? '1px solid rgba(59, 130, 246, 0.15)' : 'none'
-            }}
-            onMouseEnter={(e) => {
-              if (location.pathname !== '/life-timeline') {
-                e.target.style.color = '#e2e8f0';
-                e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.04)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (location.pathname !== '/life-timeline') {
-                e.target.style.color = '#64748b';
-                e.target.style.backgroundColor = 'transparent';
-              }
-            }}
-          >
-            <span style={{ fontSize: '16px' }}>ð</span>
-            <span style={{ flex: 1 }}>Life Timeline</span>
-          </Link>
-          
-          <Link
-            to="/memoir-ai"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              margin: '0 12px 2px 12px',
-              padding: '10px 12px',
-              borderRadius: '8px',
-              fontSize: '14px',
-              fontWeight: 500,
-              cursor: 'pointer',
-              marginBottom: '2px',
-              textDecoration: 'none',
-              color: location.pathname === '/memoir-ai' ? '#ffffff' : '#64748b',
-              background: location.pathname === '/memoir-ai' 
-                ? 'linear-gradient(to right, rgba(59, 130, 246, 0.18), rgba(124, 92, 252, 0.1))' 
-                : 'transparent',
-              border: location.pathname === '/memoir-ai' ? '1px solid rgba(59, 130, 246, 0.15)' : 'none'
-            }}
-            onMouseEnter={(e) => {
-              if (location.pathname !== '/memoir-ai') {
-                e.target.style.color = '#e2e8f0';
-                e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.04)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (location.pathname !== '/memoir-ai') {
-                e.target.style.color = '#64748b';
-                e.target.style.backgroundColor = 'transparent';
-              }
-            }}
-          >
-            <span style={{ fontSize: '16px' }}>ð</span>
-            <span style={{ flex: 1 }}>Memoir AI</span>
-          </Link>
-          
-          <Link
-            to="/final-message"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              margin: '0 12px 2px 12px',
-              padding: '10px 12px',
-              borderRadius: '8px',
-              fontSize: '14px',
-              fontWeight: 500,
-              cursor: 'pointer',
-              marginBottom: '2px',
-              textDecoration: 'none',
-              color: location.pathname === '/final-message' ? '#ffffff' : '#64748b',
-              background: location.pathname === '/final-message' 
-                ? 'linear-gradient(to right, rgba(59, 130, 246, 0.18), rgba(124, 92, 252, 0.1))' 
-                : 'transparent',
-              border: location.pathname === '/final-message' ? '1px solid rgba(59, 130, 246, 0.15)' : 'none'
-            }}
-            onMouseEnter={(e) => {
-              if (location.pathname !== '/final-message') {
-                e.target.style.color = '#e2e8f0';
-                e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.04)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (location.pathname !== '/final-message') {
-                e.target.style.color = '#64748b';
-                e.target.style.backgroundColor = 'transparent';
-              }
-            }}
-          >
-            <span style={{ fontSize: '16px' }}>âµ</span>
-            <span style={{ flex: 1 }}>Final Message</span>
-          </Link>
-        </div>
-
-        {/* Group: VERIFY */}
-        <div>
-          <div style={{
-            padding: '20px 20px 6px 20px',
-            fontSize: '10px',
-            fontWeight: 600,
-            color: '#64748b',
-            textTransform: 'uppercase',
-            letterSpacing: '0.15em'
-          }}>
-            VERIFY
-          </div>
-          
-          <Link
-            to="/legal-documents"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              margin: '0 12px 2px 12px',
-              padding: '10px 12px',
-              borderRadius: '8px',
-              fontSize: '14px',
-              fontWeight: 500,
-              cursor: 'pointer',
-              marginBottom: '2px',
-              textDecoration: 'none',
-              color: location.pathname === '/legal-documents' ? '#ffffff' : '#64748b',
-              background: location.pathname === '/legal-documents' 
-                ? 'linear-gradient(to right, rgba(59, 130, 246, 0.18), rgba(124, 92, 252, 0.1))' 
-                : 'transparent',
-              border: location.pathname === '/legal-documents' ? '1px solid rgba(59, 130, 246, 0.15)' : 'none'
-            }}
-            onMouseEnter={(e) => {
-              if (location.pathname !== '/legal-documents') {
-                e.target.style.color = '#e2e8f0';
-                e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.04)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (location.pathname !== '/legal-documents') {
-                e.target.style.color = '#64748b';
-                e.target.style.backgroundColor = 'transparent';
-              }
-            }}
-          >
-            <span style={{ fontSize: '16px' }}>ð</span>
-            <span style={{ flex: 1 }}>Legal Documents</span>
-          </Link>
-          
-          <Link
-            to="/activity-logs"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              margin: '0 12px 2px 12px',
-              padding: '10px 12px',
-              borderRadius: '8px',
-              fontSize: '14px',
-              fontWeight: 500,
-              cursor: 'pointer',
-              marginBottom: '2px',
-              textDecoration: 'none',
-              color: location.pathname === '/activity-logs' ? '#ffffff' : '#64748b',
-              background: location.pathname === '/activity-logs' 
-                ? 'linear-gradient(to right, rgba(59, 130, 246, 0.18), rgba(124, 92, 252, 0.1))' 
-                : 'transparent',
-              border: location.pathname === '/activity-logs' ? '1px solid rgba(59, 130, 246, 0.15)' : 'none'
-            }}
-            onMouseEnter={(e) => {
-              if (location.pathname !== '/activity-logs') {
-                e.target.style.color = '#e2e8f0';
-                e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.04)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (location.pathname !== '/activity-logs') {
-                e.target.style.color = '#64748b';
-                e.target.style.backgroundColor = 'transparent';
-              }
-            }}
-          >
-            <span style={{ fontSize: '16px' }}>ð</span>
-            <span style={{ flex: 1 }}>Activity Logs</span>
-          </Link>
-        </div>
-
-        {/* Group: TOOLS */}
-        <div>
-          <div style={{
-            padding: '20px 20px 6px 20px',
-            fontSize: '10px',
-            fontWeight: 600,
-            color: '#64748b',
-            textTransform: 'uppercase',
-            letterSpacing: '0.15em'
-          }}>
-            TOOLS
-          </div>
-          
-          <Link
-            to="/ai"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              margin: '0 12px 2px 12px',
-              padding: '10px 12px',
-              borderRadius: '8px',
-              fontSize: '14px',
-              fontWeight: 500,
-              cursor: 'pointer',
-              marginBottom: '2px',
-              textDecoration: 'none',
-              color: location.pathname === '/ai' ? '#ffffff' : '#64748b',
-              background: location.pathname === '/ai' 
-                ? 'linear-gradient(to right, rgba(59, 130, 246, 0.18), rgba(124, 92, 252, 0.1))' 
-                : 'transparent',
-              border: location.pathname === '/ai' ? '1px solid rgba(59, 130, 246, 0.15)' : 'none'
-            }}
-            onMouseEnter={(e) => {
-              if (location.pathname !== '/ai') {
-                e.target.style.color = '#e2e8f0';
-                e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.04)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (location.pathname !== '/ai') {
-                e.target.style.color = '#64748b';
-                e.target.style.backgroundColor = 'transparent';
-              }
-            }}
-          >
-            <span style={{ fontSize: '16px' }}>ð</span>
-            <span style={{ flex: 1 }}>AI Assistant</span>
-          </Link>
-        </div>
-      </div>
-
-      {/* BOTTOM - User section */}
-      <div style={{
-        borderTop: '1px solid rgba(255,255,255,0.04)',
-        padding: '12px'
-      }}>
-        {/* User card */}
-        <div
-          onClick={() => window.location.href = '/settings'}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            padding: '10px 10px',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            transition: 'background-color 150ms'
-          }}
-          onMouseEnter={(e) => e.target.style.backgroundColor = 'rgba(255,255,255,0.04)'}
-          onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
-        >
-          {/* Avatar */}
-          <div style={{
-            width: '32px',
-            height: '32px',
-            borderRadius: '50%',
-            background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0
-          }}>
-            <span style={{
-              color: '#ffffff',
-              fontSize: '12px',
-              fontWeight: 'bold'
-            }}>
-              {userInitials}
-            </span>
-          </div>
-          
-          {/* Name and email */}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{
-              fontSize: '14px',
-              fontWeight: 500,
-              color: '#ffffff',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis'
-            }}>
-              {userName}
+        {/* Navigation */}
+        <nav className="flex-1 overflow-y-auto py-3">
+          {NAV_GROUPS.map((group) => (
+            <div key={group.label}>
+              <p className="px-4 pt-4 pb-1.5 text-[10px] 
+                font-semibold text-slate-600 
+                uppercase tracking-[0.15em]">
+                {group.label}
+              </p>
+              {group.items.map((item) => (
+                <button
+                  key={item.path}
+                  onClick={() => {
+                    navigate(item.path)
+                    if (onClose) onClose()
+                  }}
+                  className={`
+                    flex items-center gap-3 w-full
+                    mx-auto px-3 py-2.5 mb-0.5
+                    rounded-xl text-sm font-medium
+                    transition-all duration-150
+                    text-[var(--text-muted)]
+                    ${isActive(item.path)
+                      ? `text-[var(--text-primary)] mx-3 w-[calc(100%-24px)]
+                         bg-gradient-to-r 
+                         from-[var(--blue-dim)] to-[var(--purple-dim)]
+                         border border-[var(--blue-border)]`
+                      : `text-[var(--text-secondary)] mx-3 w-[calc(100%-24px)]
+                         hover:text-[var(--text-primary)] hover:bg-[var(--border-hover)]`
+                    }
+                  `}
+                >
+                  <span className="text-base flex-shrink-0">
+                    {item.icon}
+                  </span>
+                  <span>{item.label}</span>
+                </button>
+              ))}
             </div>
-            <div style={{
-              fontSize: '12px',
-              color: '#64748b',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis'
-            }}>
-              {userEmail}
+          ))}
+        </nav>
+
+        {/* User section */}
+        <div className="border-t border-[var(--border)] p-3 
+          flex-shrink-0">
+          <button
+            onClick={() => navigate('/settings')}
+            className="flex items-center gap-3 w-full p-2.5
+              hover:bg-[var(--border-hover)] 
+              transition-colors text-left"
+          >
+            <div className="w-8 h-8 rounded-full flex-shrink-0
+              bg-gradient-to-br from-blue-500 to-purple-600
+              flex items-center justify-center
+              text-[var(--text-primary)] text-xs font-bold">
+              {initials || 'U'}
             </div>
-          </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-white 
+                truncate">
+                {name}
+              </p>
+              <p className="text-xs text-slate-500 truncate">
+                {email}
+              </p>
+            </div>
+          </button>
+          <button
+            onClick={handleSignOut}
+            className="flex items-center gap-2 w-full px-3 
+              py-2 mt-1 rounded-lg text-xs text-slate-600
+              hover:text-red-400 hover:bg-red-500/[0.05]
+              transition-colors"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" 
+              viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" 
+                strokeLinejoin="round" strokeWidth={2}
+                d="M17 16l4-4m0 0l-4-4m4 4H7m6 
+                   4v1a3 3 0 01-3 3H6a3 3 
+                   0 01-3-3V7a3 3 0 013-3h4a3 3 
+                   0 013 3v1"/>
+            </svg>
+            Sign Out
+          </button>
         </div>
-        
-        {/* Sign out button */}
-        <button
-          onClick={handleLogout}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            width: '100%',
-            padding: '8px 12px',
-            fontSize: '12px',
-            color: '#64748b',
-            cursor: 'pointer',
-            transition: 'all 150ms',
-            border: 'none',
-            background: 'none',
-            borderRadius: '6px',
-            marginTop: '4px'
-          }}
-          onMouseEnter={(e) => {
-            e.target.style.color = '#ef4444';
-            e.target.style.backgroundColor = 'rgba(239, 68, 68, 0.05)';
-          }}
-          onMouseLeave={(e) => {
-            e.target.style.color = '#64748b';
-            e.target.style.backgroundColor = 'transparent';
-          }}
-        >
-          <span style={{ fontSize: '14px' }}>Þ</span>
-          <span>Sign Out</span>
-        </button>
-      </div>
-      </div>
+      </aside>
     </>
-  );
+  )
 }

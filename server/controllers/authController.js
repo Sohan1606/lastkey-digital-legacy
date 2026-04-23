@@ -2,14 +2,18 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { promisify } = require('util');
 const User = require('../models/User');
+const Capsule = require('../models/Capsule');
 const { log } = require('../services/auditService');
 const { sendEmail } = require('../utils/email');
+const { sendCheckInConfirmation } = require('../services/emailService');
 
 // Generate JWT
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) throw new Error('JWT_SECRET is not set');
 const signToken = id => jwt.sign({ id }, JWT_SECRET, {
-  expiresIn: process.env.JWT_EXPIRES_IN || '90d'
+  expiresIn: '7d',
+  issuer: 'lastkey-api',
+  audience: 'lastkey-client'
 });
 
 // Helper to redact sensitive fields from logs
@@ -134,8 +138,8 @@ exports.login = async (req, res, next) => {
       });
     }
 
-    // Find user and select password
-    const user = await User.findOne({ email }).select('+password');
+    // Find user and select password and lockout fields
+    const user = await User.findOne({ email: email.toLowerCase().trim() }).select('+password +failedLoginAttempts +accountLocked +lockoutUntil');
     if (!user) {
       return res.status(401).json({
         status: 'fail',
@@ -143,24 +147,79 @@ exports.login = async (req, res, next) => {
       });
     }
 
+    // Check if account is locked
+    if (user.accountLocked) {
+      if (user.lockoutUntil && user.lockoutUntil > new Date()) {
+        return res.status(403).json({
+          status: 'fail',
+          message: 'Account is locked. Please reset your password to unlock.'
+        });
+      } else {
+        // Lockout period has expired, unlock the account
+        user.accountLocked = false;
+        user.failedLoginAttempts = 0;
+        user.lockoutUntil = null;
+        await user.save();
+      }
+    }
+
     const isPasswordCorrect = await user.comparePassword(password);
     if (!isPasswordCorrect) {
+      // Increment failed login attempts
+      user.failedLoginAttempts = (user.failedLoginAttempts || 0) + 1;
+
+      // Lock account after 5 failed attempts
+      if (user.failedLoginAttempts >= 5) {
+        user.accountLocked = true;
+        user.lockoutUntil = new Date(Date.now() + 30 * 60 * 1000); // Lock for 30 minutes
+        await user.save();
+
+        await log('LOGIN_FAILED', {
+          userId: user._id,
+          req,
+          metadata: {
+            reason: 'Account locked after 5 failed attempts'
+          },
+          riskLevel: 'high'
+        });
+
+        return res.status(403).json({
+          status: 'fail',
+          message: 'Account locked due to multiple failed login attempts. Please reset your password.'
+        });
+      }
+
+      await user.save();
+
+      await log('LOGIN_FAILED', {
+        userId: user._id,
+        req,
+        metadata: {
+          attempt: user.failedLoginAttempts
+        },
+        riskLevel: user.failedLoginAttempts >= 3 ? 'medium' : 'low'
+      });
+
       return res.status(401).json({
         status: 'fail',
         message: 'Invalid credentials'
       });
     }
 
+    // Reset failed login attempts on successful login
+    user.failedLoginAttempts = 0;
+    user.accountLocked = false;
+    user.lockoutUntil = null;
+
     // Update lastActive
     user.lastActive = Date.now();
     await user.save();
 
     // Log login event
-    await log('login', { 
-      userId: user._id, 
-      ip: req.ip, 
-      userAgent: req.headers['user-agent'], 
-      details: { email: user.email } 
+    await log('LOGIN', {
+      userId: user._id,
+      req,
+      metadata: { email: user.email }
     });
 
     // Generate token
@@ -339,6 +398,9 @@ exports.resetPassword = async (req, res, next) => {
     user.password = password;
     user.resetPasswordToken = undefined;
     user.resetPasswordExpiry = undefined;
+    user.failedLoginAttempts = 0;
+    user.accountLocked = false;
+    user.lockoutUntil = null;
     await user.save();
 
 
@@ -354,6 +416,59 @@ exports.resetPassword = async (req, res, next) => {
     console.error('❌ Reset password error:', error);
     res.status(400).json({
       status: 'fail',
+      message: error.message
+    });
+  }
+};
+
+// Check-in
+exports.checkIn = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    
+    user.lastLogin = new Date();
+    await user.save();
+
+    await log('CHECKIN_RECORDED', {
+      userId: user._id,
+      req,
+      metadata: { 
+        checkedInAt: new Date() 
+      },
+      riskLevel: 'low'
+    });
+
+    // Find their inactivity trigger
+    const trigger = await Capsule.findOne({
+      userId: user._id,
+      triggerType: 'inactivity',
+      isReleased: false
+    });
+
+    const triggerDays = 90; // Default 90 days
+    const nextCheckIn = new Date(
+      Date.now() + (triggerDays - 7) * 24 * 60 * 60 * 1000
+    );
+
+    await sendCheckInConfirmation(
+      user.email,
+      user.name,
+      new Date()
+    );
+
+    return res.status(200).json({
+      status: 'success',
+      message: 'Check-in recorded successfully',
+      data: {
+        checkedInAt: new Date(),
+        nextCheckInBy: nextCheckIn,
+        triggerDays
+      }
+    });
+
+  } catch (error) {
+    return res.status(500).json({
+      status: 'error',
       message: error.message
     });
   }

@@ -57,7 +57,7 @@ router.put('/:id', protect, async (req, res) => {
         wordCount: wordCount || 0,
         updatedAt: new Date()
       },
-      { new: true }
+      { returnDocument: 'after' }
     );
     
     if (!updatedChapter) {

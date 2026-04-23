@@ -36,17 +36,13 @@ const initTransporter = async () => {
   const mode = getEmailMode();
   
   if (mode === 'console') {
-    console.log('📧 Email mode: console (emails printed to terminal)');
     return null;
   }
   
   if (mode === 'ethereal') {
     // Create test account on Ethereal
     if (!etherealAccount) {
-      console.log('📧 Creating Ethereal test account...');
       etherealAccount = await nodemailer.createTestAccount();
-      console.log(`📧 Ethereal account: ${etherealAccount.user}`);
-      console.log(`📧 Ethereal preview URL will be shown after sending`);
     }
     
     transporter = nodemailer.createTransporter({
@@ -80,7 +76,6 @@ const initTransporter = async () => {
     // Verify connection
     try {
       await transporter.verify();
-      console.log('📧 SMTP connection verified');
     } catch (err) {
       console.error('❌ SMTP connection failed:', err.message);
       console.warn('⚠️ Falling back to console mode');
@@ -133,7 +128,6 @@ const sendEmail = async ({ to, subject, html, otp, attachments = [] }, maxRetrie
   // Console mode: print and return success
   if (mode === 'console' || !transporter) {
     const output = formatConsoleEmail({ to, subject, html, otp });
-    console.log(output);
     return { 
       success: true, 
       mode: 'console',
@@ -146,7 +140,6 @@ const sendEmail = async ({ to, subject, html, otp, attachments = [] }, maxRetrie
   if (!t) {
     // Fallback to console
     const output = formatConsoleEmail({ to, subject, html, otp });
-    console.log(output);
     return { 
       success: true, 
       mode: 'console',
@@ -165,12 +158,9 @@ const sendEmail = async ({ to, subject, html, otp, attachments = [] }, maxRetrie
         attachments
       });
       
-      console.log(`📧 Email sent [${mode}]: ${subject} → ${to}`);
-      
       // If using Ethereal, show preview URL
       if (mode === 'ethereal' && info.messageId) {
         const previewUrl = nodemailer.getTestMessageUrl(info);
-        console.log(`📧 Ethereal preview: ${previewUrl}`);
       }
       
       return {

@@ -49,6 +49,22 @@ const userSchema = new mongoose.Schema(
       default: false
     },
 
+    // Account lockout fields
+    failedLoginAttempts: {
+      type: Number,
+      default: 0
+    },
+
+    accountLocked: {
+      type: Boolean,
+      default: false
+    },
+
+    lockoutUntil: {
+      type: Date,
+      default: null
+    },
+
     isPremium: {
       type: Boolean,
       default: false
@@ -80,12 +96,11 @@ const userSchema = new mongoose.Schema(
       default: 'active'
     },
 
-    // Phone for WhatsApp alerts
     phone: { type: String },
 
     alertChannels: {
       type: [String],
-      enum: ['email', 'whatsapp', 'telegram'],
+      enum: ['email'],
       default: ['email'],
       validate: {
         validator: function (v) {

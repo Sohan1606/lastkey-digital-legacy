@@ -44,7 +44,7 @@ const ForgotPassword = () => {
   };
 
   return (
-    <div className="page spatial-bg" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+    <div className="page spatial-bg" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, background: 'var(--bg-base)', paddingTop: 88 }}>
       <div className="stars" />
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -75,7 +75,7 @@ const ForgotPassword = () => {
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ delay: 0.2, duration: 0.5 }}
-                style={{ width: 64, height: 64, margin: '0 auto 18px', borderRadius: 20, background: 'rgba(79,158,255,0.10)', border: '1px solid rgba(79,158,255,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                style={{ width: 64, height: 64, margin: '0 auto 18px', borderRadius: 20, background: 'var(--bg-base)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
                 <Mail style={{ width: 28, height: 28, color: 'var(--ion)' }} />
               </motion.div>
@@ -139,8 +139,8 @@ const ForgotPassword = () => {
                     borderRadius: 14,
                     border: 'none',
                     cursor: isLoading ? 'not-allowed' : 'pointer',
-                    background: 'linear-gradient(135deg,#4f9eff,#7c5cfc)',
-                    color: 'white',
+                    background: 'var(--bg-base)', 
+                    color: 'var(--text-primary)',
                     fontWeight: 800,
                     fontSize: 14,
                     display: 'flex',

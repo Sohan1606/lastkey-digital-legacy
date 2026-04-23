@@ -40,8 +40,6 @@ exports.scheduleGuardianJobs = async (user) => {
       removeOnFail: 500,
     }
   );
-
-  console.log(`Guardian jobs scheduled for ${user.email}: warning in ${user.inactivityDuration} days, trigger in ${user.inactivityDuration * 2} days`);
 };
 
 /**
@@ -58,6 +56,4 @@ exports.cancelGuardianJobs = async (userId) => {
   
   if (warningJob) await warningJob.remove();
   if (triggerJob) await triggerJob.remove();
-  
-  console.log(`Guardian jobs cancelled for user ${userId}`);
 };

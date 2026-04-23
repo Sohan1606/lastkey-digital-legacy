@@ -1,7 +1,7 @@
 const express = require('express');
-const { register, login, verifyEmail, forgotPassword, resetPassword } = require('../controllers/authController');
+const { register, login, verifyEmail, forgotPassword, resetPassword, checkIn } = require('../controllers/authController');
 const User = require('../models/User');
-const { protect } = require('../middleware/auth');
+const { protect, blacklistToken } = require('../middleware/auth');
 const { validate, registerSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema } = require('../validators');
 
 const router = express.Router();
@@ -16,9 +16,21 @@ const authLimiter = rateLimit({
 
 router.post('/register', authLimiter, validate(registerSchema), register);
 router.post('/login', authLimiter, validate(loginSchema), login);
+router.post('/logout', protect, (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (token) {
+      blacklistToken(token);
+    }
+    res.status(200).json({ success: true, message: 'Logged out successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Logout failed' });
+  }
+});
 router.get('/verify-email', verifyEmail);
 router.post('/forgot-password', authLimiter, validate(forgotPasswordSchema), forgotPassword);
 router.post('/reset-password', authLimiter, validate(resetPasswordSchema), resetPassword);
+router.post('/check-in', protect, checkIn);
 router.post('/verify-password', protect, async (req, res) => {
   try {
     const { password } = req.body;

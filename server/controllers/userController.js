@@ -27,7 +27,7 @@ exports.ping = async (req, res) => {
     const user = await User.findByIdAndUpdate(
       req.user._id,
       { lastActive: new Date(), triggerStatus: 'active', warningEmailSent: false },
-      { new: true }
+      { returnDocument: 'after' }
     );
 
     // Cancel old jobs and schedule new ones from now
@@ -78,60 +78,38 @@ exports.ping = async (req, res) => {
 // Update settings
 exports.updateSettings = async (req, res) => {
   try {
-    const { inactivityDuration, phone, alertChannels } = req.body;
-    const updateData = {};
+    const userId = req.user._id || req.user.id;
+    const allowedFields = [
+      'name', 'email', 'phone', 'bio',
+      'inactivityDuration', 'alertChannels',
+      'notifications', 'preferences',
+      'theme', 'language'
+    ];
 
-    if (phone !== undefined) updateData.phone = phone;
-    if (alertChannels) updateData.alertChannels = alertChannels;
-
-    // Sudden Death Mitigation:
-    // In real mode (days), block "short inactivity" unless at least one enrolled beneficiary exists.
-    // In DEV_FAST_MODE (minutes), do NOT block (otherwise it ruins demos).
-    const fastMode = isDevFastMode();
-
-    if (inactivityDuration != null) {
-      const Beneficiary = require('../models/Beneficiary');
-      const enrolledCount = await Beneficiary.countDocuments({
-        userId: req.user._id,
-        enrollmentStatus: 'enrolled'
-      });
-
-      if (!fastMode) {
-        // 30 days rule in real mode
-        if (inactivityDuration < 30 && enrolledCount === 0) {
-          return res.status(400).json({
-            status: 'fail',
-            message:
-              'Cannot enable a short inactivity period without at least one enrolled beneficiary. ' +
-              'Invite and enroll a beneficiary first to prevent sudden-death lockout.'
-          });
-        }
+    const updates = {};
+    allowedFields.forEach(field => {
+      if (req.body[field] !== undefined) {
+        updates[field] = req.body[field];
       }
-
-      updateData.inactivityDuration = inactivityDuration;
-    }
-
-    const user = await User.findByIdAndUpdate(req.user._id, updateData, {
-      new: true,
-      runValidators: true
     });
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { $set: updates },
+      { returnDocument: 'after', runValidators: false }
+    ).select('-password');
 
     return res.status(200).json({
       status: 'success',
-      data: {
-        inactivityDuration: user.inactivityDuration,
-        inactivityUnit: fastMode ? 'minutes' : 'days',
-        phone: user.phone,
-        alertChannels: user.alertChannels,
-        triggerStatus: user.triggerStatus,
-        ...(fastMode && {
-          warning:
-            'DEV_FAST_MODE is enabled: inactivityDuration is treated as minutes for testing.'
-        })
-      }
+      message: 'Settings updated successfully',
+      data: { user }
     });
   } catch (error) {
-    return res.status(400).json({ status: 'fail', message: error.message });
+    console.error('updateSettings error:', error.message);
+    return res.status(500).json({
+      status: 'error',
+      message: error.message
+    });
   }
 };
 

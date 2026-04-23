@@ -61,7 +61,7 @@ router.put('/:id', protect, async (req, res) => {
         photos: photos || [],
         updatedAt: new Date()
       },
-      { new: true }
+      { returnDocument: 'after' }
     );
     
     if (!updatedEvent) {

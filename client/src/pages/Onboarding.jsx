@@ -152,8 +152,8 @@ const Onboarding = () => {
                 padding: '16px 32px',
                 borderRadius: 12,
                 border: 'none',
-                background: 'linear-gradient(135deg, #00e5a0, #4f9eff)',
-                color: '#001a12',
+                background: 'linear-gradient(135deg, #4f9eff, #7c5cfc)',
+                color: 'var(--text-muted)',
                 fontWeight: 700,
                 fontSize: 16,
                 cursor: 'pointer',
@@ -193,8 +193,8 @@ const Onboarding = () => {
                     display: 'flex',
                     gap: 16,
                     padding: 20,
-                    background: 'var(--glass-2)',
-                    border: '1px solid var(--glass-border)',
+                    background: 'var(--bg-card)',
+                    border: '1px solid var(--border)',
                     borderRadius: 16
                   }}
                 >
@@ -202,13 +202,13 @@ const Onboarding = () => {
                     width: 44,
                     height: 44,
                     borderRadius: 12,
-                    background: 'rgba(0,229,160,0.1)',
+                    background: 'var(--bg-base)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     flexShrink: 0
                   }}>
-                    <item.icon size={22} style={{ color: '#00e5a0' }} />
+                    <item.icon size={22} style={{ color: 'var(--text-primary)' }} />
                   </div>
                   <div>
                     <h4 style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>{item.title}</h4>
@@ -227,8 +227,8 @@ const Onboarding = () => {
                   padding: '14px 28px',
                   borderRadius: 12,
                   border: 'none',
-                  background: 'linear-gradient(135deg, #00e5a0, #4f9eff)',
-                  color: '#001a12',
+                  background: 'linear-gradient(135deg, #4f9eff, #7c5cfc)',
+                  color: 'var(--text-muted)',
                   fontWeight: 700,
                   fontSize: 15,
                   cursor: 'pointer'
@@ -247,14 +247,14 @@ const Onboarding = () => {
               width: 80,
               height: 80,
               borderRadius: 24,
-              background: 'rgba(124,92,252,0.15)',
-              border: '1px solid rgba(124,92,252,0.3)',
+              background: 'var(--bg-base)',
+              border: '1px solid var(--border)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               margin: '0 auto 24px'
             }}>
-              <Fingerprint size={40} style={{ color: '#7c5cfc' }} />
+              <Fingerprint size={40} style={{ color: 'var(--text-primary)' }} />
             </div>
             
             <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 16 }}>
@@ -268,12 +268,12 @@ const Onboarding = () => {
             {!webauthnSupported ? (
               <div style={{
                 padding: 16,
-                background: 'rgba(255,184,48,0.1)',
-                border: '1px solid rgba(255,184,48,0.3)',
+                background: 'var(--bg-base)',
+                border: '1px solid var(--border)',
                 borderRadius: 12,
                 marginBottom: 24
               }}>
-                <p style={{ fontSize: 14, color: '#ffb830' }}>
+                <p style={{ fontSize: 14, color: 'var(--text-2)' }}>
                   Your browser doesn't support passkeys. You can still use password login.
                 </p>
               </div>
@@ -286,9 +286,9 @@ const Onboarding = () => {
                 style={{
                   padding: '16px 32px',
                   borderRadius: 12,
-                  border: '1px solid rgba(124,92,252,0.3)',
-                  background: 'rgba(124,92,252,0.1)',
-                  color: '#7c5cfc',
+                  border: '1px solid var(--border)',
+                  background: 'var(--bg-card)',
+                  color: 'var(--text-primary)',
                   fontWeight: 700,
                   fontSize: 15,
                   cursor: loading ? 'not-allowed' : 'pointer',
@@ -328,14 +328,14 @@ const Onboarding = () => {
               width: 80,
               height: 80,
               borderRadius: 24,
-              background: 'rgba(255,77,109,0.15)',
-              border: '1px solid rgba(255,77,109,0.3)',
+              background: 'var(--bg-base)',
+              border: '1px solid var(--border)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               margin: '0 auto 24px'
             }}>
-              <Lock size={40} style={{ color: '#ff4d6d' }} />
+              <Lock size={40} style={{ color: 'var(--text-primary)' }} />
             </div>
             
             <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 16, textAlign: 'center' }}>
@@ -358,8 +358,8 @@ const Onboarding = () => {
                   width: '100%',
                   padding: '16px',
                   borderRadius: 12,
-                  border: '1px solid var(--glass-border)',
-                  background: 'var(--glass-2)',
+                  border: '1px solid var(--border)',
+                  background: 'var(--bg-card)',
                   color: 'var(--text-1)',
                   fontSize: 15
                 }}
@@ -379,8 +379,8 @@ const Onboarding = () => {
                 padding: '16px',
                 borderRadius: 12,
                 border: 'none',
-                background: 'linear-gradient(135deg, #ff4d6d, #7c5cfc)',
-                color: 'white',
+                background: 'linear-gradient(135deg, #4f9eff, #7c5cfc)',
+                color: 'var(--text-muted)',
                 fontWeight: 700,
                 fontSize: 15,
                 cursor: loading ? 'not-allowed' : 'pointer'
@@ -398,14 +398,14 @@ const Onboarding = () => {
               width: 80,
               height: 80,
               borderRadius: 24,
-              background: 'rgba(0,229,160,0.15)',
-              border: '1px solid rgba(0,229,160,0.3)',
+              background: 'var(--bg-base)',
+              border: '1px solid var(--border)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               margin: '0 auto 24px'
             }}>
-              <Clock size={40} style={{ color: '#00e5a0' }} />
+              <Clock size={40} style={{ color: 'var(--text-primary)' }} />
             </div>
             
             <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 16, textAlign: 'center' }}>
@@ -435,13 +435,13 @@ const Onboarding = () => {
             
             <div style={{
               padding: 16,
-              background: 'rgba(0,229,160,0.08)',
-              border: '1px solid rgba(0,229,160,0.2)',
+              background: 'var(--bg-base)',
+              border: '1px solid var(--border)',
               borderRadius: 12,
               marginBottom: 24
             }}>
               <p style={{ fontSize: 14, color: 'var(--text-2)', lineHeight: 1.5 }}>
-                <strong style={{ color: '#00e5a0' }}>How it works:</strong> If you don't check in for {inactivityDuration} days, 
+                <strong style={{ color: 'var(--text-primary)' }}>How it works:</strong> If you don't check in for {inactivityDuration} days, 
                 the Guardian Protocol will trigger and your beneficiaries will be notified that your legacy is available.
               </p>
             </div>
@@ -456,8 +456,8 @@ const Onboarding = () => {
                 padding: '16px',
                 borderRadius: 12,
                 border: 'none',
-                background: 'linear-gradient(135deg, #00e5a0, #4f9eff)',
-                color: '#001a12',
+                background: 'linear-gradient(135deg, #4f9eff, #7c5cfc)',
+                color: 'var(--text-muted)',
                 fontWeight: 700,
                 fontSize: 15,
                 cursor: loading ? 'not-allowed' : 'pointer'
@@ -475,14 +475,14 @@ const Onboarding = () => {
               width: 80,
               height: 80,
               borderRadius: 24,
-              background: 'rgba(79,158,255,0.15)',
-              border: '1px solid rgba(79,158,255,0.3)',
+              background: 'var(--bg-base)',
+              border: '1px solid var(--border)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               margin: '0 auto 24px'
             }}>
-              <Users size={40} style={{ color: '#4f9eff' }} />
+              <Users size={40} style={{ color: 'var(--text-primary)' }} />
             </div>
             
             <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 16, textAlign: 'center' }}>
@@ -501,8 +501,8 @@ const Onboarding = () => {
                 style={{
                   padding: '14px',
                   borderRadius: 10,
-                  border: '1px solid var(--glass-border)',
-                  background: 'var(--glass-2)',
+                  border: '1px solid var(--border)',
+                  background: 'var(--bg-card)',
                   color: 'var(--text-1)',
                   fontSize: 15
                 }}
@@ -515,8 +515,8 @@ const Onboarding = () => {
                 style={{
                   padding: '14px',
                   borderRadius: 10,
-                  border: '1px solid var(--glass-border)',
-                  background: 'var(--glass-2)',
+                  border: '1px solid var(--border)',
+                  background: 'var(--bg-card)',
                   color: 'var(--text-1)',
                   fontSize: 15
                 }}
@@ -529,9 +529,9 @@ const Onboarding = () => {
                 style={{
                   padding: '14px',
                   borderRadius: 10,
-                  border: '1px solid rgba(79,158,255,0.3)',
-                  background: 'rgba(79,158,255,0.1)',
-                  color: '#4f9eff',
+                  border: '1px solid var(--border)',
+                  background: 'var(--bg-card)',
+                  color: 'var(--text-primary)',
                   fontWeight: 700,
                   fontSize: 15,
                   cursor: loading ? 'not-allowed' : 'pointer'
@@ -566,14 +566,14 @@ const Onboarding = () => {
               width: 100,
               height: 100,
               borderRadius: 28,
-              background: 'linear-gradient(135deg, rgba(0,229,160,0.2), rgba(79,158,255,0.2))',
-              border: '1px solid rgba(0,229,160,0.3)',
+              background: 'var(--bg-base)',
+              border: '1px solid var(--border)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               margin: '0 auto 32px'
             }}>
-              <CheckCircle size={48} style={{ color: '#00e5a0' }} />
+              <CheckCircle size={48} style={{ color: 'var(--text-primary)' }} />
             </div>
             
             <h2 style={{ fontSize: 32, fontWeight: 800, marginBottom: 16 }}>
@@ -592,8 +592,8 @@ const Onboarding = () => {
                 padding: '16px 32px',
                 borderRadius: 12,
                 border: 'none',
-                background: 'linear-gradient(135deg, #00e5a0, #4f9eff)',
-                color: '#001a12',
+                background: 'linear-gradient(135deg, #4f9eff, #7c5cfc)',
+                color: 'var(--text-muted)',
                 fontWeight: 700,
                 fontSize: 16,
                 cursor: 'pointer'
@@ -610,7 +610,7 @@ const Onboarding = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-950 to-black px-4 py-8">
+    <div style={{ minHeight: '100vh', background: 'var(--bg-base)', padding: '32px 16px' }}>
       <div className="max-w-4xl mx-auto">
         {/* Progress Bar */}
         <div className="mb-12">

@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Users, UserPlus, Mail, Shield, Trash2, ArrowLeft, Heart, Briefcase, User, CheckCircle, Clock, AlertCircle, Send, Search, Filter, UserCheck, Crown, Key } from 'lucide-react';
+import { Users, UserPlus, Mail, Shield, Trash2, ArrowLeft, Heart, Briefcase, User, CheckCircle, Clock, AlertCircle, Send, Search, Filter, UserCheck, Crown, Key, Lock, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import toast from 'react-hot-toast';
-import Sidebar from '../components/Sidebar';
+import DashboardLayout from '../components/DashboardLayout';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
@@ -14,13 +14,19 @@ const Beneficiaries = () => {
   const { token } = useAuth();
   const queryClient = useQueryClient();
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [showForm, setShowForm] = useState(false);
   
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     relationship: 'other',
-    accessLevel: 'view'
+    accessLevel: 'view',
+    verificationQuestion: '',
+    verificationAnswer: '',
+    verificationHint: ''
   });
+
+  const [showChecklist, setShowChecklist] = useState(false);
 
   const { data: beneficiaries, isPending: isLoading } = useQuery({
     queryKey: ['beneficiaries'],
@@ -39,7 +45,8 @@ const Beneficiaries = () => {
     }),
     onSuccess: () => {
       queryClient.invalidateQueries(['beneficiaries']);
-      setFormData({ name: '', email: '', relationship: 'other', accessLevel: 'view' });
+      setFormData({ name: '', email: '', relationship: 'other', accessLevel: 'view', verificationQuestion: '', verificationAnswer: '', verificationHint: '' });
+      setShowChecklist(false);
       toast.success('Beneficiary added!');
     },
     onError: (error) => {
@@ -60,6 +67,56 @@ const Beneficiaries = () => {
     }
   });
 
+  // SECURITY LAYER 5: Portal access mutations
+  const revokePortalMutation = useMutation({
+    mutationFn: (id) => axios.post(`${API_BASE}/beneficiaries/${id}/revoke-portal`, {}, {
+      headers: { Authorization: `Bearer ${token}` }
+    }),
+    onSuccess: () => {
+      toast.success('Portal access revoked');
+      queryClient.invalidateQueries(['beneficiaries']);
+    },
+    onError: () => {
+      toast.error('Failed to revoke access');
+    }
+  });
+
+  const resendPortalMutation = useMutation({
+    mutationFn: (id) => axios.post(`${API_BASE}/beneficiaries/${id}/resend-portal`, {}, {
+      headers: { Authorization: `Bearer ${token}` }
+    }),
+    onSuccess: () => {
+      toast.success('New access link sent');
+      queryClient.invalidateQueries(['beneficiaries']);
+    },
+    onError: () => {
+      toast.error('Failed to resend link');
+    }
+  });
+
+  // Fetch portal status for all beneficiaries
+  const { data: portalStatuses } = useQuery({
+    queryKey: ['portal-statuses', beneficiaries],
+    queryFn: async () => {
+      if (!beneficiaries || beneficiaries.length === 0) return {};
+      const statuses = {};
+      await Promise.all(
+        beneficiaries.map(async (b) => {
+          try {
+            const { data } = await axios.get(`${API_BASE}/beneficiaries/${b._id}/portal-status`, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            statuses[b._id] = data.data;
+          } catch {
+            statuses[b._id] = null;
+          }
+        })
+      );
+      return statuses;
+    },
+    enabled: !!beneficiaries && beneficiaries.length > 0
+  });
+
   const handleSubmit = (e) => {
     e.preventDefault();
     createMutation.mutate(formData);
@@ -75,42 +132,13 @@ const Beneficiaries = () => {
     sibling: '#00e5a0', friend: '#ffb830', lawyer: '#8899bb', other: '#3d5070'
   };
 
-  const getEnrollmentStatusIcon = (status) => {
-    switch (status) {
-      case 'enrolled': return <CheckCircle size={14} style={{ color: '#00e5a0' }} />;
-      case 'invited': return <Clock size={14} style={{ color: '#ffb830' }} />;
-      default: return <AlertCircle size={14} style={{ color: '#ff4d6d' }} />;
-    }
-  };
-
-  const getEnrollmentStatusText = (status) => {
-    switch (status) {
-      case 'enrolled': return 'Enrolled';
-      case 'invited': return 'Pending Enrollment';
-      default: return 'Not Invited';
-    }
-  };
-
-  const getEnrollmentStatusColor = (status) => {
-    switch (status) {
-      case 'enrolled': return '#00e5a0';
-      case 'invited': return '#ffb830';
-      default: return '#ff4d6d';
-    }
-  };
-
-  // Calculate enrollment stats
-  const enrolledCount = beneficiaries?.filter(b => b.enrollmentStatus === 'enrolled').length || 0;
   const totalCount = beneficiaries?.length || 0;
-  const enrollmentComplete = enrolledCount === totalCount && totalCount > 0;
 
   if (isLoading) return (
-    <div style={{ display: 'flex' }}>
-      <Sidebar />
+    <DashboardLayout>
       <div style={{
-        marginLeft: '240px',
         minHeight: '100vh',
-        background: '#030508',
+        background: 'var(--bg-base)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center'
@@ -128,17 +156,14 @@ const Beneficiaries = () => {
           <p style={{ color: '#64748b', fontSize: 14 }}>Loading trusted circle...</p>
         </div>
       </div>
-    </div>
+    </DashboardLayout>
   );
 
   return (
-    <div style={{ display: 'flex' }}>
-      <Sidebar />
+    <DashboardLayout>
       <div style={{
-        marginLeft: '240px',
         minHeight: '100vh',
-        background: '#030508',
-        flex: 1,
+        background: 'var(--bg-base)',
         padding: '32px'
       }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
@@ -150,7 +175,7 @@ const Beneficiaries = () => {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '8px',
-                color: '#64748b',
+                color: 'var(--text-muted)',
                 marginBottom: '32px',
                 fontSize: '14px',
                 fontWeight: 500,
@@ -167,32 +192,54 @@ const Beneficiaries = () => {
               <ArrowLeft size={14} /> Back to Dashboard
             </Link>
             
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '32px' }}>
-              <div style={{
-                width: '56px',
-                height: '56px',
-                borderRadius: '16px',
-                background: 'linear-gradient(135deg, rgba(124, 92, 252, 0.2), rgba(255, 77, 109, 0.2))',
-                border: '1px solid rgba(124, 92, 252, 0.3)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                <Users style={{ width: '28px', height: '28px', color: '#7c5cfc' }} />
-              </div>
-              <div>
-                <h1 style={{
-                  fontSize: '32px',
-                  fontWeight: 700,
-                  color: '#ffffff',
-                  marginBottom: '8px'
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '32px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <div style={{
+                  width: '56px',
+                  height: '56px',
+                  borderRadius: '16px',
+                  background: 'linear-gradient(135deg, rgba(124, 92, 252, 0.2), rgba(255, 77, 109, 0.2))',
+                  border: '1px solid rgba(124, 92, 252, 0.3)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
                 }}>
-                  Beneficiaries
-                </h1>
-                <p style={{ fontSize: '16px', color: '#64748b' }}>
-                  Trusted individuals to manage your legacy
-                </p>
+                  <Users style={{ width: '28px', height: '28px', color: '#7c5cfc' }} />
+                </div>
+                <div>
+                  <h1 style={{
+                    fontSize: '32px',
+                    fontWeight: 700,
+                    color: 'var(--text-primary)',
+                    marginBottom: '8px'
+                  }}>
+                    Beneficiaries
+                  </h1>
+                  <p style={{ fontSize: '16px', color: '#64748b' }}>
+                    Trusted individuals to manage your legacy
+                  </p>
+                </div>
               </div>
+              <button
+                onClick={() => setShowForm(true)}
+                style={{
+                  padding: '12px 20px',
+                  background: 'linear-gradient(135deg, #4f9eff, #7c5cfc)',
+                  border: 'none',
+                  borderRadius: '10px',
+                  color: 'white',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  whiteSpace: 'nowrap',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                👥 Add Beneficiary
+              </button>
             </div>
             
             {/* Search and Filter Bar */}
@@ -211,10 +258,10 @@ const Beneficiaries = () => {
                   style={{
                     width: '100%',
                     padding: '12px 12px 12px 40px',
-                    background: '#050d1a',
-                    border: '1px solid rgba(255,255,255,0.1)',
+                    background: 'var(--bg-card)',
+                    border: '1px solid var(--border-hover)',
                     borderRadius: '8px',
-                    color: '#ffffff',
+                    color: 'var(--text-primary)',
                     fontSize: '14px',
                     outline: 'none',
                     transition: 'all 150ms'
@@ -238,7 +285,7 @@ const Beneficiaries = () => {
                 background: '#050d1a',
                 border: '1px solid rgba(255,255,255,0.1)',
                 borderRadius: '8px',
-                color: '#64748b',
+                color: 'var(--text-muted)',
                 fontSize: '14px',
                 cursor: 'pointer',
                 transition: 'all 150ms'
@@ -257,39 +304,33 @@ const Beneficiaries = () => {
               </button>
             </div>
             
-            {/* Enrollment Status Summary */}
+            {/* Beneficiary Access Info */}
             {totalCount > 0 && (
               <motion.div 
                 initial={{ opacity: 0, y: 10 }} 
                 animate={{ opacity: 1, y: 0 }}
-                style={{ 
-                  marginBottom: '32px',
-                  padding: '16px 20px', 
-                  background: enrollmentComplete ? 'rgba(0,229,160,0.1)' : 'rgba(255,184,48,0.1)', 
-                  border: `1px solid ${enrollmentComplete ? 'rgba(0,229,160,0.3)' : 'rgba(255,184,48,0.3)'}`,
+                style={{
+                  padding: '14px 18px',
+                  background: 'rgba(79,158,255,0.06)',
+                  border: '1px solid rgba(79,158,255,0.15)',
                   borderRadius: '12px',
+                  marginBottom: '24px',
                   display: 'flex',
-                  alignItems: 'center',
-                  gap: '16px'
+                  alignItems: 'flex-start',
+                  gap: '12px'
                 }}
               >
-                {enrollmentComplete ? (
-                  <CheckCircle size={24} style={{ color: '#00e5a0' }} />
-                ) : (
-                  <Clock size={24} style={{ color: '#ffb830' }} />
-                )}
+                <span style={{ fontSize: '18px' }}>ℹ️</span>
                 <div>
-                  <p style={{ fontSize: '16px', fontWeight: 600, color: enrollmentComplete ? '#00e5a0' : '#ffb830' }}>
-                    {enrollmentComplete 
-                      ? 'All beneficiaries enrolled' 
-                      : `${enrolledCount} of ${totalCount} beneficiaries enrolled`
-                    }
-                  </p>
-                  <p style={{ fontSize: '14px', color: '#64748b', marginTop: '4px' }}>
-                    {enrollmentComplete 
-                      ? 'Your legacy is ready for transfer when needed'
-                      : 'Beneficiaries must complete enrollment to access your legacy'
-                    }
+                  <p style={{
+                    fontSize: '14px',
+                    color: 'var(--text-secondary)',
+                    margin: 0,
+                    lineHeight: '1.6'
+                  }}>
+                    Your beneficiaries will automatically receive 
+                    secure email access when your trigger activates.
+                    They do not need to do anything in advance.
                   </p>
                 </div>
               </motion.div>
@@ -302,9 +343,9 @@ const Beneficiaries = () => {
               initial={{ opacity: 0, x: -16 }} 
               animate={{ opacity: 1, x: 0 }}
               style={{
-                background: '#050d1a',
+                background: 'var(--bg-card)',
                 backdropFilter: 'blur(20px)',
-                border: '1px solid rgba(255,255,255,0.1)',
+                border: '1px solid var(--border)',
                 borderRadius: '16px',
                 padding: '32px',
                 position: 'sticky',
@@ -336,10 +377,10 @@ const Beneficiaries = () => {
                     style={{
                       width: '100%',
                       padding: '12px 16px',
-                      background: '#030508',
-                      border: '1px solid rgba(255,255,255,0.1)',
+                      background: 'var(--bg-base)',
+                      border: '1px solid var(--border-hover)',
                       borderRadius: '8px',
-                      color: '#ffffff',
+                      color: 'var(--text-primary)',
                       fontSize: '14px',
                       outline: 'none',
                       transition: 'all 150ms'
@@ -371,10 +412,10 @@ const Beneficiaries = () => {
                     style={{
                       width: '100%',
                       padding: '12px 16px',
-                      background: '#030508',
-                      border: '1px solid rgba(255,255,255,0.1)',
+                      background: 'var(--bg-base)',
+                      border: '1px solid var(--border-hover)',
                       borderRadius: '8px',
-                      color: '#ffffff',
+                      color: 'var(--text-primary)',
                       fontSize: '14px',
                       outline: 'none',
                       transition: 'all 150ms'
@@ -404,10 +445,10 @@ const Beneficiaries = () => {
                       style={{
                         width: '100%',
                         padding: '12px 16px',
-                        background: '#030508',
-                        border: '1px solid rgba(255,255,255,0.1)',
+                        background: 'var(--bg-base)',
+                        border: '1px solid var(--border-hover)',
                         borderRadius: '8px',
-                        color: '#ffffff',
+                        color: 'var(--text-primary)',
                         fontSize: '14px',
                         outline: 'none',
                         transition: 'all 150ms'
@@ -442,10 +483,10 @@ const Beneficiaries = () => {
                       style={{
                         width: '100%',
                         padding: '12px 16px',
-                        background: '#030508',
-                        border: '1px solid rgba(255,255,255,0.1)',
+                        background: 'var(--bg-base)',
+                        border: '1px solid var(--border-hover)',
                         borderRadius: '8px',
-                        color: '#ffffff',
+                        color: 'var(--text-primary)',
                         fontSize: '14px',
                         outline: 'none',
                         transition: 'all 150ms'
@@ -464,7 +505,285 @@ const Beneficiaries = () => {
                     </select>
                   </div>
                 </div>
-                <motion.button 
+
+                {/* Security Question Section */}
+                <div style={{ 
+                  marginTop: 24,
+                  paddingTop: 20,
+                  borderTop: '1px solid rgba(255,255,255,0.06)'
+                }}>
+                  <p style={{ 
+                    fontSize: 13, 
+                    fontWeight: 600,
+                    color: '#4f9eff',
+                    marginBottom: 16,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.08em'
+                  }}>
+                    🔐 Security Verification
+                  </p>
+                  <p style={{ 
+                    fontSize: 12, 
+                    color: 'var(--text-secondary)', 
+                    marginBottom: 16 
+                  }}>
+                    Set a question only this person can answer.
+                    This protects their access if someone else 
+                    intercepts the email.
+                  </p>
+
+                  <div>
+                    <label style={{
+                      display: 'block',
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      color: '#e2e8f0',
+                      marginBottom: '8px'
+                    }}>
+                      <Shield style={{ width: '12px', height: '12px', marginRight: '4px', display: 'inline-block' }} />
+                      Verification Question
+                    </label>
+                    <input 
+                      type="text" 
+                      placeholder="Example: What is the name of the city where we first met?" 
+                      value={formData.verificationQuestion} 
+                      onChange={e => setFormData({...formData, verificationQuestion: e.target.value})} 
+                      required
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        background: 'var(--bg-base)',
+                        border: '1px solid var(--border-hover)',
+                        borderRadius: '8px',
+                        color: 'var(--text-primary)',
+                        fontSize: '14px',
+                        outline: 'none',
+                        transition: 'all 150ms'
+                      }}
+                      onFocus={(e) => {
+                        e.target.style.borderColor = '#3b82f6';
+                        e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+                      }}
+                      onBlur={(e) => {
+                        e.target.style.borderColor = 'rgba(255,255,255,0.1)';
+                        e.target.style.boxShadow = 'none';
+                      }}
+                    />
+                  </div>
+                  <div style={{ marginTop: 16 }}>
+                    <label style={{
+                      display: 'block',
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      color: '#e2e8f0',
+                      marginBottom: '8px'
+                    }}>
+                      <Key style={{ width: '12px', height: '12px', marginRight: '4px', display: 'inline-block' }} />
+                      Answer (Only this beneficiary should know)
+                    </label>
+                    <input 
+                      type="text" 
+                      placeholder="The answer to your question" 
+                      value={formData.verificationAnswer} 
+                      onChange={e => setFormData({...formData, verificationAnswer: e.target.value})} 
+                      required
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        background: 'var(--bg-base)',
+                        border: '1px solid var(--border-hover)',
+                        borderRadius: '8px',
+                        color: 'var(--text-primary)',
+                        fontSize: '14px',
+                        outline: 'none',
+                        transition: 'all 150ms'
+                      }}
+                      onFocus={(e) => {
+                        e.target.style.borderColor = '#3b82f6';
+                        e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+                      }}
+                      onBlur={(e) => {
+                        e.target.style.borderColor = 'rgba(255,255,255,0.1)';
+                        e.target.style.boxShadow = 'none';
+                      }}
+                    />
+                  </div>
+                  <div style={{ marginTop: 16 }}>
+                    <label style={{
+                      display: 'block',
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      color: '#e2e8f0',
+                      marginBottom: '8px'
+                    }}>
+                      Hint (Optional)
+                    </label>
+                    <input 
+                      type="text" 
+                      placeholder="A clue to help them remember..." 
+                      value={formData.verificationHint} 
+                      onChange={e => setFormData({...formData, verificationHint: e.target.value})} 
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        background: 'var(--bg-base)',
+                        border: '1px solid var(--border-hover)',
+                        borderRadius: '8px',
+                        color: 'var(--text-primary)',
+                        fontSize: '14px',
+                        outline: 'none',
+                        transition: 'all 150ms'
+                      }}
+                      onFocus={(e) => {
+                        e.target.style.borderColor = '#3b82f6';
+                        e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+                      }}
+                      onBlur={(e) => {
+                        e.target.style.borderColor = 'rgba(255,255,255,0.1)';
+                        e.target.style.boxShadow = 'none';
+                      }}
+                    />
+                    <p style={{ fontSize: 11, color: '#3d5070', marginTop: 4 }}>
+                      The hint is shown to the beneficiary but 
+                      NOT the answer. Keep it vague enough 
+                      that only they understand.
+                    </p>
+                  </div>
+                </div>
+
+                {/* SECURITY LAYER 7: Show Checklist Button */}
+                {!showChecklist && (
+                  <motion.button
+                    type="button"
+                    onClick={() => setShowChecklist(true)}
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.98 }}
+                    disabled={!formData.name || !formData.email || !formData.verificationQuestion || !formData.verificationAnswer}
+                    style={{
+                      padding: '14px 24px',
+                      borderRadius: '8px',
+                      border: 'none',
+                      background: (!formData.name || !formData.email || !formData.verificationQuestion || !formData.verificationAnswer) ? '#050d1a' : 'linear-gradient(135deg, #4f9eff, #7c5cfc)',
+                      color: 'var(--text-primary)',
+                      fontWeight: 600,
+                      fontSize: '14px',
+                      cursor: (!formData.name || !formData.email || !formData.verificationQuestion || !formData.verificationAnswer) ? 'not-allowed' : 'pointer',
+                      opacity: (!formData.name || !formData.email || !formData.verificationQuestion || !formData.verificationAnswer) ? 0.6 : 1,
+                      marginTop: '8px',
+                      transition: 'all 150ms'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (formData.name && formData.email && formData.verificationQuestion && formData.verificationAnswer) {
+                        e.target.style.background = 'linear-gradient(135deg, #3b82f6, #6d28d9)';
+                        e.target.style.transform = 'translateY(-1px)';
+                        e.target.style.boxShadow = '0 10px 25px -5px rgba(79, 158, 255, 0.25)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (formData.name && formData.email && formData.verificationQuestion && formData.verificationAnswer) {
+                        e.target.style.background = 'linear-gradient(135deg, #4f9eff, #7c5cfc)';
+                        e.target.style.transform = 'translateY(0)';
+                        e.target.style.boxShadow = 'none';
+                      }
+                    }}
+                  >
+                    Review Security Checklist
+                  </motion.button>
+                )}
+
+                {/* SECURITY LAYER 7: Security Checklist */}
+                {showChecklist && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    style={{
+                      background: 'rgba(79, 158, 255, 0.06)',
+                      border: '1px solid rgba(79, 158, 255, 0.15)',
+                      borderRadius: '12px',
+                      padding: '20px',
+                      marginTop: '8px'
+                    }}
+                  >
+                    <h3 style={{
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      color: '#4f9eff',
+                      marginBottom: '16px'
+                    }}>
+                      Security Checklist for {formData.name}
+                    </h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                        <div style={{
+                          width: '18px',
+                          height: '18px',
+                          borderRadius: '50%',
+                          border: '2px solid rgba(255,255,255,0.2)',
+                          flexShrink: 0,
+                          marginTop: '2px'
+                        }} />
+                        <p style={{ fontSize: '13px', color: '#e2e8f0', lineHeight: 1.5, margin: 0 }}>
+                          Make sure <strong>{formData.name}'s email is current</strong> and only they have access to it
+                        </p>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                        <div style={{
+                          width: '18px',
+                          height: '18px',
+                          borderRadius: '50%',
+                          border: '2px solid rgba(255,255,255,0.2)',
+                          flexShrink: 0,
+                          marginTop: '2px'
+                        }} />
+                        <p style={{ fontSize: '13px', color: '#e2e8f0', lineHeight: 1.5, margin: 0 }}>
+                          The verification question should be something <strong>only {formData.name} would know</strong> — not public information
+                        </p>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                        <div style={{
+                          width: '18px',
+                          height: '18px',
+                          borderRadius: '50%',
+                          border: '2px solid rgba(255,255,255,0.2)',
+                          flexShrink: 0,
+                          marginTop: '2px'
+                        }} />
+                        <p style={{ fontSize: '13px', color: '#e2e8f0', lineHeight: 1.5, margin: 0 }}>
+                          Tell {formData.name} they are a beneficiary but <strong>do NOT share the verification answer</strong> with anyone else
+                        </p>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                        <div style={{
+                          width: '18px',
+                          height: '18px',
+                          borderRadius: '50%',
+                          border: '2px solid rgba(255,255,255,0.2)',
+                          flexShrink: 0,
+                          marginTop: '2px'
+                        }} />
+                        <p style={{ fontSize: '13px', color: '#e2e8f0', lineHeight: 1.5, margin: 0 }}>
+                          Periodically verify {formData.name}'s email is still active
+                        </p>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                        <div style={{
+                          width: '18px',
+                          height: '18px',
+                          borderRadius: '50%',
+                          border: '2px solid rgba(255,255,255,0.2)',
+                          flexShrink: 0,
+                          marginTop: '2px'
+                        }} />
+                        <p style={{ fontSize: '13px', color: '#e2e8f0', lineHeight: 1.5, margin: 0 }}>
+                          You can revoke access at any time from your dashboard
+                        </p>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {showChecklist && (
+                  <motion.button 
                   type="submit" 
                   whileHover={{ scale: 1.01 }} 
                   whileTap={{ scale: 0.98 }} 
@@ -474,7 +793,7 @@ const Beneficiaries = () => {
                     borderRadius: '8px', 
                     border: 'none', 
                     background: createMutation.isPending ? '#050d1a' : 'linear-gradient(135deg, #7c5cfc, #ff4d6d)', 
-                    color: '#ffffff', 
+                    color: 'var(--text-primary)', 
                     fontWeight: 600, 
                     fontSize: '14px', 
                     cursor: createMutation.isPending ? 'not-allowed' : 'pointer', 
@@ -499,6 +818,7 @@ const Beneficiaries = () => {
                 >
                   {createMutation.isPending ? 'Processing...' : 'Nominate Now'}
                 </motion.button>
+                )}
               </form>
             </motion.div>
 
@@ -511,34 +831,38 @@ const Beneficiaries = () => {
                   style={{ 
                     textAlign: 'center', 
                     padding: '80px 40px', 
-                    background: '#050d1a', 
+                    background: 'var(--bg-card)', 
                     backdropFilter: 'blur(20px)', 
                     border: '1px solid rgba(255,255,255,0.04)', 
                     borderRadius: '16px' 
                   }}
                 >
-                  <Users style={{ 
-                    width: '64px', 
-                    height: '64px', 
-                    color: '#64748b', 
-                    margin: '0 auto 24px' 
-                  }} />
+                  <div style={{ fontSize: 64, marginBottom: 16, opacity: 0.3 }}>
+                    👥
+                  </div>
                   <h3 style={{ 
-                    fontSize: '20px', 
-                    fontWeight: 700, 
-                    color: '#ffffff', 
-                    marginBottom: '12px' 
+                    fontSize: 20, fontWeight: 700, 
+                    color: 'var(--text-primary)', marginBottom: 8 
                   }}>
-                    No Beneficiaries Added
+                    No beneficiaries added yet
                   </h3>
                   <p style={{ 
-                    fontSize: '16px', 
-                    color: '#64748b', 
-                    maxWidth: '400px', 
-                    margin: '0 auto' 
+                    fontSize: 14, color: '#64748b', 
+                    marginBottom: 24, maxWidth: 340, margin: '0 auto 24px' 
                   }}>
-                    Your digital assets need a guardian. Add trusted contacts to your legacy plan.
+                    Designate the people who should 
+                    receive your digital legacy when the time comes.
                   </p>
+                  <button onClick={() => setShowChecklist(true)}
+                    style={{
+                      padding: '12px 28px',
+                      background: 'linear-gradient(135deg, #4f9eff, #7c5cfc)',
+                      border: 'none', borderRadius: 12,
+                      color: 'white', fontSize: 14,
+                      fontWeight: 700, cursor: 'pointer'
+                    }}>
+                    Add Your First Beneficiary
+                  </button>
                 </motion.div>
               ) : (
                 <AnimatePresence>
@@ -553,7 +877,7 @@ const Beneficiaries = () => {
                         exit={{ opacity: 0, scale: 0.95 }} 
                         transition={{ delay: idx * 0.08 }}
                         style={{
-                          background: '#050d1a',
+                          background: 'var(--bg-card)',
                           backdropFilter: 'blur(20px)',
                           border: '1px solid rgba(255,255,255,0.04)',
                           borderRadius: '12px',
@@ -615,7 +939,7 @@ const Beneficiaries = () => {
                                   borderRadius: '6px',
                                   background: 'rgba(255, 255, 255, 0.04)',
                                   border: '1px solid rgba(255, 255, 255, 0.1)',
-                                  color: '#64748b',
+                                  color: 'var(--text-muted)',
                                   fontSize: '12px',
                                   cursor: 'pointer',
                                   transition: 'all 150ms'
@@ -660,7 +984,7 @@ const Beneficiaries = () => {
                         <h4 style={{ 
                           fontSize: '18px', 
                           fontWeight: 700, 
-                          color: '#ffffff', 
+                          color: 'var(--text-primary)', 
                           marginBottom: '8px' 
                         }}>
                           {beneficiary.name}
@@ -671,7 +995,7 @@ const Beneficiaries = () => {
                           alignItems: 'center', 
                           gap: '8px', 
                           fontSize: '14px', 
-                          color: '#64748b', 
+                          color: 'var(--text-muted)', 
                           marginBottom: '16px' 
                         }}>
                           <Mail style={{ width: '16px', height: '16px' }} /> 
@@ -692,7 +1016,7 @@ const Beneficiaries = () => {
                           }}>
                             <span style={{ 
                               fontSize: '12px', 
-                              color: '#64748b', 
+                              color: 'var(--text-muted)', 
                               textTransform: 'capitalize',
                               fontWeight: 500
                             }}>
@@ -714,33 +1038,136 @@ const Beneficiaries = () => {
                               {beneficiary.accessLevel.toUpperCase()}
                             </span>
                           </div>
-                          <div style={{ 
-                            display: 'flex', 
-                            justifyContent: 'space-between', 
-                            alignItems: 'center' 
+                          {/* SECURITY LAYER 5: Portal Access Status */}
+                          <div style={{
+                            paddingTop: '12px',
+                            borderTop: '1px solid rgba(255,255,255,0.04)'
                           }}>
-                            <span style={{ 
-                              fontSize: '12px', 
-                              color: '#64748b',
-                              fontWeight: 500
+                            <div style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              marginBottom: '12px'
                             }}>
-                              Enrollment Status
-                            </span>
-                            <span style={{ 
-                              fontSize: '12px', 
-                              fontWeight: 600, 
-                              color: getEnrollmentStatusColor(beneficiary.enrollmentStatus), 
-                              display: 'flex', 
-                              alignItems: 'center', 
-                              gap: '6px',
-                              background: `${getEnrollmentStatusColor(beneficiary.enrollmentStatus)}15`,
-                              border: `1px solid ${getEnrollmentStatusColor(beneficiary.enrollmentStatus)}30`,
-                              padding: '4px 10px',
-                              borderRadius: '6px'
-                            }}>
-                              {getEnrollmentStatusIcon(beneficiary.enrollmentStatus)}
-                              {getEnrollmentStatusText(beneficiary.enrollmentStatus)}
-                            </span>
+                              <span style={{
+                                fontSize: '12px',
+                                color: 'var(--text-muted)',
+                                fontWeight: 500
+                              }}>
+                                <Lock style={{ width: '12px', height: '12px', marginRight: '4px', display: 'inline-block' }} />
+                                Portal Access
+                              </span>
+                              {portalStatuses?.[beneficiary._id]?.hasAccess ? (
+                                <span style={{
+                                  fontSize: '11px',
+                                  fontWeight: 600,
+                                  color: portalStatuses[beneficiary._id].isRevoked ? '#ff4d6d' : '#00e5a0',
+                                  background: portalStatuses[beneficiary._id].isRevoked ? 'rgba(255,77,109,0.1)' : 'rgba(0,229,160,0.1)',
+                                  border: portalStatuses[beneficiary._id].isRevoked ? '1px solid rgba(255,77,109,0.2)' : '1px solid rgba(0,229,160,0.2)',
+                                  padding: '4px 10px',
+                                  borderRadius: '6px'
+                                }}>
+                                  {portalStatuses[beneficiary._id].isRevoked ? 'Revoked' : 'Active'}
+                                </span>
+                              ) : (
+                                <span style={{
+                                  fontSize: '11px',
+                                  fontWeight: 600,
+                                  color: 'var(--text-muted)',
+                                  background: 'rgba(100,116,139,0.1)',
+                                  border: '1px solid rgba(100,116,139,0.2)',
+                                  padding: '4px 10px',
+                                  borderRadius: '6px'
+                                }}>
+                                  Not Activated
+                                </span>
+                              )}
+                            </div>
+
+                            {portalStatuses?.[beneficiary._id]?.hasAccess && !portalStatuses[beneficiary._id].isRevoked && (
+                              <div style={{
+                                fontSize: '11px',
+                                color: 'var(--text-muted)',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '4px',
+                                marginBottom: '12px'
+                              }}>
+                                <div>Accessed: {portalStatuses[beneficiary._id].accessCount || 0} time(s)</div>
+                                {portalStatuses[beneficiary._id].lastAccessed && (
+                                  <div>Last: {new Date(portalStatuses[beneficiary._id].lastAccessed).toLocaleDateString()}</div>
+                                )}
+                                <div>Expires: {new Date(portalStatuses[beneficiary._id].expiresAt).toLocaleDateString()}</div>
+                              </div>
+                            )}
+
+                            {/* SECURITY LAYER 5: Revoke/Resend Buttons */}
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                              {portalStatuses?.[beneficiary._id]?.hasAccess && !portalStatuses[beneficiary._id].isRevoked ? (
+                                <motion.button
+                                  whileHover={{ scale: 1.02 }}
+                                  whileTap={{ scale: 0.98 }}
+                                  onClick={() => revokePortalMutation.mutate(beneficiary._id)}
+                                  disabled={revokePortalMutation.isPending}
+                                  style={{
+                                    flex: 1,
+                                    padding: '8px 12px',
+                                    borderRadius: '6px',
+                                    border: '1px solid rgba(255,77,109,0.2)',
+                                    background: 'rgba(255,77,109,0.1)',
+                                    color: '#ff4d6d',
+                                    fontSize: '12px',
+                                    fontWeight: 600,
+                                    cursor: revokePortalMutation.isPending ? 'not-allowed' : 'pointer',
+                                    transition: 'all 150ms'
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    if (!revokePortalMutation.isPending) {
+                                      e.target.style.background = 'rgba(255,77,109,0.2)';
+                                    }
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.target.style.background = 'rgba(255,77,109,0.1)';
+                                  }}
+                                >
+                                  {revokePortalMutation.isPending ? 'Revoking...' : 'Revoke Access'}
+                                </motion.button>
+                              ) : (
+                                <motion.button
+                                  whileHover={{ scale: 1.02 }}
+                                  whileTap={{ scale: 0.98 }}
+                                  onClick={() => resendPortalMutation.mutate(beneficiary._id)}
+                                  disabled={resendPortalMutation.isPending}
+                                  style={{
+                                    flex: 1,
+                                    padding: '8px 12px',
+                                    borderRadius: '6px',
+                                    border: '1px solid rgba(79,158,255,0.2)',
+                                    background: 'rgba(79,158,255,0.1)',
+                                    color: '#4f9eff',
+                                    fontSize: '12px',
+                                    fontWeight: 600,
+                                    cursor: resendPortalMutation.isPending ? 'not-allowed' : 'pointer',
+                                    transition: 'all 150ms'
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    if (!resendPortalMutation.isPending) {
+                                      e.target.style.background = 'rgba(79,158,255,0.2)';
+                                    }
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.target.style.background = 'rgba(79,158,255,0.1)';
+                                  }}
+                                >
+                                  {resendPortalMutation.isPending ? 'Sending...' : (
+                                    <>
+                                      <RefreshCw style={{ width: '12px', height: '12px', marginRight: '4px', display: 'inline-block' }} />
+                                      Resend Link
+                                    </>
+                                  )}
+                                </motion.button>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </motion.div>
@@ -752,7 +1179,7 @@ const Beneficiaries = () => {
           </div>
         </div>
       </div>
-    </div>
+    </DashboardLayout>
   );
 };
 

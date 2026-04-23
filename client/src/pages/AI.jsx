@@ -1,179 +1,471 @@
-import { useState } from 'react';
-import { Copy, Bot, MessageSquare, Loader2, Sparkles } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
-import { motion } from 'framer-motion';
-import axios from 'axios';
-import toast from 'react-hot-toast';
+import React, { useState, useRef, useEffect } from 'react'
+import { useAuth } from '../contexts/AuthContext'
+import DashboardLayout from '../components/DashboardLayout'
+import axios from 'axios'
+import toast from 'react-hot-toast'
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+const API_BASE = import.meta.env.VITE_API_BASE_URL 
+  || 'http://localhost:5000/api'
 
-const emotions = ['love', 'apology', 'gratitude', 'farewell', 'encouragement', 'memories'];
-const recipients = ['family', 'friend', 'partner', 'child', 'parent', 'colleague'];
-const tones = ['emotional', 'formal', 'casual', 'poetic', 'heartfelt'];
+const SUGGESTED_QUESTIONS = [
+  'How do I set up my digital legacy?',
+  'How secure is my data?',
+  'What happens when my trigger activates?',
+  'How do I add a beneficiary?',
+  'What is my legacy score?',
+  'How does the check-in timer work?'
+]
 
-const emotionColors = {
-  love: '#ff4d6d', apology: '#ffb830', gratitude: '#00e5a0', farewell: '#7c5cfc', encouragement: '#4f9eff', memories: '#ffb830'
-};
+export default function AIAssistant() {
+  const { token } = useAuth()
+  const [messages, setMessages] = useState([
+    {
+      id: 1,
+      role: 'assistant',
+      content: `Hello! I am your LastKey AI assistant. 👋
 
-const AI = () => {
-  const { token } = useAuth();
-  const [formData, setFormData] = useState({
-    emotion: 'love',
-    recipient: 'family',
-    tone: 'emotional',
-    context: ''
-  });
-  const [loading, setLoading] = useState(false);
-  const [generatedMessage, setGeneratedMessage] = useState('');
-  const [typing, setTyping] = useState(false);
+I can help you understand how to protect your digital legacy, explain features, and give you personalized suggestions based on your account.
 
-  const handleGenerate = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setGeneratedMessage('');
+What would you like to know?`,
+      timestamp: new Date()
+    }
+  ])
+  const [input, setInput] = useState('')
+  const [loading, setLoading] = useState(false)
+  const bottomRef = useRef(null)
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
+
+  const sendMessage = async (text) => {
+    const messageText = text || input.trim()
+    if (!messageText || loading) return
+
+    const userMessage = {
+      id: Date.now(),
+      role: 'user',
+      content: messageText,
+      timestamp: new Date()
+    }
+
+    setMessages(prev => [...prev, userMessage])
+    setInput('')
+    setLoading(true)
 
     try {
-      const response = await axios.post(`${API_BASE}/ai/generate-message`, formData, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const { data } = await axios.post(
+        `${API_BASE}/ai/chat`,
+        { message: messageText },
+        { headers: { Authorization: `Bearer ${token}` } }
+      )
 
-      setTyping(true);
-      const message = response.data.data.message;
-      let i = 0;
-      const typer = setInterval(() => {
-        setGeneratedMessage(message.slice(0, i));
-        i++;
-        if (i > message.length) {
-          clearInterval(typer);
-          setTyping(false);
-          toast.success('AI Legacy Message Generated!');
-        }
-      }, 30);
+      const assistantMessage = {
+        id: Date.now() + 1,
+        role: 'assistant',
+        content: data.data.message,
+        timestamp: new Date()
+      }
 
-    } catch {
-      toast.error('Failed to generate message. Check your OpenAI key.');
+      setMessages(prev => [...prev, assistantMessage])
+
+    } catch (error) {
+      const errorMessage = {
+        id: Date.now() + 1,
+        role: 'assistant',
+        content: 'I apologize, I am having trouble responding right now. Please try again.',
+        timestamp: new Date(),
+        isError: true
+      }
+      setMessages(prev => [...prev, errorMessage])
+      toast.error('AI assistant unavailable')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
-  const copyToClipboard = async () => {
-    await navigator.clipboard.writeText(generatedMessage);
-    toast.success('Copied to clipboard!');
-  };
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      sendMessage()
+    }
+  }
 
-  const selectedEmotionColor = emotionColors[formData.emotion] || '#7c5cfc';
+  const formatTime = (date) => {
+    return new Date(date).toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  }
 
   return (
-    <div className="page spatial-bg">
-      <div className="stars" />
-      <div className="container" style={{ padding: '32px 24px' }}>
-              
-        <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }} style={{ textAlign: 'center', marginBottom: 40 }}>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 12, background: `linear-gradient(135deg, ${selectedEmotionColor}30, var(--plasma))`, border: `1px solid ${selectedEmotionColor}40`, padding: '12px 24px', borderRadius: 20, marginBottom: 20 }}>
-              <Bot style={{ width: 24, height: 24, color: selectedEmotionColor }} />
-              <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-1)' }}>AI Legacy Message Generator</span>
+    <DashboardLayout>
+      <div style={{
+        height: 'calc(100vh - 0px)',
+        display: 'flex',
+        flexDirection: 'column',
+        background: 'var(--bg-base)'
+      }}>
+
+        {/* Header */}
+        <div style={{
+          padding: '24px 32px 20px',
+          borderBottom: '1px solid var(--border)',
+          flexShrink: 0
+        }}>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: 12 
+          }}>
+            <div style={{
+              width: 44,
+              height: 44,
+              borderRadius: 12,
+              background: 'linear-gradient(135deg, #4f9eff20, #a78bfa20)',
+              border: '1px solid rgba(79,158,255,0.2)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 22
+            }}>
+              🤖
             </div>
-            <h1 className="display" style={{ fontSize: 32, marginBottom: 12 }}>Craft Perfect Farewell Messages</h1>
-            <p style={{ fontSize: 15, color: 'var(--text-2)', maxWidth: 500, margin: '0 auto' }}>Let AI create heartfelt, personalized messages for your loved ones.</p>
-          </motion.div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 24, alignItems: 'start' }}>
-            <motion.div initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }}
-              style={{ background: 'var(--glass-1)', backdropFilter: 'blur(20px)', border: '1px solid var(--glass-border)', borderRadius: 24, padding: 28 }}>
-              <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-1)', marginBottom: 24 }}>Generate Your Message</h2>
-              
-              <form onSubmit={handleGenerate} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-                <div>
-                  <label>Emotion</label>
-                  <select value={formData.emotion} onChange={(e) => setFormData({...formData, emotion: e.target.value})}>
-                    {emotions.map((emotion) => (
-                      <option key={emotion} value={emotion}>{emotion.charAt(0).toUpperCase() + emotion.slice(1)}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label>Recipient</label>
-                  <select value={formData.recipient} onChange={(e) => setFormData({...formData, recipient: e.target.value})}>
-                    {recipients.map((recipient) => (
-                      <option key={recipient} value={recipient}>{recipient.charAt(0).toUpperCase() + recipient.slice(1)}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label>Tone</label>
-                  <select value={formData.tone} onChange={(e) => setFormData({...formData, tone: e.target.value})}>
-                    {tones.map((tone) => (
-                      <option key={tone} value={tone}>{tone.charAt(0).toUpperCase() + tone.slice(1)}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label>Additional Context (Optional)</label>
-                  <textarea value={formData.context} onChange={(e) => setFormData({...formData, context: e.target.value})} rows={4} placeholder="Any specific memories or details to include..." style={{ resize: 'none' }} />
-                </div>
-
-                <motion.button type="submit" disabled={loading} whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
-                  style={{ padding: '16px 24px', borderRadius: 14, border: 'none', background: loading ? 'var(--glass-2)' : `linear-gradient(135deg, ${selectedEmotionColor}, var(--plasma))`, color: 'white', fontWeight: 700, fontSize: 15, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginTop: 8 }}>
-                  {loading ? (
-                    <><div className="spinner spinner-sm" style={{ borderTopColor: 'white' }} /> Generating with AI...</>
-                  ) : (
-                    <><Bot style={{ width: 18, height: 18 }} /> Generate Legacy Message</>
-                  )}
-                </motion.button>
-              </form>
-            </motion.div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-              <motion.div initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }}
-                style={{ background: 'var(--glass-1)', backdropFilter: 'blur(20px)', border: '1px solid var(--glass-border)', borderRadius: 24, padding: 28, flex: 1 }}>
-                <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-1)', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <MessageSquare style={{ width: 20, height: 20, color: 'var(--ion)' }} />
-                  AI Generated Message Preview
-                </h3>
-                {generatedMessage ? (
-                  <div style={{ position: 'relative' }}>
-                    <div style={{ background: 'var(--glass-2)', border: '1px solid var(--glass-border)', borderRadius: 16, padding: 20, maxHeight: 320, overflowY: 'auto' }}>
-                      <div style={{ fontSize: 14, color: 'var(--text-1)', lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>
-                        {typing && <span style={{ animation: 'blink 1s infinite' }}>|</span>}
-                        {generatedMessage}
-                      </div>
-                    </div>
-                    <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={copyToClipboard}
-                      style={{ position: 'absolute', top: 12, right: 12, padding: '10px 16px', borderRadius: 12, border: 'none', background: 'var(--ion)', color: 'white', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <Copy style={{ width: 14, height: 14 }} /> Copy
-                    </motion.button>
-                  </div>
-                ) : (
-                  <div style={{ padding: '60px 20px', textAlign: 'center', background: 'var(--glass-2)', borderRadius: 16 }}>
-                    <MessageSquare style={{ width: 48, height: 48, color: 'var(--text-3)', margin: '0 auto 12px', opacity: 0.5 }} />
-                    <p style={{ fontSize: 14, color: 'var(--text-2)' }}>Generate your first AI-powered legacy message</p>
-                  </div>
-                )}
-              </motion.div>
-
-              <motion.div initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4 }}
-                style={{ background: 'rgba(0,229,160,0.05)', border: '1px solid rgba(0,229,160,0.15)', borderRadius: 16, padding: 18 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(0,229,160,0.1)', border: '1px solid rgba(0,229,160,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Sparkles style={{ width: 20, height: 20, color: 'var(--pulse)' }} />
-                  </div>
-                  <div>
-                    <h4 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-1)', marginBottom: 2 }}>Powered by GPT-4o</h4>
-                    <p style={{ fontSize: 12, color: 'var(--text-2)' }}>Private & secure message generation</p>
-                  </div>
-                </div>
-              </motion.div>
+            <div>
+              <h1 style={{
+                fontSize: 20,
+                fontWeight: 700,
+                color: 'var(--text-primary)',
+                margin: 0
+              }}>
+                AI Assistant
+              </h1>
+              <p style={{
+                fontSize: 13,
+                color: 'var(--text-muted)',
+                margin: 0,
+                marginTop: 2
+              }}>
+                Ask me anything about your digital legacy
+              </p>
+            </div>
+            <div style={{
+              marginLeft: 'auto',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '4px 10px',
+              background: 'rgba(0,229,160,0.08)',
+              border: '1px solid rgba(0,229,160,0.2)',
+              borderRadius: 20,
+              fontSize: 12,
+              color: '#00e5a0'
+            }}>
+              <span style={{
+                width: 6,
+                height: 6,
+                borderRadius: '50%',
+                background: '#00e5a0',
+                display: 'inline-block'
+              }} />
+              Online
             </div>
           </div>
-        </motion.div>
-      </div>
-    </div>
-  );
-};
+        </div>
 
-export default AI;
+        {/* Messages area */}
+        <div style={{
+          flex: 1,
+          overflowY: 'auto',
+          padding: '24px 32px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 16
+        }}>
+          
+          {/* Suggested questions - show only at start */}
+          {messages.length === 1 && (
+            <div style={{ marginBottom: 8 }}>
+              <p style={{
+                fontSize: 12,
+                color: 'var(--text-muted)',
+                marginBottom: 10,
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
+                fontWeight: 600
+              }}>
+                Suggested questions
+              </p>
+              <div style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: 8
+              }}>
+                {SUGGESTED_QUESTIONS.map((q, i) => (
+                  <button
+                    key={i}
+                    onClick={() => sendMessage(q)}
+                    style={{
+                      padding: '8px 14px',
+                      background: 'var(--bg-card)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 20,
+                      color: 'var(--text-secondary)',
+                      fontSize: 13,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                      textAlign: 'left'
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.borderColor = 'var(--blue-border)'
+                      e.currentTarget.style.color = 'var(--blue)'
+                      e.currentTarget.style.background = 'var(--blue-dim)'
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.borderColor = 'var(--border)'
+                      e.currentTarget.style.color = 'var(--text-secondary)'
+                      e.currentTarget.style.background = 'var(--bg-card)'
+                    }}
+                  >
+                    {q}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Chat messages */}
+          {messages.map(msg => (
+            <div
+              key={msg.id}
+              style={{
+                display: 'flex',
+                justifyContent: msg.role === 'user' 
+                  ? 'flex-end' 
+                  : 'flex-start',
+                gap: 10,
+                alignItems: 'flex-start'
+              }}
+            >
+              {/* AI Avatar */}
+              {msg.role === 'assistant' && (
+                <div style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 10,
+                  background: 'linear-gradient(135deg, #4f9eff, #a78bfa)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 16,
+                  flexShrink: 0,
+                  marginTop: 2
+                }}>
+                  🤖
+                </div>
+              )}
+
+              {/* Message bubble */}
+              <div style={{
+                maxWidth: '70%',
+                padding: '12px 16px',
+                borderRadius: msg.role === 'user' 
+                  ? '18px 18px 4px 18px'
+                  : '18px 18px 18px 4px',
+                background: msg.role === 'user'
+                  ? 'linear-gradient(135deg, #4f9eff, #7c5cfc)'
+                  : msg.isError
+                  ? 'rgba(248,113,113,0.08)'
+                  : 'var(--bg-card)',
+                border: msg.role === 'user'
+                  ? 'none'
+                  : msg.isError
+                  ? '1px solid rgba(248,113,113,0.2)'
+                  : '1px solid var(--border)',
+              }}>
+                <p style={{
+                  margin: 0,
+                  fontSize: 14,
+                  lineHeight: 1.7,
+                  color: msg.role === 'user'
+                    ? '#ffffff'
+                    : 'var(--text-primary)',
+                  whiteSpace: 'pre-wrap'
+                }}>
+                  {msg.content}
+                </p>
+                <p style={{
+                  margin: '6px 0 0 0',
+                  fontSize: 11,
+                  color: msg.role === 'user'
+                    ? 'rgba(255,255,255,0.6)'
+                    : 'var(--text-muted)',
+                  textAlign: 'right'
+                }}>
+                  {formatTime(msg.timestamp)}
+                </p>
+              </div>
+
+              {/* User Avatar */}
+              {msg.role === 'user' && (
+                <div style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 10,
+                  background: 'linear-gradient(135deg, #4f9eff, #7c5cfc)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 14,
+                  fontWeight: 700,
+                  color: 'white',
+                  flexShrink: 0,
+                  marginTop: 2
+                }}>
+                  U
+                </div>
+              )}
+            </div>
+          ))}
+
+          {/* Loading indicator */}
+          {loading && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: 10
+            }}>
+              <div style={{
+                width: 32,
+                height: 32,
+                borderRadius: 10,
+                background: 'linear-gradient(135deg, #4f9eff, #a78bfa)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 16,
+                flexShrink: 0
+              }}>
+                🤖
+              </div>
+              <div style={{
+                padding: '14px 18px',
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border)',
+                borderRadius: '18px 18px 18px 4px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4
+              }}>
+                {[0,1,2].map(i => (
+                  <div key={i} style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: '50%',
+                    background: 'var(--blue)',
+                    animation: `pulse 1.2s ease-in-out ${i * 0.2}s infinite` 
+                  }} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div ref={bottomRef} />
+        </div>
+
+        {/* Input area */}
+        <div style={{
+          padding: '16px 32px 24px',
+          borderTop: '1px solid var(--border)',
+          flexShrink: 0
+        }}>
+          <div style={{
+            display: 'flex',
+            gap: 12,
+            alignItems: 'flex-end',
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border)',
+            borderRadius: 16,
+            padding: '12px 16px',
+            transition: 'border-color 0.15s ease'
+          }}
+          onFocusCapture={e => {
+            e.currentTarget.style.borderColor = 'var(--border-focus)'
+          }}
+          onBlurCapture={e => {
+            e.currentTarget.style.borderColor = 'var(--border)'
+          }}
+          >
+            <textarea
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              onKeyDown={handleKeyPress}
+              placeholder="Ask me anything about your digital legacy..."
+              rows={1}
+              style={{
+                flex: 1,
+                background: 'transparent',
+                border: 'none',
+                outline: 'none',
+                color: 'var(--text-primary)',
+                fontSize: 14,
+                resize: 'none',
+                fontFamily: 'inherit',
+                lineHeight: 1.6,
+                maxHeight: 120,
+                overflowY: 'auto'
+              }}
+              onInput={e => {
+                e.target.style.height = 'auto'
+                e.target.style.height = 
+                  Math.min(e.target.scrollHeight, 120) + 'px'
+              }}
+            />
+            <button
+              onClick={() => sendMessage()}
+              disabled={!input.trim() || loading}
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 10,
+                background: input.trim() && !loading
+                  ? 'linear-gradient(135deg, #4f9eff, #7c5cfc)'
+                  : 'var(--bg-elevated)',
+                border: 'none',
+                cursor: input.trim() && !loading 
+                  ? 'pointer' : 'not-allowed',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+                transition: 'all 0.15s ease',
+                fontSize: 16
+              }}
+            >
+              {loading ? (
+                <div style={{
+                  width: 16,
+                  height: 16,
+                  border: '2px solid rgba(255,255,255,0.2)',
+                  borderTop: '2px solid white',
+                  borderRadius: '50%',
+                  animation: 'spin 0.7s linear infinite'
+                }} />
+              ) : '➤'}
+            </button>
+          </div>
+          <p style={{
+            fontSize: 11,
+            color: 'var(--text-muted)',
+            textAlign: 'center',
+            marginTop: 10,
+            margin: '10px 0 0 0'
+          }}>
+            Press Enter to send · Shift+Enter for new line
+          </p>
+        </div>
+
+      </div>
+    </DashboardLayout>
+  )
+}

@@ -2,10 +2,13 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
+const { fileTypeFromBuffer } = require('file-type');
 
 const LegalDocument = require('../models/LegalDocument');
 const { protect } = require('../middleware/auth');
 const { log } = require('../services/auditService');
+const { uploadLimiter, scanLimiter } = require('../server');
 
 const router = express.Router();
 
@@ -118,16 +121,47 @@ router.get('/', protect, async (req, res) => {
  * POST /api/legal-documents
  * Owner: create document + upload attachments
  */
-router.post('/', protect, upload.array('attachments', 5), async (req, res) => {
+router.post('/', protect, uploadLimiter, upload.single('document'), async (req, res) => {
   try {
-    const {
-      type,
-      title,
-      propertyAddress,
-      parcelId,
-      instructionsForBeneficiary,
-      certifiedCopyInstructions
-    } = req.body;
+    // Check file was received
+    if (!req.file) {
+      return res.status(400).json({
+        status: 'fail',
+        message: 'No file uploaded. Please select a file.'
+      })
+    }
+
+    // Validate actual file type using file-type
+    const fileBuffer = fs.readFileSync(req.file.path);
+    const detectedType = await fileTypeFromBuffer(fileBuffer);
+
+    const allowedTypes = ['pdf', 'jpg', 'jpeg', 'png', 'tiff'];
+
+    if (!detectedType || !allowedTypes.includes(detectedType.ext)) {
+      // Delete the uploaded file immediately
+      fs.unlinkSync(req.file.path);
+      return res.status(400).json({
+        status: 'fail',
+        message: 'Invalid file type detected'
+      })
+    }
+
+    // Validate file size (10MB max - redundant but safe)
+    const maxSize = 10 * 1024 * 1024;
+    if (req.file.size > maxSize) {
+      fs.unlinkSync(req.file.path);
+      return res.status(400).json({
+        status: 'fail',
+        message: 'File too large. Maximum 10MB allowed.'
+      })
+    }
+
+    // Rename file to remove path traversal risk
+    const safeFileName = `${Date.now()}-${crypto.randomBytes(16).toString('hex')}${path.extname(req.file.originalname).toLowerCase()}`;
+    const safePath = path.join(path.dirname(req.file.path), safeFileName);
+    fs.renameSync(req.file.path, safePath);
+    req.file.path = safePath;
+    req.file.filename = safeFileName;
 
     // Booleans / JSON fields
     const visibleToBeneficiaries = req.body.visibleToBeneficiaries !== 'false';
@@ -142,50 +176,38 @@ router.post('/', protect, upload.array('attachments', 5), async (req, res) => {
     const clientEncrypted = req.body.clientEncrypted === 'true' || req.body.clientEncrypted === true;
     const encryptionVersion = req.body.encryptionVersion || '1';
 
-    // Process uploaded files
+    // Process uploaded file
     const attachments = [];
-    if (req.files?.length) {
-      for (let i = 0; i < req.files.length; i++) {
-        const file = req.files[i];
-        const fileBuffer = fs.readFileSync(file.path);
-        const sha256Hash = LegalDocument.computeHash(fileBuffer);
+    if (req.file) {
+      const file = req.file;
+      const fileBuffer = fs.readFileSync(file.path);
+      const sha256Hash = LegalDocument.computeHash(fileBuffer);
 
-        // Optional per-file IV from client
-        const ivB64 =
-          req.body[`attachmentIv_${i}`] ||
-          req.body[`attachmentIv_${file.originalname}`] ||
-          undefined;
+      // Optional per-file IV from client
+      const ivB64 = req.body[`attachmentIv_0`] || req.body[`attachmentIv_${file.originalname}`] || undefined;
 
-        attachments.push({
-          filename: file.filename,
-          originalName: file.originalname,
-          mimeType: file.mimetype,
-          size: file.size,
-          sha256Hash,
-          encrypted: clientEncrypted,
-          ivB64, // NOTE: you must add ivB64 to schema (next step)
-          encryptionVersion, // optional; add to schema if you want to persist
-          storagePath: file.path,
-          uploadedAt: new Date()
-        });
-      }
+      const attachment = {
+        filename: req.file.filename,
+        originalName: req.file.originalname,
+        mimeType: req.file.mimetype,
+        size: req.file.size,
+        sha256Hash,
+        encrypted: false, // Default to false for simple uploads
+        storagePath: req.file.path,
+        uploadedAt: new Date()
+      };
+      attachments.push(attachment);
     }
 
+    // Create document with minimal required fields
     const document = await LegalDocument.create({
       ownerId: req.user._id,
-      type,
-      title,
-      propertyAddress,
-      parcelId,
-      recordingInfo,
-      notarized,
-      notaryInfo,
-      originalLocation,
-      instructionsForBeneficiary,
-      certifiedCopyInstructions,
-      attachments,
-      visibleToBeneficiaries,
-      allowedBeneficiaries
+      type: 'other', // Default type (must be in enum)
+      title: req.file.originalname, // Use filename as title
+      instructionsForBeneficiary: 'This document is stored for your reference. Please review it with legal counsel if needed.', // Required field
+      attachments: attachments,
+      visibleToBeneficiaries: false, // Default to false
+      notarized: false // Default to false
     });
 
     await log('legal_document_created', {
@@ -201,15 +223,13 @@ router.post('/', protect, upload.array('attachments', 5), async (req, res) => {
       data: stripStoragePaths(document)
     });
   } catch (err) {
-    console.error('Create document error:', err.message);
+    console.error('Upload error:', err.message)
 
-    // Clean up uploaded files on error
-    if (req.files?.length) {
-      for (const file of req.files) {
-        try {
-          fs.unlinkSync(file.path);
-        } catch (_) {}
-      }
+    // Clean up uploaded file on error
+    if (req.file) {
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (_) {}
     }
 
     return res.status(500).json({ success: false, message: err.message });
@@ -278,7 +298,7 @@ router.put('/:id', protect, async (req, res) => {
     const document = await LegalDocument.findOneAndUpdate(
       { _id: req.params.id, ownerId: req.user._id },
       update,
-      { new: true, runValidators: true }
+      { returnDocument: 'after', runValidators: true }
     );
 
     if (!document) {
@@ -388,6 +408,108 @@ router.get('/:id/attachments/:attachmentId', protect, async (req, res) => {
   } catch (err) {
     console.error('Download error:', err.message);
     return res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+/**
+ * POST /api/legal-documents/:id/scan
+ * OCR scanning for existing documents
+ */
+router.post('/:id/scan', protect, scanLimiter, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const document = await LegalDocument.findOne({
+      _id: id,
+      ownerId: req.user._id
+    });
+
+    if (!document) {
+      return res.status(404).json({
+        success: false,
+        message: 'Document not found'
+      });
+    }
+
+    // Check if document has attachments
+    if (!document.attachments || document.attachments.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Document has no attachments to scan'
+      });
+    }
+
+    // Get the first attachment
+    const attachment = document.attachments[0];
+    
+    // Check if file exists
+    if (!attachment.storagePath || !fs.existsSync(attachment.storagePath)) {
+      return res.status(404).json({
+        success: false,
+        message: 'File not found on server'
+      });
+    }
+
+    // Update document status to processing
+    document.status = 'processing';
+    await document.save();
+
+    // Try OCR with tesseract
+    try {
+      const Tesseract = await import('tesseract.js');
+      const { data } = await Tesseract.recognize(
+        attachment.storagePath,
+        'eng',
+        { logger: () => {} }
+      );
+
+      // Update document with scan results
+      document.scanResult = {
+        extractedText: data.text,
+        confidence: Math.round(data.confidence),
+        notaryDetected: false,
+        documentType: attachment.mimeType,
+        processedAt: new Date().toISOString()
+      };
+      document.status = 'verified';
+      await document.save();
+
+      await log('legal_document_scanned', {
+        userId: req.user._id,
+        details: { documentId: document._id, confidence: document.scanResult.confidence },
+        ip: req.ip,
+        userAgent: req.headers['user-agent']
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: 'Document scanned successfully',
+        data: stripStoragePaths(document)
+      });
+
+    } catch (ocrError) {
+      console.error('OCR error:', ocrError.message);
+      document.status = 'rejected';
+      document.scanResult = {
+        extractedText: 'OCR processing failed. Please try again.',
+        confidence: 0,
+        processedAt: new Date().toISOString()
+      };
+      await document.save();
+
+      return res.status(200).json({
+        success: true,
+        message: 'Scan attempted but OCR failed',
+        data: stripStoragePaths(document)
+      });
+    }
+
+  } catch (error) {
+    console.error('Scan controller error:', error.message);
+    return res.status(500).json({
+      success: false,
+      message: error.message
+    });
   }
 });
 

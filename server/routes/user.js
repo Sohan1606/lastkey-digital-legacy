@@ -9,7 +9,30 @@ router.use(protect);
 
 // Core routes
 router.post('/ping', ping);
-router.put('/settings', validate(updateSettingsSchema), updateSettings);
+router.get('/settings', async (req, res) => {
+  try {
+    const User = require('../models/User');
+    const user = await User.findById(req.user._id).select('-password');
+
+    if (!user) {
+      return res.status(404).json({
+        status: 'fail',
+        message: 'User not found'
+      });
+    }
+
+    return res.status(200).json({
+      status: 'success',
+      data: { user }
+    });
+  } catch (error) {
+    return res.status(500).json({
+      status: 'error',
+      message: error.message
+    });
+  }
+});
+router.put('/settings', updateSettings);
 router.get('/score', getLegacyScore);
 
 /**
@@ -62,7 +85,7 @@ router.post('/onboarding-complete', validate(updateSettingsSchema), async (req, 
     if (alertChannels !== undefined) updateData.alertChannels = alertChannels;
 
     const User = require('../models/User');
-    const user = await User.findByIdAndUpdate(req.user._id, updateData, { new: true });
+    const user = await User.findByIdAndUpdate(req.user._id, updateData, { returnDocument: 'after' });
 
     return res.json({ status: 'success', data: { user } });
   } catch (error) {
@@ -169,21 +192,39 @@ router.get('/activity', async (req, res) => {
 });
 
 /**
- * Audit logs for owner
+ * Activity logs (AuditLog)
  */
 router.get('/logs', async (req, res) => {
   try {
     const AuditLog = require('../models/AuditLog');
-    const { type } = req.query;
-    const query = { userId: req.user._id };
+    const userId = req.user._id;
 
-    if (type && type !== 'all') query.event = type;
+    const logs = await AuditLog
+      .find({ userId })
+      .sort({ timestamp: -1 })
+      .limit(100)
+      .lean();
 
-    const logs = await AuditLog.find(query).sort({ timestamp: -1 }).limit(100).lean();
+    // Transform to match client expectations
+    const transformedLogs = logs.map(log => ({
+      _id: log._id,
+      event: log.action.toLowerCase().replace(/_/g, '_'),
+      severity: log.riskLevel || 'info',
+      timestamp: log.timestamp,
+      ip: log.ipAddress,
+      details: log.metadata || log.details
+    }));
 
-    return res.json({ success: true, data: logs });
-  } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(200).json({
+      status: 'success',
+      data: transformedLogs
+    });
+  } catch (error) {
+    console.error('Get logs error:', error.message);
+    return res.status(500).json({
+      status: 'error',
+      message: error.message
+    });
   }
 });
 

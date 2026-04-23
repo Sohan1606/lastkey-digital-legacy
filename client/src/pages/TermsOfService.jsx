@@ -14,7 +14,7 @@ const TermsOfService = () => {
           animate={{ opacity: 1, y: 0 }}
           style={{ textAlign: 'center', marginBottom: 28 }}
         >
-          <div style={{ width: 64, height: 64, borderRadius: 18, background: 'rgba(79,158,255,0.10)', border: '1px solid rgba(79,158,255,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>
+          <div style={{ width: 64, height: 64, borderRadius: 18, background: 'var(--bg-base)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>
             <FileText style={{ width: 28, height: 28, color: 'var(--ion)' }} />
           </div>
           <h1 className="display" style={{ fontSize: 30, marginBottom: 8 }}>Terms of Service</h1>
@@ -64,7 +64,7 @@ const TermsOfService = () => {
                 <li>AI-powered message generation</li>
                 <li>Voice message creation and storage</li>
               </ul>
-              <div style={{ background: 'rgba(255,184,48,0.06)', border: '1px solid rgba(255,184,48,0.22)', borderRadius: 16, padding: 14, marginTop: 6 }}>
+              <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, padding: 14, marginTop: 6 }}>
                 <p style={{ color: 'var(--amber)', fontSize: 12, margin: 0, lineHeight: 1.6 }}>
                   <strong>Important:</strong> LastKey is a planning tool, not a legal service. 
                   For estate planning, please consult with qualified legal professionals.
@@ -109,17 +109,17 @@ const TermsOfService = () => {
                 distribution when triggered by prolonged inactivity.
               </p>
               
-              <div style={{ background: 'rgba(79,158,255,0.06)', border: '1px solid rgba(79,158,255,0.20)', borderRadius: 16, padding: 16 }}>
-                <h4 style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)', margin: '0 0 10px' }}>Protocol Activation</h4>
+              <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, padding: 16 }}>
+                <h4 style={{ fontSize: 13, fontWeight: 900, color: 'var(--text-1)', margin: '0 0 10px' }}>Protocol Activation</h4>
                 <ul style={{ display: 'grid', gap: 8, paddingLeft: 18, margin: 0, fontSize: 12, color: 'var(--text-2)' }}>
                   <li>Warning phase after your configured inactivity period</li>
                   <li>Final activation after double the inactivity period</li>
-                  <li>Email and optional WhatsApp alerts to beneficiaries</li>
+                  <li>Email alerts to beneficiaries</li>
                   <li>Release of Time Letters and asset instructions</li>
                 </ul>
               </div>
               
-              <div style={{ background: 'rgba(255,77,109,0.06)', border: '1px solid rgba(255,77,109,0.22)', borderRadius: 16, padding: 14 }}>
+              <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, padding: 14 }}>
                 <p style={{ color: 'var(--danger)', fontSize: 12, margin: 0, lineHeight: 1.6 }}>
                   <strong>Critical:</strong> Once the Guardian Protocol is activated, certain actions cannot be undone. 
                   Please maintain regular account activity and keep your information current.
@@ -135,9 +135,9 @@ const TermsOfService = () => {
               <h3 style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)', margin: 0 }}>Subscription Tiers</h3>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
                 {[
-                  { name: 'Free', color: 'rgba(136,153,187,0.18)', border: 'rgba(136,153,187,0.22)', items: ['2 Loved Ones', '3 Time Letters', '5 Memory Items'] },
-                  { name: 'Guardian ($4.99/mo)', color: 'rgba(79,158,255,0.12)', border: 'rgba(79,158,255,0.22)', items: ['5 Loved Ones', '20 Time Letters', '50 Memory Items', 'WhatsApp Alerts'] },
-                  { name: 'Legacy Pro ($12.99/mo)', color: 'rgba(124,92,252,0.12)', border: 'rgba(124,92,252,0.22)', items: ['Unlimited Everything', 'AI Voice Messages', 'Memoir AI', 'Life Timeline'] },
+                  { name: 'Free', color: 'var(--bg-card)', border: 'var(--border)', items: ['2 Loved Ones', '3 Time Letters', '5 Memory Items'] },
+                  { name: 'Guardian ($4.99/mo)', color: 'var(--bg-card)', border: 'var(--border)', items: ['5 Loved Ones', '20 Time Letters', '50 Memory Items'] },
+                  { name: 'Legacy Pro ($12.99/mo)', color: 'var(--bg-card)', border: 'var(--border)', items: ['Unlimited Everything', 'AI Voice Messages', 'Memoir AI', 'Life Timeline'] },
                 ].map(tier => (
                   <div key={tier.name} style={{ background: tier.color, border: `1px solid ${tier.border}`, borderRadius: 16, padding: 14 }}>
                     <h4 style={{ fontSize: 13, fontWeight: 900, color: 'var(--text-1)', margin: 0 }}>{tier.name}</h4>
@@ -190,7 +190,7 @@ const TermsOfService = () => {
               7. Limitations & Disclaimers
             </h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12, color: 'var(--text-2)', fontSize: 13, lineHeight: 1.8 }}>
-              <div style={{ background: 'rgba(255,77,109,0.06)', border: '1px solid rgba(255,77,109,0.22)', borderRadius: 16, padding: 14 }}>
+              <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, padding: 14 }}>
                 <h4 style={{ fontSize: 13, fontWeight: 900, color: 'var(--text-1)', margin: '0 0 8px' }}>Service Limitations</h4>
                 <p style={{ color: 'var(--text-2)', fontSize: 12, margin: 0 }}>
                   LastKey cannot guarantee delivery of your legacy in all circumstances, including but not limited to:
@@ -259,7 +259,7 @@ const TermsOfService = () => {
           </section>
 
           {/* Contact */}
-          <section style={{ background: 'linear-gradient(135deg, rgba(79,158,255,0.12), rgba(124,92,252,0.10))', border: '1px solid rgba(79,158,255,0.25)', borderRadius: 20, padding: 24 }}>
+          <section style={{ background: 'linear-gradient(135deg, #4f9eff, #7c5cfc)', border: '1px solid var(--border)', borderRadius: 20, padding: 24 }}>
             <h2 className="display" style={{ fontSize: 18, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 10 }}>
               <Users style={{ width: 18, height: 18, color: 'var(--ion)' }} />
               Questions About These Terms?

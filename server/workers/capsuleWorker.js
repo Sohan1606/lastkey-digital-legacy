@@ -13,15 +13,12 @@ if (capsuleQueue) {
 
   const capsule = await Capsule.findById(capsuleId);
   if (!capsule || capsule.isReleased) {
-    console.log(`Capsule ${capsuleId} already released or not found`);
     return;
   }
 
   capsule.isReleased = true;
   capsule.releasedAt = new Date();
   await capsule.save();
-
-  console.log(`Released capsule: ${capsule.title}`);
 
   const user = await User.findById(capsule.userId);
   const beneficiaries = await Beneficiary.find({ userId: capsule.userId });
@@ -59,7 +56,9 @@ if (capsuleQueue) {
   backoff: { type: 'exponential', delay: 5000 },
 });
 
-capsuleWorker.on('completed', (job) => console.log(`Capsule job ${job.id} completed`));
+capsuleWorker.on('completed', (job) => {
+  // Job completed
+});
 capsuleWorker.on('failed', (job, err) => console.error(`Capsule job ${job?.id} failed:`, err.message));
 
 } // Close the if block for capsuleQueue

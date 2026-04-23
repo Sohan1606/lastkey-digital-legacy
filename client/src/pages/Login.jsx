@@ -40,13 +40,14 @@ const Login = () => {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #030508, #070e1b, #030508)',
+      background: 'var(--bg-base)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       padding: '24px',
       position: 'relative',
-      overflow: 'hidden'
+      overflow: 'hidden',
+      paddingTop: '88px'
     }}>
       {/* Background Orbs */}
       <div style={{
@@ -80,9 +81,9 @@ const Login = () => {
           position: 'relative',
           width: '100%',
           maxWidth: '448px',
-          background: 'rgba(7, 14, 27, 0.8)',
+          background: 'var(--bg-card)',
           backdropFilter: 'blur(24px)',
-          border: '1px solid rgba(255,255,255,0.1)',
+          border: '1px solid var(--border)',
           borderRadius: '16px',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
           padding: '32px'
@@ -96,14 +97,14 @@ const Login = () => {
         <h1 style={{
           fontSize: '28px',
           fontWeight: 700,
-          color: '#ffffff',
+          color: 'var(--text-primary)',
           textAlign: 'center',
           marginBottom: '8px'
         }}>
           Welcome back
         </h1>
         <p style={{
-          color: '#94a3b8',
+          color: 'var(--text-secondary)',
           textAlign: 'center',
           fontSize: '14px',
           marginBottom: '32px'
@@ -118,13 +119,13 @@ const Login = () => {
             alignItems: 'center',
             gap: '8px',
             padding: '12px 16px',
-            background: 'rgba(239, 68, 68, 0.1)',
-            border: '1px solid rgba(239, 68, 68, 0.2)',
+            background: 'var(--red-dim)',
+            border: '1px solid rgba(248, 113, 113, 0.2)',
             borderRadius: '8px',
             marginBottom: '24px'
           }}>
-            <AlertCircle style={{ width: '16px', height: '16px', color: '#ef4444' }} />
-            <span style={{ color: '#ef4444', fontSize: '14px' }}>{error}</span>
+            <AlertCircle style={{ width: '16px', height: '16px', color: 'var(--red)' }} />
+            <span style={{ color: 'var(--red)', fontSize: '14px' }}>{error}</span>
           </div>
         )}
 
@@ -151,11 +152,12 @@ const Login = () => {
                 alignItems: 'center',
                 pointerEvents: 'none'
               }}>
-                <Mail style={{ width: '16px', height: '16px', color: '#64748b' }} />
+                <Mail style={{ width: '16px', height: '16px', color: 'var(--text-muted)' }} />
               </div>
               <input
                 type="email"
                 name="email"
+                autoComplete="email"
                 value={formData.email}
                 onChange={handleInputChange}
                 placeholder="name@example.com"
@@ -163,20 +165,21 @@ const Login = () => {
                 style={{
                   width: '100%',
                   padding: '12px 12px 12px 40px',
-                  background: '#030508',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: '8px',
-                  color: '#ffffff',
+                  backgroundColor: 'var(--bg-base)',
+                  color: 'var(--text-primary)',
+                  caretColor: 'var(--text-primary)',
+                  border: '1px solid var(--border-hover)',
+                  borderRadius: 'var(--radius-md)',
                   fontSize: '14px',
                   outline: 'none',
                   transition: 'all 150ms'
                 }}
                 onFocus={(e) => {
-                  e.target.style.borderColor = '#3b82f6';
-                  e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+                  e.target.style.borderColor = 'var(--border-focus)';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(79, 158, 255, 0.08)';
                 }}
                 onBlur={(e) => {
-                  e.target.style.borderColor = 'rgba(255,255,255,0.1)';
+                  e.target.style.borderColor = 'var(--border-hover)';
                   e.target.style.boxShadow = 'none';
                 }}
               />
@@ -189,7 +192,7 @@ const Login = () => {
               display: 'block',
               fontSize: '12px',
               fontWeight: 500,
-              color: '#e2e8f0',
+              color: 'var(--text-secondary)',
               marginBottom: '8px'
             }}>
               Password
@@ -204,11 +207,12 @@ const Login = () => {
                 alignItems: 'center',
                 pointerEvents: 'none'
               }}>
-                <Lock style={{ width: '16px', height: '16px', color: '#64748b' }} />
+                <Lock style={{ width: '16px', height: '16px', color: 'var(--text-muted)' }} />
               </div>
               <input
                 type={showPassword ? "text" : "password"}
                 name="password"
+                autoComplete="current-password"
                 value={formData.password}
                 onChange={handleInputChange}
                 placeholder="Enter your password"
@@ -216,20 +220,21 @@ const Login = () => {
                 style={{
                   width: '100%',
                   padding: '12px 40px 12px 40px',
-                  background: '#030508',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: '8px',
-                  color: '#ffffff',
+                  backgroundColor: 'var(--bg-base)',
+                  color: 'var(--text-primary)',
+                  caretColor: 'var(--text-primary)',
+                  border: '1px solid var(--border-hover)',
+                  borderRadius: 'var(--radius-md)',
                   fontSize: '14px',
                   outline: 'none',
                   transition: 'all 150ms'
                 }}
                 onFocus={(e) => {
-                  e.target.style.borderColor = '#3b82f6';
-                  e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+                  e.target.style.borderColor = 'var(--border-focus)';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(79, 158, 255, 0.08)';
                 }}
                 onBlur={(e) => {
-                  e.target.style.borderColor = 'rgba(255,255,255,0.1)';
+                  e.target.style.borderColor = 'var(--border-hover)';
                   e.target.style.boxShadow = 'none';
                 }}
               />
@@ -254,9 +259,9 @@ const Login = () => {
                 onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
               >
                 {showPassword ? (
-                  <EyeOff style={{ width: '16px', height: '16px', color: '#64748b' }} />
+                  <EyeOff style={{ width: '16px', height: '16px', color: 'var(--text-muted)' }} />
                 ) : (
-                  <Eye style={{ width: '16px', height: '16px', color: '#64748b' }} />
+                  <Eye style={{ width: '16px', height: '16px', color: 'var(--text-muted)' }} />
                 )}
               </button>
             </div>
@@ -268,10 +273,10 @@ const Login = () => {
             disabled={loginLoading}
             style={{
               padding: '12px 24px',
-              background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+              background: 'linear-gradient(135deg, #4f9eff, #7c5cfc)',
               border: 'none',
-              borderRadius: '8px',
-              color: '#ffffff',
+              borderRadius: 'var(--radius-md)',
+              color: 'var(--text-primary)',
               fontSize: '14px',
               fontWeight: 600,
               cursor: loginLoading ? 'not-allowed' : 'pointer',
@@ -284,14 +289,14 @@ const Login = () => {
             }}
             onMouseEnter={(e) => {
               if (!loginLoading) {
-                e.target.style.background = 'linear-gradient(135deg, #2563eb, #7c3aed)';
+                e.target.style.background = 'var(--blue)';
                 e.target.style.transform = 'translateY(-1px)';
-                e.target.style.boxShadow = '0 10px 25px -5px rgba(59, 130, 246, 0.25)';
+                e.target.style.boxShadow = 'var(--shadow-blue)';
               }
             }}
             onMouseLeave={(e) => {
               if (!loginLoading) {
-                e.target.style.background = 'linear-gradient(135deg, #3b82f6, #8b5cf6)';
+                e.target.style.background = 'linear-gradient(135deg, #4f9eff, #7c5cfc)';
                 e.target.style.transform = 'translateY(0)';
                 e.target.style.boxShadow = 'none';
               }
@@ -321,7 +326,7 @@ const Login = () => {
         {/* Links */}
         <div style={{ textAlign: 'center', marginTop: '24px' }}>
           <p style={{
-            color: '#94a3b8',
+            color: 'var(--text-secondary)',
             fontSize: '14px',
             marginBottom: '12px'
           }}>
@@ -329,13 +334,13 @@ const Login = () => {
             <Link 
               to="/register" 
               style={{
-                color: '#3b82f6',
+                color: 'var(--blue)',
                 fontWeight: 500,
                 textDecoration: 'none',
                 transition: 'color 150ms'
               }}
-              onMouseEnter={(e) => e.target.style.color = '#2563eb'}
-              onMouseLeave={(e) => e.target.style.color = '#3b82f6'}
+              onMouseEnter={(e) => e.target.style.color = 'var(--blue-dark)'}
+              onMouseLeave={(e) => e.target.style.color = 'var(--blue)'}
             >
               Create one free
             </Link>
@@ -343,13 +348,13 @@ const Login = () => {
           <Link 
             to="/forgot-password" 
             style={{
-              color: '#94a3b8',
+              color: 'var(--text-secondary)',
               fontSize: '13px',
               textDecoration: 'none',
               transition: 'color 150ms'
             }}
-            onMouseEnter={(e) => e.target.style.color = '#e2e8f0'}
-            onMouseLeave={(e) => e.target.style.color = '#94a3b8'}
+            onMouseEnter={(e) => e.target.style.color = 'var(--text-primary)'}
+            onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'}
           >
             Forgot your password?
           </Link>
@@ -359,8 +364,8 @@ const Login = () => {
         <div style={{
           marginTop: '32px',
           padding: '16px',
-          background: 'rgba(59, 130, 246, 0.05)',
-          border: '1px solid rgba(59, 130, 246, 0.1)',
+          background: 'var(--blue-dim)',
+          border: '1px solid var(--blue-border)',
           borderRadius: '8px',
           textAlign: 'center'
         }}>
@@ -371,18 +376,18 @@ const Login = () => {
             gap: '8px',
             marginBottom: '8px'
           }}>
-            <Shield style={{ width: '16px', height: '16px', color: '#3b82f6' }} />
+            <Shield style={{ width: '16px', height: '16px', color: 'var(--blue)' }} />
             <span style={{
               fontSize: '12px',
               fontWeight: 600,
-              color: '#3b82f6'
+              color: 'var(--blue)'
             }}>
               Protected by Zero-Knowledge Encryption
             </span>
           </div>
           <p style={{
             fontSize: '11px',
-            color: '#64748b',
+            color: 'var(--text-muted)',
             margin: 0,
             lineHeight: '1.4'
           }}>
@@ -391,12 +396,6 @@ const Login = () => {
         </div>
       </motion.div>
 
-      <style jsx>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
     </div>
   );
 };

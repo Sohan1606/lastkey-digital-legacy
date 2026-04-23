@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import Logo from './Logo'
+import { useAuth } from '../contexts/AuthContext'
 
 const PUBLIC_ROUTES = [
   '/', '/login', '/signin', '/register', '/signup',
@@ -8,16 +9,33 @@ const PUBLIC_ROUTES = [
   '/privacy', '/terms', '/trust'
 ]
 
+const DASHBOARD_ROUTES = [
+  '/dashboard', '/vault', '/beneficiaries', '/capsules',
+  '/voice-messages', '/final-message', '/memoir-ai',
+  '/life-timeline', '/legal-documents', '/settings',
+  '/activity-logs', '/ai'
+]
+
 export default function Navbar() {
   const location = useLocation()
   const navigate = useNavigate()
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const dropdownRef = useRef(null)
+  const { user, logout } = useAuth()
 
   const isPublicRoute = 
     PUBLIC_ROUTES.includes(location.pathname) ||
     location.pathname.startsWith('/reset-password') ||
     location.pathname.startsWith('/beneficiary')
+
+  const isDashboardRoute = 
+    DASHBOARD_ROUTES.some(route => location.pathname.startsWith(route)) ||
+    location.pathname.startsWith('/portal')
+
+  // Don't show navbar on dashboard routes
+  if (isDashboardRoute) {
+    return null
+  }
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -54,18 +72,15 @@ export default function Navbar() {
   }
 
   const handleSignOut = () => {
-    localStorage.clear()
-    sessionStorage.clear()
-    delete axios.defaults.headers.common['Authorization']
+    logout()
     setUserMenuOpen(false)
     navigate('/')
   }
 
-  const user = JSON.parse(localStorage.getItem('user') || '{}')
   const userName = user?.name || user?.email || 'User'
   const userInitials = userName
     .split(' ')
-    .map(n => n[0])
+    .map(n => n[0] || '')
     .join('')
     .toUpperCase()
     .slice(0, 2)

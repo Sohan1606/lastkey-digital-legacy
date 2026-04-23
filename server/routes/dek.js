@@ -43,7 +43,7 @@ router.post('/initialize', protect, async (req, res) => {
     
     await auditService.log({
       userId: req.user._id,
-      event: 'dek_initialized',
+      event: 'DEK_INITIALIZED',
       details: { version: encryptedMasterKey.version || '1' }
     });
     
@@ -144,7 +144,7 @@ router.post('/rotate', protect, async (req, res) => {
     
     await auditService.log({
       userId: req.user._id,
-      event: 'dek_rotated',
+      event: 'DEK_ROTATED',
       details: { rotationCount: dek.rotationCount }
     });
     
@@ -199,7 +199,7 @@ router.post('/beneficiary-shares', protect, async (req, res) => {
     
     await auditService.log({
       userId: req.user._id,
-      event: 'beneficiary_share_added',
+      event: 'BENEFICIARY_SHARE_ADDED',
       details: { beneficiaryId }
     });
     
@@ -239,7 +239,7 @@ router.get('/my-share', protect, async (req, res) => {
     
     await auditService.log({
       userId: req.user._id,
-      event: 'beneficiary_share_accessed',
+      event: 'BENEFICIARY_SHARE_ACCESSED',
       details: { ownerId: dek.ownerId }
     });
     
@@ -274,7 +274,7 @@ router.delete('/beneficiary-shares/:beneficiaryId', protect, async (req, res) =>
     
     await auditService.log({
       userId: req.user._id,
-      event: 'beneficiary_share_revoked',
+      event: 'BENEFICIARY_SHARE_REVOKED',
       details: { beneficiaryId: req.params.beneficiaryId }
     });
     

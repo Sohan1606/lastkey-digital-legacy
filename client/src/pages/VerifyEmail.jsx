@@ -50,7 +50,7 @@ const VerifyEmail = () => {
   };
 
   return (
-    <div className="page spatial-bg" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+    <div className="page spatial-bg" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, background: 'var(--bg-base)', paddingTop: 88 }}>
       <div className="stars" />
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -68,17 +68,17 @@ const VerifyEmail = () => {
             style={{ width: 80, height: 80, margin: '0 auto 18px', borderRadius: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >
             {status === 'loading' && (
-              <div style={{ width: 80, height: 80, background: 'rgba(79,158,255,0.10)', border: '1px solid rgba(79,158,255,0.22)', borderRadius: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ width: 80, height: 80, background: 'var(--bg-base)', border: '1px solid var(--border)', borderRadius: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Loader2 style={{ width: 34, height: 34, color: 'var(--ion)', animation: 'spin 0.8s linear infinite' }} />
               </div>
             )}
             {status === 'success' && (
-              <div style={{ width: 80, height: 80, background: 'rgba(0,229,160,0.10)', border: '1px solid rgba(0,229,160,0.25)', borderRadius: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ width: 80, height: 80, background: 'var(--bg-base)', border: '1px solid var(--border)', borderRadius: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <CheckCircle style={{ width: 34, height: 34, color: 'var(--pulse)' }} />
               </div>
             )}
             {status === 'error' && (
-              <div style={{ width: 80, height: 80, background: 'rgba(255,77,109,0.10)', border: '1px solid rgba(255,77,109,0.25)', borderRadius: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ width: 80, height: 80, background: 'var(--bg-base)', border: '1px solid var(--border)', borderRadius: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <XCircle style={{ width: 34, height: 34, color: 'var(--danger)' }} />
               </div>
             )}
@@ -120,7 +120,7 @@ const VerifyEmail = () => {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={handleGoToDashboard}
-                style={{ width: '100%', padding: '14px 18px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg,#4f9eff,#7c5cfc)', color: 'white', fontWeight: 800, boxShadow: 'var(--glow-ion)' }}
+                style={{ width: '100%', padding: '14px 18px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, #4f9eff, #7c5cfc)', color: 'var(--text-primary)', fontWeight: 800, boxShadow: 'var(--glow-ion)' }}
               >
                 Go to Dashboard
               </motion.button>
@@ -131,7 +131,7 @@ const VerifyEmail = () => {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={handleGoToLogin}
-                style={{ width: '100%', padding: '14px 18px', borderRadius: 14, border: '1px solid var(--glass-border)', cursor: 'pointer', background: 'var(--glass-2)', color: 'var(--text-1)', fontWeight: 800 }}
+                style={{ width: '100%', padding: '14px 18px', borderRadius: 14, border: '1px solid var(--glass-border)', cursor: 'pointer', background: 'var(--bg-card)', color: 'var(--text-1)', fontWeight: 800 }}
               >
                 Back to Login
               </motion.button>
@@ -144,7 +144,7 @@ const VerifyEmail = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.6 }}
-              style={{ marginTop: 18, padding: 14, background: 'rgba(255,184,48,0.06)', border: '1px solid rgba(255,184,48,0.22)', borderRadius: 14 }}
+              style={{ marginTop: 18, padding: 14, background: 'var(--bg-base)', border: '1px solid var(--border)', borderRadius: 14 }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--amber)', fontSize: 12 }}>
                 <Mail style={{ width: 14, height: 14 }} />

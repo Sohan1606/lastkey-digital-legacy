@@ -63,7 +63,7 @@ router.put('/:id', protect, async (req, res) => {
         duration,
         updatedAt: new Date()
       },
-      { new: true }
+      { returnDocument: 'after' }
     );
     
     if (!updatedMessage) {

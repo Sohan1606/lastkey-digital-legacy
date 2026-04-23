@@ -14,7 +14,7 @@ const PrivacyPolicy = () => {
           animate={{ opacity: 1, y: 0 }}
           style={{ textAlign: 'center', marginBottom: 28 }}
         >
-          <div style={{ width: 64, height: 64, borderRadius: 18, background: 'rgba(124,92,252,0.10)', border: '1px solid rgba(124,92,252,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>
+          <div style={{ width: 64, height: 64, borderRadius: 18, background: 'var(--bg-base)', border: '1px solid var(--border-base)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>
             <Shield style={{ width: 28, height: 28, color: 'var(--plasma)' }} />
           </div>
           <h1 className="display" style={{ fontSize: 30, marginBottom: 8 }}>Privacy Policy</h1>
@@ -55,14 +55,14 @@ const PrivacyPolicy = () => {
                 {
                   title: 'Account Information',
                   items: ['Name and email address', 'Phone number (for alerts, optional)', 'Password (encrypted and salted)'],
-                  accent: 'rgba(79,158,255,0.12)',
-                  border: 'rgba(79,158,255,0.22)',
+                  accent: 'var(--accent-blue)',
+                  border: 'var(--border-blue)',
                 },
                 {
                   title: 'Legacy Content',
                   items: ['Time letters and messages', 'Digital asset instructions', 'Beneficiary information', 'Life timeline events'],
-                  accent: 'rgba(124,92,252,0.12)',
-                  border: 'rgba(124,92,252,0.22)',
+                  accent: 'var(--accent-purple)',
+                  border: 'var(--border-purple)',
                 },
               ].map(card => (
                 <div key={card.title} style={{ background: card.accent, border: `1px solid ${card.border}`, borderRadius: 16, padding: 16 }}>
@@ -82,7 +82,7 @@ const PrivacyPolicy = () => {
               How We Protect Your Data
             </h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div style={{ background: 'rgba(0,229,160,0.06)', border: '1px solid rgba(0,229,160,0.22)', borderRadius: 16, padding: 16 }}>
+              <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-base)', borderRadius: 16, padding: 16 }}>
                 <h3 style={{ fontSize: 13, fontWeight: 900, color: 'var(--text-1)', margin: '0 0 8px' }}>🔐 Zero-Knowledge Vault Encryption</h3>
                 <p style={{ color: 'var(--text-2)', fontSize: 13, lineHeight: 1.8, margin: 0 }}>
                   Your Memory Vault passwords are encrypted <strong>client-side</strong> using AES-256 encryption before they ever leave your device. We cannot access, read, or reset your vault passwords. This is true zero-knowledge security.
@@ -116,7 +116,7 @@ const PrivacyPolicy = () => {
                 { n: '4', t: 'Legal Compliance', d: 'To comply with legal obligations and protect our users’ rights' },
               ].map(row => (
                 <div key={row.n} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, background: 'var(--glass-2)', border: '1px solid var(--glass-border)', borderRadius: 16, padding: 14 }}>
-                  <div style={{ width: 26, height: 26, borderRadius: 999, background: 'rgba(79,158,255,0.12)', border: '1px solid rgba(79,158,255,0.25)', color: 'var(--ion)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 900, flexShrink: 0 }}>
+                  <div style={{ width: 26, height: 26, borderRadius: 999, background: 'var(--accent-blue)', border: '1px solid var(--border-blue)', color: 'var(--ion)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 900, flexShrink: 0 }}>
                     {row.n}
                   </div>
                   <div>
@@ -136,9 +136,8 @@ const PrivacyPolicy = () => {
               {[
                 { t: 'OpenAI', d: 'For AI-powered message generation and memoir creation. Your content is processed securely and not used for training.' },
                 { t: 'Stripe', d: 'For secure payment processing. We never store your credit card information.' },
-                { t: 'Twilio', d: 'For WhatsApp alerts (optional). Your phone number is encrypted and only used for alerts you authorize.' },
               ].map(x => (
-                <div key={x.t} style={{ borderLeft: '3px solid var(--ion)', paddingLeft: 12, background: 'rgba(255,255,255,0.02)', borderRadius: 12, paddingTop: 10, paddingBottom: 10, paddingRight: 12 }}>
+                <div key={x.t} style={{ borderLeft: '3px solid var(--ion)', paddingLeft: 12, background: 'var(--bg-card)', borderRadius: 12, paddingTop: 10, paddingBottom: 10, paddingRight: 12 }}>
                   <h4 style={{ margin: '0 0 4px', fontSize: 13, fontWeight: 900, color: 'var(--text-1)' }}>{x.t}</h4>
                   <p style={{ margin: 0, fontSize: 13, color: 'var(--text-2)', lineHeight: 1.7 }}>{x.d}</p>
                 </div>
@@ -184,7 +183,7 @@ const PrivacyPolicy = () => {
           </section>
 
           {/* Contact */}
-          <section style={{ background: 'linear-gradient(135deg, rgba(124,92,252,0.12), rgba(79,158,255,0.10))', border: '1px solid rgba(124,92,252,0.25)', borderRadius: 20, padding: 24 }}>
+          <section style={{ background: 'linear-gradient(135deg, #4f9eff, #7c5cfc)', border: '1px solid var(--border-base)', borderRadius: 20, padding: 24 }}>
             <h2 className="display" style={{ fontSize: 18, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 10 }}>
               <Mail style={{ width: 18, height: 18, color: 'var(--plasma)' }} />
               Questions About Your Privacy?

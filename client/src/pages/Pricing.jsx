@@ -59,7 +59,6 @@ const Pricing = () => {
         { text: 'AI Voice Messages', included: false },
         { text: 'Life Timeline', included: false },
         { text: 'Memoir AI', included: false },
-        { text: 'WhatsApp Alerts', included: false },
         { text: 'Priority Support', included: false },
       ],
       cta: 'Start Free',
@@ -79,7 +78,7 @@ const Pricing = () => {
         { text: '20 Time Capsules', included: true },
         { text: '50 Vault Items', included: true },
         { text: 'Advanced Guardian Protocol', included: true },
-        { text: 'Email + WhatsApp Alerts', included: true },
+        { text: 'Email Alerts', included: true },
         { text: 'AI Voice Messages', included: false },
         { text: 'Life Timeline', included: false },
         { text: 'Memoir AI', included: false },
@@ -195,9 +194,9 @@ const Pricing = () => {
               <motion.div key={plan.id}
                 initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}
                 style={{
-                  background: plan.featured ? `linear-gradient(145deg, rgba(124,92,252,0.08), rgba(79,158,255,0.04))` : 'var(--glass-1)',
+                  background: plan.featured ? `linear-gradient(145deg, rgba(124,92,252,0.08), rgba(79,158,255,0.04))` : 'var(--bg-base)',
                   backdropFilter: 'blur(24px)',
-                  border: `1px solid ${plan.featured ? 'rgba(124,92,252,0.4)' : plan.popular ? 'rgba(79,158,255,0.3)' : 'var(--glass-border)'}`,
+                  border: `1px solid ${plan.featured ? 'rgba(124,92,252,0.4)' : plan.popular ? 'rgba(79,158,255,0.3)' : 'var(--border)'}`,
                   borderRadius: 24,
                   padding: 32,
                   position: 'relative',
@@ -228,7 +227,7 @@ const Pricing = () => {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 28 }}>
                   {plan.features.map((feat, fi) => (
                     <div key={fi} style={{ display: 'flex', alignItems: 'center', gap: 10, opacity: feat.included ? 1 : 0.38 }}>
-                      <div style={{ width: 18, height: 18, borderRadius: '50%', background: feat.included ? 'rgba(0,229,160,0.12)' : 'var(--glass-1)', border: `1px solid ${feat.included ? 'rgba(0,229,160,0.3)' : 'var(--glass-border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <div style={{ width: 18, height: 18, borderRadius: '50%', background: feat.included ? 'rgba(0,229,160,0.12)' : 'var(--bg-base)', border: `1px solid ${feat.included ? 'rgba(0,229,160,0.3)' : 'var(--border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                         {feat.included ? <Check size={10} color="var(--pulse)" /> : <X size={10} color="var(--text-3)" />}
                       </div>
                       <span style={{ fontSize: 13, color: feat.included ? 'var(--text-1)' : 'var(--text-3)', textDecoration: feat.included ? 'none' : 'line-through' }}>{feat.text}</span>
@@ -241,16 +240,16 @@ const Pricing = () => {
                   disabled={loadingTier === plan.id}
                   style={{
                     width: '100%', padding: '14px 24px', borderRadius: 12, cursor: loadingTier === plan.id ? 'not-allowed' : 'pointer',
-                    background: plan.featured ? 'linear-gradient(135deg,#7c5cfc,#4f9eff)' : plan.popular ? 'rgba(79,158,255,0.12)' : 'var(--glass-2)',
+                    background: plan.featured ? 'linear-gradient(135deg,#7c5cfc,#4f9eff)' : plan.popular ? 'rgba(79,158,255,0.12)' : 'var(--bg-base)',
                     color: plan.featured ? 'white' : plan.popular ? 'var(--ion)' : 'var(--text-2)',
-                    border: plan.featured ? 'none' : `1px solid ${plan.popular ? 'rgba(79,158,255,0.3)' : 'var(--glass-border)'}`,
+                    border: plan.featured ? 'none' : `1px solid ${plan.popular ? 'rgba(79,158,255,0.3)' : 'var(--border)'}`,
                     fontWeight: 700, fontSize: 14, opacity: loadingTier === plan.id ? 0.6 : 1,
                     boxShadow: plan.featured ? '0 0 20px rgba(124,92,252,0.4)' : 'none',
                     transition: 'all 0.2s ease',
                     fontFamily: 'var(--font-body)',
                   }}
-                  onMouseEnter={e => { if (!plan.featured) { e.currentTarget.style.background = plan.popular ? 'rgba(79,158,255,0.2)' : 'var(--glass-3)'; } }}
-                  onMouseLeave={e => { if (!plan.featured) { e.currentTarget.style.background = plan.popular ? 'rgba(79,158,255,0.12)' : 'var(--glass-2)'; } }}
+                  onMouseEnter={e => { if (!plan.featured) { e.currentTarget.style.background = plan.popular ? 'rgba(79,158,255,0.2)' : 'var(--bg-base)'; } }}
+                  onMouseLeave={e => { if (!plan.featured) { e.currentTarget.style.background = plan.popular ? 'rgba(79,158,255,0.12)' : 'var(--bg-base)'; } }}
                 >
                   {loadingTier === plan.id ? 'Processing...' : plan.cta}
                   {!loadingTier && plan.featured && <ArrowRight size={14} style={{ marginLeft: 6, display: 'inline' }} />}
@@ -261,8 +260,8 @@ const Pricing = () => {
         </div>
 
         {/* Feature comparison */}
-        <div style={{ marginBottom: 64, background: 'var(--glass-1)', border: '1px solid var(--glass-border)', borderRadius: 20, overflow: 'hidden' }}>
-          <div style={{ padding: 18, borderBottom: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+        <div style={{ marginBottom: 64, background: 'var(--bg-base)', border: '1px solid var(--border)', borderRadius: 20, overflow: 'hidden' }}>
+          <div style={{ padding: 18, borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
             <div>
               <div className="display" style={{ fontSize: 18 }}>Compare features</div>
               <div style={{ fontSize: 12, color: 'var(--text-3)' }}>Everything is encrypted. Upgrade any time.</div>
@@ -273,9 +272,9 @@ const Pricing = () => {
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 760 }}>
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'left', padding: '14px 16px', fontSize: 12, color: 'var(--text-3)', borderBottom: '1px solid var(--glass-border)' }}>Feature</th>
+                  <th style={{ textAlign: 'left', padding: '14px 16px', fontSize: 12, color: 'var(--text-3)', borderBottom: '1px solid var(--border)' }}>Feature</th>
                   {plans.map(p => (
-                    <th key={p.id} style={{ textAlign: 'center', padding: '14px 16px', fontSize: 12, color: 'var(--text-2)', borderBottom: '1px solid var(--glass-border)' }}>{p.name}</th>
+                    <th key={p.id} style={{ textAlign: 'center', padding: '14px 16px', fontSize: 12, color: 'var(--text-2)', borderBottom: '1px solid var(--border)' }}>{p.name}</th>
                   ))}
                 </tr>
               </thead>
@@ -297,7 +296,7 @@ const Pricing = () => {
 
         {/* Trust Bar */}
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}
-          style={{ display: 'flex', justifyContent: 'center', gap: 32, flexWrap: 'wrap', marginBottom: 64, padding: '24px 32px', background: 'var(--glass-1)', borderRadius: 16, border: '1px solid var(--glass-border)' }}>
+          style={{ display: 'flex', justifyContent: 'center', gap: 32, flexWrap: 'wrap', marginBottom: 64, padding: '24px 32px', background: 'var(--bg-base)', borderRadius: 16, border: '1px solid var(--border)' }}>
           {[
             { icon: '🔒', label: 'AES-256 Encryption' },
             { icon: '💳', label: 'Stripe Secure Payments' },
@@ -318,7 +317,7 @@ const Pricing = () => {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16 }}>
             {faqs.map((faq, i) => (
               <motion.div key={i} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 + i * 0.07 }}
-                style={{ background: 'var(--glass-1)', border: '1px solid var(--glass-border)', borderRadius: 16, padding: 24 }}>
+                style={{ background: 'var(--bg-base)', border: '1px solid var(--border)', borderRadius: 16, padding: 24 }}>
                 <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--ion)', marginBottom: 8 }}>Q: {faq.q}</p>
                 <p style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.6, margin: 0 }}>{faq.a}</p>
               </motion.div>
@@ -333,11 +332,11 @@ const Pricing = () => {
           <p style={{ color: 'var(--text-2)', marginBottom: 28, fontSize: 15 }}>Join thousands who trust LastKey. Start free — no credit card required.</p>
           <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
             <button onClick={() => navigate(user ? '/dashboard' : '/register')}
-              style={{ background: 'linear-gradient(135deg,#7c5cfc,#4f9eff)', border: 'none', borderRadius: 12, padding: '14px 32px', fontSize: 15, fontWeight: 700, color: 'white', cursor: 'pointer', boxShadow: 'var(--glow-plasma)' }}>
+              style={{ background: 'linear-gradient(135deg, #4f9eff, #7c5cfc)', border: 'none', borderRadius: 12, padding: '14px 32px', fontSize: 15, fontWeight: 700, color: 'white', cursor: 'pointer', boxShadow: 'var(--glow-plasma)' }}>
               Get Started Free
             </button>
             <button onClick={() => handleSubscribe('guardian')}
-              style={{ background: 'var(--glass-2)', border: '1px solid rgba(79,158,255,0.3)', borderRadius: 12, padding: '14px 32px', fontSize: 15, fontWeight: 600, color: 'var(--ion)', cursor: 'pointer' }}>
+              style={{ background: 'var(--bg-base)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 32px', fontSize: 15, fontWeight: 600, color: 'var(--ion)', cursor: 'pointer' }}>
               Try Guardian Free →
             </button>
           </div>

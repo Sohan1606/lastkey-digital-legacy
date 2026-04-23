@@ -10,7 +10,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import toast from 'react-hot-toast';
-import Sidebar from '../components/Sidebar';
+import DashboardLayout from '../components/DashboardLayout';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
@@ -167,6 +167,59 @@ const LegalDocuments = () => {
     setExpandedScanResults(newExpanded);
   };
 
+  // View document (authenticated)
+  const handleView = async (documentId) => {
+    try {
+      const response = await axios.get(
+        `${API_BASE}/legal-documents/${documentId}/view`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          responseType: 'blob'
+        }
+      );
+      
+      const blob = new Blob([response.data], {
+        type: response.headers['content-type']
+      });
+      const url = URL.createObjectURL(blob);
+      
+      // Open in new tab for viewing
+      window.open(url, '_blank');
+      
+      // Clean up after 60 seconds
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      
+    } catch (error) {
+      toast.error('Could not open document');
+    }
+  };
+
+  // Download document (authenticated)
+  const handleDownload = async (documentId) => {
+    try {
+      const response = await axios.get(
+        `${API_BASE}/legal-documents/${documentId}/download`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          responseType: 'blob'
+        }
+      );
+      
+      const blob = new Blob([response.data]);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'document';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+    } catch (error) {
+      toast.error('Download failed');
+    }
+  };
+
   // Get file icon
   const getFileIcon = (mimeType) => {
     if (mimeType === 'application/pdf') {
@@ -222,12 +275,10 @@ const LegalDocuments = () => {
 
   if (isLoading) {
     return (
-      <div style={{ display: 'flex' }}>
-        <Sidebar />
+      <DashboardLayout>
         <div style={{
-          marginLeft: '240px',
           minHeight: '100vh',
-          background: '#030508',
+          background: 'var(--bg-base)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center'
@@ -245,18 +296,15 @@ const LegalDocuments = () => {
             <p style={{ color: '#64748b', fontSize: 14 }}>Loading documents...</p>
           </div>
         </div>
-      </div>
+      </DashboardLayout>
     );
   }
 
   return (
-    <div style={{ display: 'flex' }}>
-      <Sidebar />
+    <DashboardLayout>
       <div style={{
-        marginLeft: '240px',
         minHeight: '100vh',
-        background: '#030508',
-        flex: 1,
+        background: 'var(--bg-base)',
         padding: '32px'
       }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
@@ -268,7 +316,7 @@ const LegalDocuments = () => {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '8px',
-                color: '#64748b',
+                color: 'var(--text-muted)',
                 marginBottom: '32px',
                 fontSize: '14px',
                 fontWeight: 500,
@@ -339,7 +387,7 @@ const LegalDocuments = () => {
                 Legal Document Vault
               </h1>
               <p style={{
-                color: '#64748b',
+                color: 'var(--text-muted)',
                 fontSize: '18px',
                 maxWidth: '600px',
                 margin: '0 auto'
@@ -365,10 +413,10 @@ const LegalDocuments = () => {
                 style={{
                   width: '100%',
                   padding: '12px 12px 12px 40px',
-                  background: '#050d1a',
+                  background: 'var(--bg-card)',
                   border: '1px solid rgba(255,255,255,0.1)',
                   borderRadius: '8px',
-                  color: '#ffffff',
+                  color: 'var(--text-primary)',
                   fontSize: '14px',
                   outline: 'none',
                   transition: 'all 150ms'
@@ -392,7 +440,7 @@ const LegalDocuments = () => {
               background: '#050d1a',
               border: '1px solid rgba(255,255,255,0.1)',
               borderRadius: '8px',
-              color: '#64748b',
+              color: 'var(--text-muted)',
               fontSize: '14px',
               cursor: 'pointer',
               transition: 'all 150ms'
@@ -448,6 +496,8 @@ const LegalDocuments = () => {
               }}
             >
               <input
+                id="document-upload"
+                name="document-upload"
                 ref={fileInputRef}
                 type="file"
                 accept=".pdf,.jpg,.jpeg,.png,.tiff"
@@ -469,7 +519,7 @@ const LegalDocuments = () => {
                     <p style={{
                       fontSize: '18px',
                       fontWeight: 600,
-                      color: '#ffffff',
+                      color: 'var(--text-primary)',
                       marginBottom: '8px'
                     }}>
                       Uploading document...
@@ -506,13 +556,13 @@ const LegalDocuments = () => {
                   <h3 style={{
                     fontSize: '20px',
                     fontWeight: 600,
-                    color: '#ffffff',
+                    color: 'var(--text-primary)',
                     marginBottom: '12px'
                   }}>
                     Upload Legal Document
                   </h3>
                   <p style={{
-                    color: '#64748b',
+                    color: 'var(--text-muted)',
                     fontSize: '14px',
                     marginBottom: '16px'
                   }}>
@@ -555,7 +605,7 @@ const LegalDocuments = () => {
               <h2 style={{
                 fontSize: '24px',
                 fontWeight: 700,
-                color: '#ffffff',
+                color: 'var(--text-primary)',
                 marginBottom: '32px'
               }}>
                 Your Documents ({documents.length})
@@ -571,7 +621,7 @@ const LegalDocuments = () => {
                       exit={{ opacity: 0, y: -20 }}
                       transition={{ delay: index * 0.05 }}
                       style={{
-                        background: '#050d1a',
+                        background: 'var(--bg-card)',
                         border: '1px solid rgba(255,255,255,0.04)',
                         borderRadius: '12px',
                         padding: '24px',
@@ -610,7 +660,7 @@ const LegalDocuments = () => {
                             <h3 style={{
                               fontSize: '18px',
                               fontWeight: 600,
-                              color: '#ffffff',
+                              color: 'var(--text-primary)',
                               overflow: 'hidden',
                               textOverflow: 'ellipsis',
                               whiteSpace: 'nowrap'
@@ -637,10 +687,10 @@ const LegalDocuments = () => {
                                 alignItems: 'center',
                                 gap: '8px',
                                 padding: '8px 16px',
-                                background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                                background: 'linear-gradient(135deg, #4f9eff, #7c5cfc)',
                                 border: 'none',
                                 borderRadius: '8px',
-                                color: '#ffffff',
+                                color: 'var(--text-primary)',
                                 fontSize: '14px',
                                 fontWeight: 500,
                                 cursor: scanMutation.isPending ? 'not-allowed' : 'pointer',
@@ -680,6 +730,7 @@ const LegalDocuments = () => {
                             <motion.button
                               whileHover={{ scale: 1.02 }}
                               whileTap={{ scale: 0.98 }}
+                              onClick={() => handleDownload(doc._id)}
                               style={{
                                 display: 'flex',
                                 alignItems: 'center',
@@ -742,7 +793,7 @@ const LegalDocuments = () => {
                                     borderRadius: '6px',
                                     background: 'rgba(255, 255, 255, 0.04)',
                                     border: '1px solid rgba(255, 255, 255, 0.1)',
-                                    color: '#64748b',
+                                    color: 'var(--text-muted)',
                                     fontSize: '14px',
                                     cursor: 'pointer',
                                     transition: 'all 150ms'
@@ -769,7 +820,7 @@ const LegalDocuments = () => {
                                   borderRadius: '8px',
                                   background: 'rgba(255, 255, 255, 0.04)',
                                   border: '1px solid rgba(255, 255, 255, 0.1)',
-                                  color: '#64748b',
+                                  color: 'var(--text-muted)',
                                   cursor: 'pointer',
                                   transition: 'all 150ms'
                                 }}
@@ -806,7 +857,7 @@ const LegalDocuments = () => {
                               gap: '8px',
                               padding: '8px 12px',
                               borderRadius: '8px',
-                              border: '1px solid rgba(255,255,255,0.1)',
+                              border: '1px solid var(--border)',
                               background: 'rgba(255,255,255,0.02)',
                               color: '#e2e8f0',
                               fontSize: '13px',
@@ -859,7 +910,7 @@ const LegalDocuments = () => {
                                   </div>
                                   <p style={{
                                     fontSize: '14px',
-                                    color: '#64748b',
+                                    color: 'var(--text-muted)',
                                     whiteSpace: 'pre-wrap',
                                     lineHeight: '1.6'
                                   }}>
@@ -906,40 +957,34 @@ const LegalDocuments = () => {
                 borderRadius: '16px' 
               }}
             >
-              <FileText style={{ 
-                width: '64px', 
-                height: '64px', 
-                color: '#64748b', 
-                margin: '0 auto 24px' 
-              }} />
+              <div style={{ fontSize: 64, marginBottom: 16, opacity: 0.3 }}>
+                📄
+              </div>
               <h3 style={{ 
-                fontSize: '20px', 
-                fontWeight: 700, 
-                color: '#ffffff', 
-                marginBottom: '12px' 
+                fontSize: 20, fontWeight: 700, 
+                color: 'var(--text-primary)', marginBottom: 8 
               }}>
                 No documents uploaded yet
               </h3>
               <p style={{ 
-                fontSize: '16px', 
-                color: '#64748b', 
-                maxWidth: '400px', 
-                margin: '0 auto 32px' 
+                fontSize: 14, color: '#64748b', 
+                marginBottom: 24, maxWidth: 340, margin: '0 auto 24px' 
               }}>
-                Upload your first legal document to get started with AI-powered OCR scanning and verification
+                Upload your will, power of attorney, 
+                insurance policies and other important legal documents.
               </p>
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => fileInputRef.current?.click()}
                 style={{
-                  padding: '12px 24px',
-                  borderRadius: '8px',
+                  padding: '12px 28px',
+                  borderRadius: 12,
                   border: 'none',
-                  background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
-                  color: '#ffffff',
-                  fontSize: '14px',
-                  fontWeight: 600,
+                  background: 'linear-gradient(135deg, #4f9eff, #7c5cfc)',
+                  color: 'var(--text-primary)',
+                  fontSize: 14,
+                  fontWeight: 700,
                   cursor: 'pointer',
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -964,7 +1009,7 @@ const LegalDocuments = () => {
           )}
         </div>
       </div>
-    </div>
+    </DashboardLayout>
   );
 };
 

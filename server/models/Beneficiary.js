@@ -22,6 +22,21 @@ const beneficiarySchema = new mongoose.Schema(
       default: 'other'
     },
 
+    // Verification question for portal access (SECURITY LAYER 1)
+    verificationQuestion: {
+      type: String,
+      default: null
+    },
+    verificationAnswerHash: {
+      type: String,
+      select: false, // Never return hash by default
+      default: null
+    },
+    verificationHint: {
+      type: String,
+      default: ''
+    },
+
     // Match your owner-side validator options
     accessLevel: {
       type: String,
@@ -147,6 +162,17 @@ beneficiarySchema.methods.verifyLoginOtp = async function (otp) {
   }
 
   return { valid: false, reason: 'invalid' };
+};
+
+// Set verification answer (SECURITY LAYER 1)
+beneficiarySchema.methods.setVerificationAnswer = async function (answer) {
+  this.verificationAnswerHash = await bcrypt.hash(answer.toLowerCase().trim(), 12);
+};
+
+// Verify verification answer (SECURITY LAYER 1)
+beneficiarySchema.methods.verifyVerificationAnswer = async function (answer) {
+  if (!this.verificationAnswerHash) return false;
+  return bcrypt.compare(answer.toLowerCase().trim(), this.verificationAnswerHash);
 };
 
 module.exports = mongoose.model('Beneficiary', beneficiarySchema);

@@ -1,12 +1,7 @@
 const Asset = require('../models/Asset');
 const { log } = require('../services/auditService');
 
-// Ciphertext validation helper
-const isCiphertext = (str) => {
-  if (typeof str !== 'string' || str.length < 50) return false;
-  // Base64-like chars (allow padding)
-  return /^[A-Za-z0-9+/]*={0,2}$/.test(str);
-};
+// NOTE: Client-side encryption - server does not validate ciphertext format
 
 // NOTE: Server-side decryption removed (P2)
 // Passwords are client-encrypted; server never sees plaintext
@@ -15,21 +10,8 @@ exports.createAsset = async (req, res, next) => {
   try {
     const validatedBody = req.validatedBody || req.body;
     
-    // Server safety net: enforce ciphertext-only for passwords
-    if (validatedBody.password) {
-      if (validatedBody.clientEncrypted !== true) {
-        return res.status(400).json({
-          status: 'fail',
-          message: 'Password must be client-encrypted (clientEncrypted: true)'
-        });
-      }
-      if (!isCiphertext(validatedBody.password)) {
-        return res.status(400).json({
-          status: 'fail',
-          message: 'Invalid password ciphertext format (must be base64-encoded, min length 50)'
-        });
-      }
-    }
+    // NOTE: Client-side encryption - server does not validate ciphertext format
+    // Server only stores what client sends (encrypted or plaintext based on client state)
 
     const assetData = {
       ...validatedBody,
@@ -55,10 +37,10 @@ exports.getAssets = async (req, res, next) => {
     const assets = await Asset.find({ userId: req.user._id });
 
     // Log vault access
-    await log('vault_access', { 
-      userId: req.user._id, 
-      ip: req.ip, 
-      details: { count: assets.length } 
+    await log('VAULT_ITEM_VIEWED', {
+      userId: req.user._id,
+      ip: req.ip,
+      details: { count: assets.length }
     });
 
     // Return assets with encrypted passwords (client will decrypt)
@@ -91,21 +73,8 @@ exports.updateAsset = async (req, res, next) => {
   try {
     const validatedBody = req.validatedBody || req.body;
     
-    // Server safety net: enforce ciphertext-only for passwords
-    if (validatedBody.password) {
-      if (validatedBody.clientEncrypted !== true) {
-        return res.status(400).json({
-          status: 'fail',
-          message: 'Password must be client-encrypted (clientEncrypted: true)'
-        });
-      }
-      if (!isCiphertext(validatedBody.password)) {
-        return res.status(400).json({
-          status: 'fail',
-          message: 'Invalid password ciphertext format (must be base64-encoded, min length 50)'
-        });
-      }
-    }
+    // NOTE: Client-side encryption - server does not validate ciphertext format
+    // Server only stores what client sends (encrypted or plaintext based on client state)
 
     const asset = await Asset.findOne({ _id: req.params.id, userId: req.user._id });
 

@@ -217,7 +217,7 @@ exports.initializeUserDEK = async (userId, password) => {
   // Audit log
   await auditService.log({
     userId,
-    event: 'dek_initialized',
+    event: 'DEK_INITIALIZED',
     details: { keyVersion: '1' }
   });
   
@@ -269,7 +269,7 @@ exports.rotateDEK = async (ownerId, oldPassword, newPassword) => {
   // Audit log
   await auditService.log({
     userId: ownerId,
-    event: 'dek_rotated',
+    event: 'DEK_ROTATED',
     details: { rotationCount: dek.rotationCount }
   });
   

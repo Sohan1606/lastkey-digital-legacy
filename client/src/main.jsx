@@ -33,22 +33,24 @@ createRoot(document.getElementById('root')).render(
               <Toaster
                 position="top-right"
                 toastOptions={{
-                  duration: 4000,
+                  duration: 3000,
                   style: {
-                    background: 'var(--toast-bg)',
-                    color: 'var(--toast-color)',
-                    border: '1px solid var(--toast-border)',
+                    background: '#0b1629',
+                    color: '#f0f4ff',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    borderRadius: '12px',
+                    fontSize: '14px',
                   },
                   success: {
                     iconTheme: {
-                      primary: '#10b981',
-                      secondary: '#ffffff',
+                      primary: '#00e5a0',
+                      secondary: '#0b1629',
                     },
                   },
                   error: {
                     iconTheme: {
-                      primary: '#ef4444',
-                      secondary: '#ffffff',
+                      primary: '#ff4d6d',
+                      secondary: '#0b1629',
                     },
                   },
                 }}

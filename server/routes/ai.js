@@ -1,6 +1,6 @@
 const express = require('express');
 const { protect } = require('../middleware/auth');
-const { generateLegacyMessage, getAISuggestions, getLegacyScoreData, generateVoiceMessage, generateMemoir } = require('../controllers/aiController');
+const { generateLegacyMessage, getAISuggestions, getLegacyScoreData, generateVoiceMessage, generateMemoir, handleChat } = require('../controllers/aiController');
 
 const router = express.Router();
 
@@ -24,8 +24,9 @@ const checkAIFeature = (req, res, next) => {
 router.post('/generate-message', protect, checkAIFeature, generateLegacyMessage);
 router.post('/generate-voice', protect, checkAIFeature, generateVoiceMessage);
 router.post('/generate-memoir', protect, checkAIFeature, generateMemoir);
-router.get('/suggestions', protect, checkAIFeature, getAISuggestions);
-router.get('/legacy-score', protect, checkAIFeature, getLegacyScoreData);
+router.get('/suggestions', protect, getAISuggestions);
+router.get('/legacy-score', protect, getLegacyScoreData);
+router.post('/chat', protect, handleChat);
 
 module.exports = router;
 

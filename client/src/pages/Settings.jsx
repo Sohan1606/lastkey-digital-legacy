@@ -5,7 +5,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { Shield, Bell, User, LogOut, Save, Key, CheckCircle, Settings as SettingsIcon, Lock, Smartphone, Mail, Globe, AlertTriangle, RefreshCw, Eye, EyeOff } from 'lucide-react';
-import Sidebar from '../components/Sidebar';
+import DashboardLayout from '../components/DashboardLayout';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
@@ -63,13 +63,10 @@ const Settings = () => {
   };
 
   return (
-    <div style={{ display: 'flex' }}>
-      <Sidebar />
+    <DashboardLayout>
       <div style={{
-        marginLeft: '240px',
         minHeight: '100vh',
-        background: '#030508',
-        flex: 1,
+        background: 'var(--bg-base)',
         padding: '32px'
       }}>
         <div style={{ maxWidth: '800px', margin: '0 auto' }}>
@@ -92,7 +89,7 @@ const Settings = () => {
                 <h1 style={{
                   fontSize: '32px',
                   fontWeight: 700,
-                  color: '#ffffff',
+                  color: 'var(--text-primary)',
                   marginBottom: '8px'
                 }}>
                   Settings
@@ -110,9 +107,9 @@ const Settings = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
             style={{
-              background: '#050d1a',
+              background: 'var(--bg-card)',
               backdropFilter: 'blur(20px)',
-              border: '1px solid rgba(255,255,255,0.1)',
+              border: '1px solid var(--border)',
               borderRadius: '16px',
               padding: '32px',
               marginBottom: '24px'
@@ -140,10 +137,10 @@ const Settings = () => {
                   style={{
                     width: '100%',
                     padding: '12px 16px',
-                    background: '#030508',
+                    background: 'var(--bg-base)',
                     border: '1px solid rgba(255,255,255,0.05)',
                     borderRadius: '8px',
-                    color: '#64748b',
+                    color: 'var(--text-muted)',
                     fontSize: '14px',
                     opacity: 0.6,
                     cursor: 'not-allowed'
@@ -165,10 +162,10 @@ const Settings = () => {
                   style={{
                     width: '100%',
                     padding: '12px 16px',
-                    background: '#030508',
+                    background: 'var(--bg-base)',
                     border: '1px solid rgba(255,255,255,0.05)',
                     borderRadius: '8px',
-                    color: '#64748b',
+                    color: 'var(--text-muted)',
                     fontSize: '14px',
                     opacity: 0.6,
                     cursor: 'not-allowed'
@@ -184,9 +181,9 @@ const Settings = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
             style={{
-              background: '#050d1a',
+              background: 'var(--bg-card)',
               backdropFilter: 'blur(20px)',
-              border: '1px solid rgba(255,255,255,0.1)',
+              border: '1px solid var(--border)',
               borderRadius: '16px',
               padding: '32px',
               marginBottom: '24px'
@@ -215,10 +212,10 @@ const Settings = () => {
                 style={{
                   width: '100%',
                   padding: '12px 16px',
-                  background: '#030508',
-                  border: '1px solid rgba(255,255,255,0.1)',
+                  background: 'var(--bg-base)',
+                  border: '1px solid var(--border-hover)',
                   borderRadius: '8px',
-                  color: '#ffffff',
+                  color: 'var(--text-primary)',
                   fontSize: '14px',
                   outline: 'none',
                   transition: 'all 150ms'
@@ -228,7 +225,7 @@ const Settings = () => {
                   e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
                 }}
                 onBlur={(e) => {
-                  e.target.style.borderColor = 'rgba(255,255,255,0.1)';
+                  e.target.style.borderColor = 'var(--border-hover)';
                   e.target.style.boxShadow = 'none';
                 }}
               />
@@ -245,9 +242,9 @@ const Settings = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
             style={{
-              background: '#050d1a',
+              background: 'var(--bg-card)',
               backdropFilter: 'blur(20px)',
-              border: '1px solid rgba(255,255,255,0.1)',
+              border: '1px solid var(--border)',
               borderRadius: '16px',
               padding: '32px',
               marginBottom: '24px'
@@ -264,20 +261,24 @@ const Settings = () => {
               Set a passphrase your beneficiaries can use to decrypt your vault in an emergency.
               This is <strong>different from your account password</strong>. Write it down and share it safely.
             </p>
-            <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '16px' }}>
+            <form onSubmit={(e) => {
+                e.preventDefault();
+                // Handle form submission if needed
+              }} style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '16px' }}>
               <input 
                 type="password" 
                 placeholder={recoverySet ? "Update recovery passphrase..." : "Set recovery passphrase..."}
                 value={recoveryPassphrase}
                 onChange={e => setRecoveryPassphrase(e.target.value)}
+                autoComplete="new-password"
                 style={{
                   flex: 1,
                   minWidth: '200px',
                   padding: '12px 16px',
-                  background: '#030508',
-                  border: '1px solid rgba(255,255,255,0.1)',
+                  background: 'var(--bg-base)',
+                  border: '1px solid var(--border-hover)',
                   borderRadius: '8px',
-                  color: '#ffffff',
+                  color: 'var(--text-primary)',
                   fontSize: '14px',
                   outline: 'none',
                   transition: 'all 150ms'
@@ -306,8 +307,8 @@ const Settings = () => {
                   padding: '12px 24px', 
                   borderRadius: '8px', 
                   border: 'none', 
-                  background: recoverySet ? 'linear-gradient(135deg, #00e5a0, #4f9eff)' : 'linear-gradient(135deg, #4f9eff, #7c5cfc)', 
-                  color: '#001a12', 
+                  background: 'linear-gradient(135deg, #4f9eff, #7c5cfc)', 
+                  color: 'white', 
                   fontWeight: 600, 
                   fontSize: '14px', 
                   cursor: (recoveryMutation.isPending || !recoveryPassphrase) ? 'not-allowed' : 'pointer',
@@ -329,10 +330,10 @@ const Settings = () => {
               >
                 {recoveryMutation.isPending ? 'Saving...' : (recoverySet ? 'Update Passphrase' : 'Save Passphrase')}
               </motion.button>
-            </div>
+            </form>
             <div style={{ 
               fontSize: '12px', 
-              color: '#64748b', 
+              color: 'var(--text-muted)', 
               marginTop: '12px',
               display: 'flex',
               alignItems: 'center',
@@ -368,9 +369,9 @@ const Settings = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
             style={{
-              background: '#050d1a',
+              background: 'var(--bg-card)',
               backdropFilter: 'blur(20px)',
-              border: '1px solid rgba(255,255,255,0.1)',
+              border: '1px solid var(--border)',
               borderRadius: '16px',
               padding: '32px',
               marginBottom: '32px'
@@ -384,9 +385,7 @@ const Settings = () => {
             </div>
             <div style={{ display: 'grid', gap: '16px', marginBottom: '24px' }}>
               {[
-                { id: 'email', name: 'Email', icon: Mail, description: 'Email alerts', enabled: true },
-                { id: 'whatsapp', name: 'WhatsApp', icon: Smartphone, description: 'Requires phone number + provider integration', enabled: false },
-                { id: 'telegram', name: 'Telegram', icon: Globe, description: 'Requires Telegram bot token', enabled: false }
+                { id: 'email', name: 'Email', icon: Mail, description: 'Email alerts', enabled: true }
               ].map(channel => {
                 const Icon = channel.icon;
                 const isEnabled = settings.alertChannels.includes(channel.id);
@@ -467,40 +466,6 @@ const Settings = () => {
                 );
               })}
             </div>
-            <div>
-              <label style={{
-                display: 'block',
-                fontSize: '12px',
-                fontWeight: 500,
-                color: '#e2e8f0',
-                marginBottom: '8px'
-              }}>Phone Number (for WhatsApp alerts)</label>
-              <input 
-                type="tel" 
-                value={settings.phone} 
-                onChange={e => setSettings(prev => ({ ...prev, phone: e.target.value }))} 
-                placeholder="+1234567890"
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  background: '#030508',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: '8px',
-                  color: '#ffffff',
-                  fontSize: '14px',
-                  outline: 'none',
-                  transition: 'all 150ms'
-                }}
-                onFocus={(e) => {
-                  e.target.style.borderColor = '#3b82f6';
-                  e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = 'rgba(255,255,255,0.1)';
-                  e.target.style.boxShadow = 'none';
-                }}
-              />
-            </div>
           </motion.div>
 
           {/* Action Buttons */}
@@ -519,7 +484,7 @@ const Settings = () => {
                 borderRadius: '8px', 
                 background: 'linear-gradient(135deg, #4f9eff, #7c5cfc)', 
                 border: 'none', 
-                color: '#ffffff', 
+                color: 'white', 
                 fontWeight: 600, 
                 fontSize: '14px', 
                 cursor: settingsMutation.isPending ? 'not-allowed' : 'pointer', 
@@ -532,14 +497,12 @@ const Settings = () => {
               }}
               onMouseEnter={(e) => {
                 if (!settingsMutation.isPending) {
-                  e.target.style.background = 'linear-gradient(135deg, #3b82f6, #6d28d9)';
                   e.target.style.transform = 'translateY(-1px)';
                   e.target.style.boxShadow = '0 10px 25px -5px rgba(79, 158, 255, 0.25)';
                 }
               }}
               onMouseLeave={(e) => {
                 if (!settingsMutation.isPending) {
-                  e.target.style.background = 'linear-gradient(135deg, #4f9eff, #7c5cfc)';
                   e.target.style.transform = 'translateY(0)';
                   e.target.style.boxShadow = 'none';
                 }
@@ -579,7 +542,7 @@ const Settings = () => {
           </motion.div>
         </div>
       </div>
-    </div>
+    </DashboardLayout>
   );
 };
 

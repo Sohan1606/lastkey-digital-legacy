@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../contexts/AuthContext';
-import { Pencil, Trash2, Eye, EyeOff, Plus, Shield, Lock, ExternalLink, X, Copy, ShieldCheck, Search, Filter, Key, Wallet, FileText, Database, CreditCard } from 'lucide-react';
+import { Pencil, Trash2, Eye, EyeOff, Plus, Shield, Lock, Unlock, ExternalLink, X, Copy, ShieldCheck, Search, Filter, Key, Wallet, FileText, Database, CreditCard } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import toast from 'react-hot-toast';
-import Sidebar from '../components/Sidebar';
+import DashboardLayout from '../components/DashboardLayout';
 import { 
   deriveKey, encryptText, decryptText, isCryptoSupported,
   generateMasterDEK, setMasterDEK, getMasterDEK, hasDEK, clearMasterDEK,
@@ -197,7 +197,8 @@ const Vault = () => {
         try {
           const dek = getMasterDEK();
           // Encrypt the password before sending using DEK
-          assetData.password = await encryptText(assetData.password, dek);
+          const encryptedPassword = await encryptText(assetData.password, dek);
+          assetData.password = encryptedPassword;
           assetData.clientEncrypted = true;
         } catch (err) {
           console.error('Encryption failed:', err);
@@ -214,7 +215,14 @@ const Vault = () => {
       toast.success('Asset secured with client-side encryption!');
     },
     onError: (err) => {
-      toast.error(err.message || 'Failed to save asset');
+      console.error('Asset creation error:', err.response?.data || err);
+      if (err.response?.data?.errors) {
+        const validationErrors = err.response.data.errors;
+        const errorMessages = validationErrors.map(e => `${e.field}: ${e.message}`).join(', ');
+        toast.error(`Validation failed: ${errorMessages}`);
+      } else {
+        toast.error(err.response?.data?.message || err.message || 'Failed to save asset');
+      }
     }
   });
 
@@ -263,15 +271,12 @@ const Vault = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (passwordChanged && !hasDEK()) {
-      toast.error('Unlock vault to update password');
+    
+    if (!hasDEK()) {
       setShowUnlockModal(true);
       return;
     }
-    if (!hasDEK() && !editingId) {
-      setShowUnlockModal(true);
-      return;
-    }
+    
     const submitData = { ...formData };
     if (editingId) {
       updateMutation.mutate({ id: editingId, assetData: submitData });
@@ -312,12 +317,10 @@ const Vault = () => {
   };
 
   if (isLoading) return (
-    <div style={{ display: 'flex' }}>
-      <Sidebar />
+    <DashboardLayout>
       <div style={{
-        marginLeft: '240px',
         minHeight: '100vh',
-        background: '#030508',
+        background: 'var(--bg-base)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center'
@@ -326,7 +329,7 @@ const Vault = () => {
           <div style={{
             width: '40px',
             height: '40px',
-            border: '4px solid rgba(255,255,255,0.1)',
+            border: '4px solid var(--border)',
             borderTop: '4px solid #3b82f6',
             borderRadius: '50%',
             animation: 'spin 1s linear infinite',
@@ -335,20 +338,74 @@ const Vault = () => {
           <p style={{ color: '#64748b', fontSize: 14 }}>Loading your vault...</p>
         </div>
       </div>
-    </div>
+    </DashboardLayout>
   );
 
   return (
-    <div style={{ display: 'flex' }}>
-      <Sidebar />
+    <DashboardLayout>
       <div style={{
-        marginLeft: '240px',
         minHeight: '100vh',
-        background: '#030508',
-        flex: 1,
+        background: 'var(--bg-base)',
         padding: '32px'
       }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+          {/* Vault Status Indicator */}
+          <div style={{
+            background: hasDEK() ? 'rgba(0,229,160,0.1)' : 'rgba(255,184,48,0.1)',
+            border: `1px solid ${hasDEK() ? 'rgba(0,229,160,0.3)' : 'rgba(255,184,48,0.3)'}`,
+            borderRadius: '12px',
+            padding: '16px',
+            marginBottom: '24px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px'
+          }}>
+            <div style={{
+              width: '40px',
+              height: '40px',
+              borderRadius: '10px',
+              background: hasDEK() ? 'rgba(0,229,160,0.2)' : 'rgba(255,184,48,0.2)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              {hasDEK() ? (
+                <Unlock style={{ width: '20px', height: '20px', color: '#00e5a0' }} />
+              ) : (
+                <Lock style={{ width: '20px', height: '20px', color: '#ffb830' }} />
+              )}
+            </div>
+            <div style={{ flex: 1 }}>
+              <h3 style={{ fontSize: '16px', fontWeight: 600, color: '#ffffff', margin: '0 0 4px' }}>
+                Vault Status: {hasDEK() ? 'Unlocked' : 'Locked'}
+              </h3>
+              <p style={{ fontSize: '13px', color: hasDEK() ? '#00e5a0' : '#ffb830', margin: 0 }}>
+                {hasDEK() 
+                  ? 'Your vault is unlocked. You can securely add and manage assets.' 
+                  : 'Your vault is locked. Click "Add Asset" to unlock your vault first.'
+                }
+              </p>
+            </div>
+            {!hasDEK() && (
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setShowUnlockModal(true)}
+                style={{
+                  padding: '10px 20px',
+                  borderRadius: '8px',
+                  background: 'var(--gradient-amber)',
+                  border: 'none',
+                  color: 'var(--text-primary)',
+                  fontWeight: 600,
+                  fontSize: '14px',
+                  cursor: 'pointer'
+                }}
+              >
+                Unlock Vault
+              </motion.button>
+            )}
+          </div>
           {/* Unlock Modal */}
           <AnimatePresence>
             {showUnlockModal && (
@@ -369,9 +426,9 @@ const Vault = () => {
                   animate={{ scale: 1, opacity: 1 }}
                   exit={{ scale: 0.9, opacity: 0 }}
                   style={{
-                    background: '#050d1a',
+                    background: 'var(--bg-card)',
                     backdropFilter: 'blur(24px)',
-                    border: '1px solid rgba(255,255,255,0.1)',
+                    border: '1px solid var(--border)',
                     borderRadius: 16,
                     padding: 32,
                     maxWidth: 400,
@@ -407,30 +464,36 @@ const Vault = () => {
                       </div>
                     )}
                   </div>
-                  <input
-                    type="password"
-                    placeholder="Enter vault password..."
-                    value={vaultPassword}
-                    onChange={e => setVaultPassword(e.target.value)}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter') {
-                        unlockVault(vaultPassword).then(success => {
-                          if (success && pendingDecryptId) {
-                            const asset = assets.find(a => a._id === pendingDecryptId);
-                            if (asset) {
-                              handleShowPassword(pendingDecryptId, asset.password);
-                            }
-                            setPendingDecryptId(null);
-                          }
-                        });
+                  <form onSubmit={(e) => {
+                    e.preventDefault();
+                    unlockVault(vaultPassword).then(success => {
+                      if (success && pendingDecryptId) {
+                        const asset = assets.find(a => a._id === pendingDecryptId);
+                        if (asset) {
+                          handleShowPassword(pendingDecryptId, asset.password);
+                        }
+                        setPendingDecryptId(null);
                       }
-                    }}
-                    style={{
-                      width: '100%', padding: '14px 16px', borderRadius: 12,
-                      border: '1px solid rgba(255,255,255,0.1)', background: '#030508',
-                      color: '#ffffff', fontSize: 14, marginBottom: 16
-                    }}
-                  />
+                    });
+                  }}>
+                    <input
+                      type="password"
+                      placeholder="Enter vault password..."
+                      value={vaultPassword}
+                      onChange={e => setVaultPassword(e.target.value)}
+                      autoComplete="current-password"
+                      style={{
+                        width: '100%',
+                        padding: '14px 16px',
+                        borderRadius: '12px',
+                        border: '1px solid var(--border-hover)',
+                        background: 'var(--bg-base)',
+                        color: 'var(--text-primary)',
+                        fontSize: '14px',
+                        marginBottom: '16px'
+                      }}
+                    />
+                  </form>
                   <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
@@ -448,8 +511,8 @@ const Vault = () => {
                     }}
                     style={{
                       width: '100%', padding: '14px', borderRadius: 12,
-                      border: 'none', background: 'linear-gradient(135deg, #00e5a0, #4f9eff)',
-                      color: '#001a12', fontWeight: 700, fontSize: 14, cursor: isInitializingDEK ? 'not-allowed' : 'pointer',
+                      border: 'none', background: 'var(--gradient-green-blue)',
+                      color: 'var(--text-primary)', fontWeight: 700, fontSize: 14, cursor: isInitializingDEK ? 'not-allowed' : 'pointer',
                       opacity: isInitializingDEK ? 0.7 : 1
                     }}
                   >
@@ -490,10 +553,10 @@ const Vault = () => {
                   alignItems: 'center',
                   gap: '8px',
                   padding: '12px 20px',
-                  background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                  background: 'linear-gradient(135deg, #4f9eff, #7c5cfc)',
                   border: 'none',
                   borderRadius: '8px',
-                  color: '#ffffff',
+                  color: 'var(--text-primary)',
                   fontWeight: 500,
                   fontSize: '14px',
                   cursor: 'pointer',
@@ -511,7 +574,7 @@ const Vault = () => {
                 }}
               >
                 <Plus size={16} />
-                Add Entry
+                Add Vault Item
               </motion.button>
             )}
           </div>
@@ -529,9 +592,9 @@ const Vault = () => {
                   cursor: 'pointer',
                   transition: 'all 150ms',
                   border: 'none',
-                  background: category === 'All' ? 'rgba(59, 130, 246, 0.2)' : 'transparent',
-                  color: category === 'All' ? '#ffffff' : '#64748b',
-                  border: category === 'All' ? '1px solid rgba(59, 130, 246, 0.3)' : '1px solid transparent'
+                  background: category === 'All' ? 'var(--blue-dim)' : 'transparent',
+                  color: category === 'All' ? 'var(--text-primary)' : 'var(--text-muted)',
+                  border: category === 'All' ? '1px solid var(--blue-border)' : '1px solid transparent'
                 }}
                 onMouseEnter={(e) => {
                   if (category !== 'All') {
@@ -570,7 +633,7 @@ const Vault = () => {
                   background: '#050d1a',
                   border: '1px solid rgba(255,255,255,0.1)',
                   borderRadius: '8px',
-                  color: '#ffffff',
+                  color: 'var(--text-primary)',
                   fontSize: '14px',
                   outline: 'none',
                   transition: 'all 150ms'
@@ -594,7 +657,7 @@ const Vault = () => {
               background: '#050d1a',
               border: '1px solid rgba(255,255,255,0.1)',
               borderRadius: '8px',
-              color: '#64748b',
+              color: 'var(--text-muted)',
               fontSize: '14px',
               cursor: 'pointer',
               transition: 'all 150ms'
@@ -695,10 +758,10 @@ const Vault = () => {
                         style={{
                           width: '100%',
                           padding: '12px 16px',
-                          background: '#030508',
-                          border: '1px solid rgba(255,255,255,0.1)',
+                          background: 'var(--bg-base)',
+                          border: '1px solid var(--border-hover)',
                           borderRadius: '8px',
-                          color: '#ffffff',
+                          color: 'var(--text-primary)',
                           fontSize: '14px',
                           outline: 'none',
                           transition: 'all 150ms'
@@ -730,10 +793,10 @@ const Vault = () => {
                         style={{
                           width: '100%',
                           padding: '12px 16px',
-                          background: '#030508',
-                          border: '1px solid rgba(255,255,255,0.1)',
+                          background: 'var(--bg-base)',
+                          border: '1px solid var(--border-hover)',
                           borderRadius: '8px',
-                          color: '#ffffff',
+                          color: 'var(--text-primary)',
                           fontSize: '14px',
                           outline: 'none',
                           transition: 'all 150ms'
@@ -764,10 +827,10 @@ const Vault = () => {
                         style={{
                           width: '100%',
                           padding: '12px 16px',
-                          background: '#030508',
-                          border: '1px solid rgba(255,255,255,0.1)',
+                          background: 'var(--bg-base)',
+                          border: '1px solid var(--border-hover)',
                           borderRadius: '8px',
-                          color: '#ffffff',
+                          color: 'var(--text-primary)',
                           fontSize: '14px',
                           outline: 'none',
                           transition: 'all 150ms'
@@ -812,10 +875,10 @@ const Vault = () => {
                         style={{
                           width: '100%',
                           padding: '12px 16px',
-                          background: '#030508',
-                          border: '1px solid rgba(255,255,255,0.1)',
+                          background: 'var(--bg-base)',
+                          border: '1px solid var(--border-hover)',
                           borderRadius: '8px',
-                          color: '#ffffff',
+                          color: 'var(--text-primary)',
                           fontSize: '14px',
                           outline: 'none',
                           transition: 'all 150ms',
@@ -860,10 +923,10 @@ const Vault = () => {
                         style={{
                           width: '100%',
                           padding: '12px 16px',
-                          background: '#030508',
-                          border: '1px solid rgba(255,255,255,0.1)',
+                          background: 'var(--bg-base)',
+                          border: '1px solid var(--border-hover)',
                           borderRadius: '8px',
-                          color: '#ffffff',
+                          color: 'var(--text-primary)',
                           fontSize: '14px',
                           outline: 'none',
                           transition: 'all 150ms'
@@ -896,10 +959,10 @@ const Vault = () => {
                         style={{
                           width: '100%',
                           padding: '12px 16px',
-                          background: '#030508',
-                          border: '1px solid rgba(255,255,255,0.1)',
+                          background: 'var(--bg-base)',
+                          border: '1px solid var(--border-hover)',
                           borderRadius: '8px',
-                          color: '#ffffff',
+                          color: 'var(--text-primary)',
                           fontSize: '14px',
                           outline: 'none',
                           transition: 'all 150ms'
@@ -937,10 +1000,10 @@ const Vault = () => {
                             style={{
                               width: '100%',
                               padding: '12px 16px',
-                              background: '#030508',
-                              border: '1px solid rgba(255,255,255,0.1)',
+                              background: 'var(--bg-base)',
+                              border: '1px solid var(--border-hover)',
                               borderRadius: '8px',
-                              color: '#ffffff',
+                              color: 'var(--text-primary)',
                               fontSize: '14px',
                               outline: 'none',
                               transition: 'all 150ms'
@@ -974,10 +1037,10 @@ const Vault = () => {
                             style={{
                               width: '100%',
                               padding: '12px 16px',
-                              background: '#030508',
-                              border: '1px solid rgba(255,255,255,0.1)',
+                              background: 'var(--bg-base)',
+                              border: '1px solid var(--border-hover)',
                               borderRadius: '8px',
-                              color: '#ffffff',
+                              color: 'var(--text-primary)',
                               fontSize: '14px',
                               outline: 'none',
                               transition: 'all 150ms'
@@ -1013,10 +1076,10 @@ const Vault = () => {
                             style={{
                               width: '100%',
                               padding: '12px 16px',
-                              background: '#030508',
-                              border: '1px solid rgba(255,255,255,0.1)',
+                              background: 'var(--bg-base)',
+                              border: '1px solid var(--border-hover)',
                               borderRadius: '8px',
-                              color: '#ffffff',
+                              color: 'var(--text-primary)',
                               fontSize: '14px',
                               outline: 'none',
                               transition: 'all 150ms'
@@ -1061,10 +1124,10 @@ const Vault = () => {
                           resize: 'none',
                           width: '100%',
                           padding: '12px 16px',
-                          background: '#030508',
-                          border: '1px solid rgba(255,255,255,0.1)',
+                          background: 'var(--bg-base)',
+                          border: '1px solid var(--border-hover)',
                           borderRadius: '8px',
-                          color: '#ffffff',
+                          color: 'var(--text-primary)',
                           fontSize: '14px',
                           outline: 'none',
                           transition: 'all 150ms',
@@ -1082,8 +1145,7 @@ const Vault = () => {
                     </div>
                     <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '12px' }}>
                       <motion.button 
-                        type="submit" 
-                        whileHover={{ scale: 1.01 }} 
+                        whileHover={{ scale: 1.02 }} 
                         whileTap={{ scale: 0.98 }} 
                         disabled={createMutation.isPending || updateMutation.isPending || (!hasDEK() && (passwordChanged || !editingId))}
                         style={{ 
@@ -1091,8 +1153,8 @@ const Vault = () => {
                           padding: '14px 24px', 
                           borderRadius: '8px', 
                           border: 'none', 
-                          background: (!hasDEK() && passwordChanged) ? '#050d1a' : 'linear-gradient(135deg, #4f9eff, #00e5a0)', 
-                          color: (!hasDEK() && passwordChanged) ? '#64748b' : '#001a12', 
+                          background: 'linear-gradient(135deg, #4f9eff, #7c5cfc)', 
+                          color: 'white', 
                           fontWeight: 600, 
                           fontSize: '14px', 
                           cursor: (createMutation.isPending || updateMutation.isPending || (!hasDEK() && (passwordChanged || !editingId))) ? 'not-allowed' : 'pointer', 
@@ -1101,14 +1163,12 @@ const Vault = () => {
                         }}
                         onMouseEnter={(e) => {
                           if (!(createMutation.isPending || updateMutation.isPending || (!hasDEK() && (passwordChanged || !editingId)))) {
-                            e.target.style.background = 'linear-gradient(135deg, #3b82f6, #00e5a0)';
                             e.target.style.transform = 'translateY(-1px)';
                             e.target.style.boxShadow = '0 10px 25px -5px rgba(79, 158, 255, 0.25)';
                           }
                         }}
                         onMouseLeave={(e) => {
                           if (!(createMutation.isPending || updateMutation.isPending || (!hasDEK() && (passwordChanged || !editingId)))) {
-                            e.target.style.background = 'linear-gradient(135deg, #4f9eff, #00e5a0)';
                             e.target.style.transform = 'translateY(0)';
                             e.target.style.boxShadow = 'none';
                           }
@@ -1124,8 +1184,8 @@ const Vault = () => {
                         style={{ 
                           padding: '14px 24px', 
                           borderRadius: '8px', 
-                          border: '1px solid rgba(255,255,255,0.1)', 
-                          background: '#050d1a', 
+                          border: '1px solid var(--border-hover)', 
+                          background: 'var(--bg-card)', 
                           color: '#e2e8f0', 
                           fontWeight: 500, 
                           fontSize: '14px', 
@@ -1150,7 +1210,53 @@ const Vault = () => {
             )}
           </AnimatePresence>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' }}>
+          {assets && assets.length === 0 ? (
+            <div style={{
+              textAlign: 'center',
+              padding: '60px 20px',
+              background: 'var(--glass-1)',
+              border: '1px solid var(--glass-border)',
+              borderRadius: 24,
+              marginTop: 24
+            }}>
+              <div style={{ fontSize: 64, marginBottom: 16, opacity: 0.3 }}>
+                🔒
+              </div>
+              <h3 style={{ 
+                fontSize: 20, fontWeight: 700, 
+                color: 'var(--text-1)', marginBottom: 8 
+              }}>
+                Your vault is empty
+              </h3>
+              <p style={{ 
+                fontSize: 14, color: 'var(--text-2)', 
+                marginBottom: 24, maxWidth: 340, margin: '0 auto 24px'
+              }}>
+                Start protecting your most important 
+                digital assets. Add passwords, documents, 
+                financial info, and more.
+              </p>
+              <button onClick={() => { 
+                if (!hasDEK()) {
+                  setShowUnlockModal(true);
+                  return;
+                }
+                setShowForm(true);
+                setFormData({ platform: '', username: '', url: '', password: '', notes: '', instruction: 'delete', assetType: 'general', cryptocurrency: '', walletAddress: '', blockchain: '' });
+                scrollToForm();
+              }}
+                style={{
+                  padding: '12px 28px',
+                  background: 'linear-gradient(135deg, #4f9eff, #7c5cfc)',
+                  border: 'none', borderRadius: 12,
+                  color: 'white', fontSize: 14,
+                  fontWeight: 700, cursor: 'pointer'
+                }}>
+                + Add Your First Item
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' }}>
             {assets && assets.map((asset, idx) => {
               const insStyle = getInstructionStyle(asset.instruction);
               const decryptedPassword = showPasswords[asset._id];
@@ -1171,7 +1277,7 @@ const Vault = () => {
                   animate={{ opacity: 1, y: 0 }} 
                   transition={{ delay: idx * 0.05 }}
                   style={{
-                    background: '#050d1a',
+                    background: 'var(--bg-card)',
                     border: '1px solid rgba(255,255,255,0.04)',
                     borderRadius: '12px',
                     padding: '20px',
@@ -1194,12 +1300,12 @@ const Vault = () => {
                       width: '48px',
                       height: '48px',
                       borderRadius: '12px',
-                      background: 'rgba(59, 130, 246, 0.1)',
-                      border: '1px solid rgba(59, 130, 246, 0.15)',
+                      background: 'var(--primary-light)',
+                      border: '1px solid var(--primary)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      color: '#3b82f6'
+                      color: 'var(--primary)'
                     }}>
                       {getAssetIcon()}
                     </div>
@@ -1211,19 +1317,19 @@ const Vault = () => {
                             style={{
                               padding: '6px 12px',
                               borderRadius: '6px',
-                              background: 'rgba(239, 68, 68, 0.1)',
-                              border: '1px solid rgba(239, 68, 68, 0.2)',
-                              color: '#ef4444',
+                              background: 'var(--error-light)',
+                              border: '1px solid var(--error)',
+                              color: 'var(--error)',
                               fontSize: '12px',
                               fontWeight: 500,
                               cursor: 'pointer',
                               transition: 'all 150ms'
                             }}
                             onMouseEnter={(e) => {
-                              e.target.style.background = 'rgba(239, 68, 68, 0.2)';
+                              e.target.style.background = 'var(--error)';
                             }}
                             onMouseLeave={(e) => {
-                              e.target.style.background = 'rgba(239, 68, 68, 0.1)';
+                              e.target.style.background = 'var(--error-light)';
                             }}
                           >
                             Confirm
@@ -1234,8 +1340,8 @@ const Vault = () => {
                               padding: '6px 12px',
                               borderRadius: '6px',
                               background: 'rgba(255, 255, 255, 0.04)',
-                              border: '1px solid rgba(255, 255, 255, 0.1)',
-                              color: '#64748b',
+                              border: '1px solid var(--border-hover)',
+                              color: 'var(--text-muted)',
                               fontSize: '12px',
                               cursor: 'pointer',
                               transition: 'all 150ms'
@@ -1246,7 +1352,7 @@ const Vault = () => {
                             }}
                             onMouseLeave={(e) => {
                               e.target.style.background = 'rgba(255, 255, 255, 0.04)';
-                              e.target.style.color = '#64748b';
+                              e.target.style.color = 'var(--text-muted)';
                             }}
                           >
                             Cancel
@@ -1262,8 +1368,8 @@ const Vault = () => {
                               padding: '8px',
                               borderRadius: '8px',
                               background: 'rgba(255, 255, 255, 0.04)',
-                              border: '1px solid rgba(255, 255, 255, 0.1)',
-                              color: '#64748b',
+                              border: '1px solid var(--border-hover)',
+                              color: 'var(--text-muted)',
                               cursor: 'pointer',
                               transition: 'all 150ms'
                             }}
@@ -1272,7 +1378,7 @@ const Vault = () => {
                               e.target.style.background = 'rgba(255, 255, 255, 0.08)';
                             }}
                             onMouseLeave={(e) => {
-                              e.target.style.color = '#64748b';
+                              e.target.style.color = 'var(--text-muted)';
                               e.target.style.background = 'rgba(255, 255, 255, 0.04)';
                             }}
                           >
@@ -1286,17 +1392,17 @@ const Vault = () => {
                               padding: '8px',
                               borderRadius: '8px',
                               background: 'rgba(255, 255, 255, 0.04)',
-                              border: '1px solid rgba(255, 255, 255, 0.1)',
-                              color: '#64748b',
+                              border: '1px solid var(--border-hover)',
+                              color: 'var(--text-muted)',
                               cursor: 'pointer',
                               transition: 'all 150ms'
                             }}
                             onMouseEnter={(e) => {
-                              e.target.style.color = '#ef4444';
-                              e.target.style.background = 'rgba(239, 68, 68, 0.04)';
+                              e.target.style.color = 'var(--error)';
+                              e.target.style.background = 'var(--error-light)';
                             }}
                             onMouseLeave={(e) => {
-                              e.target.style.color = '#64748b';
+                              e.target.style.color = 'var(--text-muted)';
                               e.target.style.background = 'rgba(255, 255, 255, 0.04)';
                             }}
                           >
@@ -1308,7 +1414,7 @@ const Vault = () => {
                   </div>
                   
                   {/* Platform name */}
-                  <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#ffffff', marginBottom: '12px' }}>
+                  <h3 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-1)', marginBottom: '12px' }}>
                     {asset.platform}
                   </h3>
 
@@ -1318,9 +1424,9 @@ const Vault = () => {
                       <span style={{
                         padding: '4px 8px',
                         borderRadius: '6px',
-                        background: 'rgba(251, 146, 60, 0.1)',
-                        border: '1px solid rgba(251, 146, 60, 0.2)',
-                        color: '#fb923c',
+                        background: 'var(--warning-light)',
+                        border: '1px solid var(--warning)',
+                        color: 'var(--warning)',
                         fontSize: '10px',
                         fontWeight: 500,
                         textTransform: 'uppercase'
@@ -1331,9 +1437,9 @@ const Vault = () => {
                         <span style={{
                           padding: '4px 8px',
                           borderRadius: '6px',
-                          background: 'rgba(59, 130, 246, 0.1)',
-                          border: '1px solid rgba(59, 130, 246, 0.2)',
-                          color: '#3b82f6',
+                          background: 'var(--primary-light)',
+                          border: '1px solid var(--primary)',
+                          color: 'var(--primary)',
                           fontSize: '10px',
                           fontWeight: 500
                         }}>
@@ -1360,7 +1466,7 @@ const Vault = () => {
                   <div style={{ marginBottom: '16px' }}>
                     <span style={{
                       fontSize: '10px',
-                      color: '#64748b',
+                      color: 'var(--text-muted)',
                       fontWeight: 500,
                       textTransform: 'uppercase',
                       letterSpacing: '0.1em'
@@ -1377,7 +1483,7 @@ const Vault = () => {
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
                       <span style={{
                         fontSize: '10px',
-                        color: '#64748b',
+                        color: 'var(--text-muted)',
                         fontWeight: 500,
                         textTransform: 'uppercase',
                         letterSpacing: '0.1em'
@@ -1405,7 +1511,7 @@ const Vault = () => {
                       <span style={{
                         fontFamily: 'monospace',
                         fontSize: '14px',
-                        color: '#ffffff',
+                        color: 'var(--text-primary)',
                         flex: 1,
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
@@ -1417,7 +1523,7 @@ const Vault = () => {
                         onClick={() => handleShowPassword(asset._id, asset.password)} 
                         style={{
                           padding: '6px',
-                          color: '#64748b',
+                          color: 'var(--text-muted)',
                           cursor: 'pointer',
                           transition: 'all 150ms',
                           background: 'none',
@@ -1454,7 +1560,7 @@ const Vault = () => {
                             background: 'none',
                             border: 'none',
                             cursor: 'pointer',
-                            color: '#64748b',
+                            color: 'var(--text-muted)',
                             transition: 'all 150ms',
                             borderRadius: '4px'
                           }}
@@ -1502,7 +1608,7 @@ const Vault = () => {
                         target="_blank" 
                         rel="noopener noreferrer"
                         style={{ 
-                          color: '#64748b', 
+                          color: 'var(--text-muted)', 
                           display: 'flex',
                           textDecoration: 'none',
                           padding: '6px',
@@ -1525,91 +1631,11 @@ const Vault = () => {
                 </motion.div>
               );
             })}
-          </div>
-
-          {(!assets || assets.length === 0) && !showForm && (
-            <motion.div 
-              initial={{ opacity: 0 }} 
-              animate={{ opacity: 1 }} 
-              style={{ 
-                textAlign: 'center', 
-                padding: '80px 20px', 
-                background: '#050d1a', 
-                backdropFilter: 'blur(20px)', 
-                border: '1px solid rgba(255,255,255,0.04)', 
-                borderRadius: '16px' 
-              }}
-            >
-              <Shield style={{ 
-                width: '64px', 
-                height: '64px', 
-                color: '#64748b', 
-                margin: '0 auto 20px' 
-              }} />
-              <h3 style={{ 
-                fontSize: '22px', 
-                fontWeight: 700, 
-                color: '#ffffff', 
-                marginBottom: '10px' 
-              }}>
-                Your Vault is Empty
-              </h3>
-              <p style={{ 
-                fontSize: '14px', 
-                color: '#64748b', 
-                marginBottom: '28px', 
-                maxWidth: '400px', 
-                margin: '0 auto 28px' 
-              }}>
-                Secure your digital legacy. Add accounts, keys, and sensitive information.
-              </p>
-              <motion.button 
-                whileHover={{ scale: 1.04 }} 
-                whileTap={{ scale: 0.96 }} 
-                onClick={() => { 
-                  if (!hasDEK()) {
-                    setShowUnlockModal(true);
-                    return;
-                  }
-                  setShowForm(true); 
-                  scrollToForm(); 
-                }}
-                style={{ 
-                  padding: '14px 32px', 
-                  borderRadius: '8px', 
-                  border: 'none', 
-                  background: 'linear-gradient(135deg, #4f9eff, #00e5a0)', 
-                  color: '#001a12', 
-                  fontWeight: 600, 
-                  fontSize: '14px', 
-                  cursor: 'pointer',
-                  transition: 'all 150ms'
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.background = 'linear-gradient(135deg, #3b82f6, #00e5a0)';
-                  e.target.style.transform = 'translateY(-1px)';
-                  e.target.style.boxShadow = '0 10px 25px -5px rgba(79, 158, 255, 0.25)';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.background = 'linear-gradient(135deg, #4f9eff, #00e5a0)';
-                  e.target.style.transform = 'translateY(0)';
-                  e.target.style.boxShadow = 'none';
-                }}
-              >
-                <Plus style={{ 
-                  width: 16, 
-                  height: 16, 
-                  display: 'inline', 
-                  marginRight: '8px',
-                  verticalAlign: 'middle'
-                }} /> 
-                Secure First Asset
-              </motion.button>
-            </motion.div>
+            </div>
           )}
         </div>
       </div>
-    </div>
+    </DashboardLayout>
   );
 };
 

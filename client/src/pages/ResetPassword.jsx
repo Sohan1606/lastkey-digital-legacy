@@ -85,7 +85,7 @@ const ResetPassword = () => {
   };
 
   return (
-    <div className="page spatial-bg" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+    <div className="page spatial-bg" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, background: 'var(--bg-base)' }}>
       <div className="stars" />
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} style={{ width: '100%', maxWidth: 460 }}>
         <div style={{ background: 'var(--glass-1)', backdropFilter: 'blur(24px)', borderRadius: 28, border: '1px solid var(--glass-border)', padding: 32, boxShadow: '0 24px 80px rgba(0,0,0,0.55)' }}>
@@ -100,25 +100,25 @@ const ResetPassword = () => {
                 <XCircle style={{ width: 28, height: 28, color: 'var(--danger)' }} />
               </div>
               <h1 className="display" style={{ fontSize: 22, marginBottom: 10, textAlign: 'center' }}>Invalid Reset Link</h1>
-              <p style={{ color: 'var(--text-2)', marginBottom: 18, lineHeight: 1.6, fontSize: 13 }}>
+              <p style={{ color: 'var(--text-muted)', marginBottom: 18, lineHeight: 1.6, fontSize: 13 }}>
                 This password reset link is invalid or has expired. Please request a new one.
               </p>
               <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={handleGoToLogin}
-                style={{ width: '100%', padding: '14px 18px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg,#4f9eff,#7c5cfc)', color: 'white', fontWeight: 800, boxShadow: 'var(--glow-ion)' }}>
+                style={{ width: '100%', padding: '14px 18px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, #4f9eff, #7c5cfc)', color: 'white', fontWeight: 800, boxShadow: 'var(--glow-ion)' }}>
                 Request New Reset Link
               </motion.button>
             </div>
           ) : (
             <>
               <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.2, duration: 0.5 }}
-                style={{ width: 64, height: 64, margin: '0 auto 18px', borderRadius: 20, background: 'rgba(79,158,255,0.10)', border: '1px solid rgba(79,158,255,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                style={{ width: 64, height: 64, margin: '0 auto 18px', borderRadius: 20, background: 'rgba(79,158,255,0.10)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Lock style={{ width: 28, height: 28, color: 'var(--ion)' }} />
               </motion.div>
 
               <motion.h1 initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }} className="display" style={{ fontSize: 22, marginBottom: 8, textAlign: 'center' }}>
                 Set New Password
               </motion.h1>
-              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }} style={{ color: 'var(--text-2)', marginBottom: 18, textAlign: 'center', lineHeight: 1.6, fontSize: 13 }}>
+              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }} style={{ color: 'var(--text-muted)', marginBottom: 18, textAlign: 'center', lineHeight: 1.6, fontSize: 13 }}>
                 Choose a strong password for your LastKey account
               </motion.p>
 
@@ -128,7 +128,7 @@ const ResetPassword = () => {
                     <CheckCircle style={{ width: 28, height: 28, color: 'var(--pulse)' }} />
                   </div>
                   <h2 className="display" style={{ fontSize: 18, marginBottom: 6 }}>Password Reset Successful!</h2>
-                  <p style={{ color: 'var(--text-2)', fontSize: 13 }}>Redirecting you to dashboard...</p>
+                  <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>Redirecting you to dashboard...</p>
                 </motion.div>
               ) : (
                 <motion.form initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -136,7 +136,7 @@ const ResetPassword = () => {
                     <label htmlFor="password">New Password</label>
                     <div style={{ position: 'relative' }}>
                       <div style={{ position: 'absolute', top: '50%', left: 12, transform: 'translateY(-50%)', pointerEvents: 'none' }}>
-                        <Lock style={{ width: 16, height: 16, color: 'var(--text-3)' }} />
+                        <Lock style={{ width: 16, height: 16, color: 'var(--text-primary)' }} />
                       </div>
                       <input
                         type={showPassword ? 'text' : 'password'}
@@ -153,7 +153,7 @@ const ResetPassword = () => {
                         onClick={() => setShowPassword(!showPassword)}
                         style={{ position: 'absolute', top: '50%', right: 8, transform: 'translateY(-50%)', background: 'transparent', border: 'none', cursor: 'pointer', padding: 8 }}
                       >
-                        {showPassword ? <EyeOff style={{ width: 16, height: 16, color: 'var(--text-2)' }} /> : <Eye style={{ width: 16, height: 16, color: 'var(--text-2)' }} />}
+                        {showPassword ? <EyeOff style={{ width: 16, height: 16, color: 'var(--text-muted)' }} /> : <Eye style={{ width: 16, height: 16, color: 'var(--text-muted)' }} />}
                       </button>
                     </div>
                     {password && !validatePassword(password) && (
@@ -168,7 +168,7 @@ const ResetPassword = () => {
                     <label htmlFor="confirmPassword">Confirm New Password</label>
                     <div style={{ position: 'relative' }}>
                       <div style={{ position: 'absolute', top: '50%', left: 12, transform: 'translateY(-50%)', pointerEvents: 'none' }}>
-                        <Lock style={{ width: 16, height: 16, color: 'var(--text-3)' }} />
+                        <Lock style={{ width: 16, height: 16, color: 'var(--text-primary)' }} />
                       </div>
                       <input
                         type={showConfirmPassword ? 'text' : 'password'}
@@ -185,7 +185,7 @@ const ResetPassword = () => {
                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                         style={{ position: 'absolute', top: '50%', right: 8, transform: 'translateY(-50%)', background: 'transparent', border: 'none', cursor: 'pointer', padding: 8 }}
                       >
-                        {showConfirmPassword ? <EyeOff style={{ width: 16, height: 16, color: 'var(--text-2)' }} /> : <Eye style={{ width: 16, height: 16, color: 'var(--text-2)' }} />}
+                        {showConfirmPassword ? <EyeOff style={{ width: 16, height: 16, color: 'var(--text-muted)' }} /> : <Eye style={{ width: 16, height: 16, color: 'var(--text-muted)' }} />}
                       </button>
                     </div>
                     {confirmPassword && password !== confirmPassword && (
@@ -201,7 +201,7 @@ const ResetPassword = () => {
                     disabled={isLoading || !validatePassword(password) || password !== confirmPassword}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    style={{ width: '100%', padding: '14px 18px', borderRadius: 14, border: 'none', cursor: isLoading ? 'not-allowed' : 'pointer', background: 'linear-gradient(135deg,#4f9eff,#7c5cfc)', color: 'white', fontWeight: 800, boxShadow: 'var(--glow-ion)', opacity: (isLoading || !validatePassword(password) || password !== confirmPassword) ? 0.6 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}
+                    style={{ width: '100%', padding: '14px 18px', borderRadius: 14, border: 'none', cursor: isLoading ? 'not-allowed' : 'pointer', background: 'linear-gradient(135deg, #4f9eff, #7c5cfc)', color: 'white', fontWeight: 800, boxShadow: 'var(--glow-ion)', opacity: (isLoading || !validatePassword(password) || password !== confirmPassword) ? 0.6 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}
                   >
                     {isLoading ? (
                       <>

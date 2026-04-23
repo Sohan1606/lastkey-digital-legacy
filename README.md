@@ -240,10 +240,6 @@ STRIPE_SECRET_KEY=sk_test_your-stripe-test-key
 STRIPE_GUARDIAN_PRICE_ID=price_guardian_basic
 STRIPE_LEGACY_PRO_PRICE_ID=price_legacy_pro
 
-# WhatsApp/Telegram (optional)
-WHATSAPP_API_KEY=your_whatsapp_api_key
-TELEGRAM_BOT_TOKEN=your_telegram_bot_token
-
 # Estate Administrator
 ESTATE_ADMIN_EMAIL=admin@lastkey.com
 ```
@@ -394,7 +390,7 @@ LastKey's approach:
 
 ### **Guardian Protocol**
 - Monitors user inactivity with configurable thresholds
-- Sends alerts via email, WhatsApp, and Telegram
+- Sends alerts via email
 - Automatically triggers legacy delivery when activated
 - Real-time status updates via Socket.IO
 

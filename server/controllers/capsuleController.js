@@ -60,7 +60,7 @@ exports.updateCapsule = async (req, res) => {
     const capsule = await Capsule.findOneAndUpdate(
       { _id: req.params.id, userId: req.user._id },
       req.body,
-      { new: true, runValidators: true }
+      { returnDocument: 'after', runValidators: true }
     );
 
     if (!capsule) {

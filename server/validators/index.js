@@ -8,7 +8,11 @@ const registerSchema = z
   .object({
     name: z.string().min(2, 'Name must be at least 2 characters').max(100),
     email: z.string().email('Invalid email address'),
-    password: z.string().min(8, 'Password must be at least 8 characters'),
+    password: z.string()
+      .min(8, 'Password must be at least 8 characters')
+      .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+      .regex(/[0-9]/, 'Password must contain at least one number')
+      .regex(/[!@#$%^&*(),.?":{}|<>]/, 'Password must contain at least one special character'),
     confirmPassword: z.string()
   })
   .refine((data) => data.password === data.confirmPassword, {
@@ -19,7 +23,7 @@ const registerSchema = z
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
   password: z.string().min(1, 'Password is required')
-});
+}).passthrough();
 
 const forgotPasswordSchema = z.object({
   email: z.string().email('Invalid email address')
@@ -28,7 +32,11 @@ const forgotPasswordSchema = z.object({
 const resetPasswordSchema = z
   .object({
     token: z.string().min(1, 'Token is required'),
-    password: z.string().min(8, 'Password must be at least 8 characters'),
+    password: z.string()
+      .min(8, 'Password must be at least 8 characters')
+      .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+      .regex(/[0-9]/, 'Password must contain at least one number')
+      .regex(/[!@#$%^&*(),.?":{}|<>]/, 'Password must contain at least one special character'),
     confirmPassword: z.string()
   })
   .refine((data) => data.password === data.confirmPassword, {
@@ -68,7 +76,7 @@ const createAssetSchema = z.object({
   password: z.string().optional(),  // Ciphertext enforced in controller
   url: z.string().url().optional().or(z.string().max(500)),
   notes: z.string().max(2000).optional(),
-  instruction: z.enum(['delete', 'share', 'transfer']),
+  instruction: z.enum(['delete', 'share', 'transfer']).optional(),
   assetType: z.enum([
     'general', 'crypto_exchange', 'crypto_wallet', 'hardware_wallet', 
     'seed_phrase', 'private_key'
@@ -83,7 +91,7 @@ const createAssetSchema = z.object({
     'Cardano', 'Polkadot', 'other'
   ]).optional(),
   clientEncrypted: z.boolean().optional()
-});
+}).passthrough();
 
 const updateAssetSchema = createAssetSchema.partial();
 
@@ -132,12 +140,12 @@ const createLegalDocumentSchema = z.object({
 // ============================================
 
 const updateSettingsSchema = z.object({
-  name: z.string().min(2).max(100).optional(),
+  name: z.string().min(0).max(100).optional(),
   phone: z.string().optional(),
   inactivityDuration: z.number().min(7).max(365).optional(),
-  alertChannels: z.array(z.enum(['email', 'whatsapp', 'telegram'])).optional(),
-  recoveryPassphrase: z.string().min(12, 'Recovery passphrase must be at least 12 characters').optional()
-});
+  alertChannels: z.array(z.enum(['email'])).optional(),
+  recoveryPassphrase: z.string().min(12, 'Recovery passphrase must be at least 12 characters').optional(),
+}).passthrough();
 
 // ============================================
 // Beneficiary Portal Validators (IMPORTANT - UPDATED)

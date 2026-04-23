@@ -19,29 +19,57 @@ export const AuthProvider = ({ children }) => {
     if (t) axios.defaults.headers.common['Authorization'] = `Bearer ${t}`;
     return t || null;
   });
-  const [user, setUser] = useState(null);
-  const queryClient = useQueryClient();
-
-  const { isPending: fetchingUser } = useQuery({
-    queryKey: ['user'],
-    queryFn: async () => {
-      if (!token) return null;
+  const [user, setUser] = useState(() => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
       try {
-        const { data } = await axios.get(`${API_BASE}/auth/protected`);
-        const userData = data.data.user;
-        setUser(userData);
-        return userData;
-      } catch (err) {
-        setToken(null);
-        setUser(null);
-        localStorage.removeItem('token');
-        delete axios.defaults.headers.common['Authorization'];
+        return JSON.parse(storedUser);
+      } catch (e) {
         return null;
       }
-    },
-    enabled: !!token,
-    retry: false,
+    }
+    return null;
   });
+  const [fetchingUser, setFetchingUser] = useState(false);
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const initAuth = async () => {
+      const storedToken = localStorage.getItem('token');
+
+      if (!storedToken) {
+        setFetchingUser(false);
+        return; // No token - not logged in, that is fine
+      }
+
+      try {
+        axios.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
+
+        const response = await axios.get(`${API_BASE}/auth/protected`);
+
+        const userData = response.data.data?.user || response.data.user || response.data.data;
+
+        if (userData) {
+          setUser(userData);
+          setToken(storedToken);
+          localStorage.setItem('user', JSON.stringify(userData));
+        }
+
+      } catch (error) {
+        // Token invalid or expired - clean up silently
+        // Do NOT console.error here (causes console noise)
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        delete axios.defaults.headers.common['Authorization'];
+        setUser(null);
+        setToken(null);
+      } finally {
+        setFetchingUser(false);
+      }
+    };
+
+    initAuth();
+  }, []);
 
   // Keep axios header in sync when token changes
   useEffect(() => {
@@ -54,6 +82,15 @@ export const AuthProvider = ({ children }) => {
     }
   }, [token]);
 
+  // Keep user in localStorage in sync
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem('user', JSON.stringify(user));
+    } else {
+      localStorage.removeItem('user');
+    }
+  }, [user]);
+
   const loginMutation = useMutation({
     mutationFn: async ({ email, password }) => {
       const { data } = await axios.post(`${API_BASE}/auth/login`, { email, password });
@@ -62,6 +99,8 @@ export const AuthProvider = ({ children }) => {
     onSuccess: (data) => {
       setToken(data.token);
       setUser(data.data.user);
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.data.user));
       queryClient.setQueryData(['user'], data.data.user);
     },
   });
@@ -74,6 +113,8 @@ export const AuthProvider = ({ children }) => {
     onSuccess: (data) => {
       setToken(data.token);
       setUser(data.data.user);
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.data.user));
       queryClient.setQueryData(['user'], data.data.user);
     },
   });
@@ -81,6 +122,9 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     setToken(null);
     setUser(null);
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    delete axios.defaults.headers.common['Authorization'];
     queryClient.clear();
   };
 

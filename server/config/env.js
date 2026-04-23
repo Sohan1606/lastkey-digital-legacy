@@ -83,15 +83,19 @@ const validateEnv = () => {
 
     return env;
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      console.error('❌ Environment validation failed:');
-      error.errors.forEach((err) => {
-        console.error(`   - ${err.path.join('.')}: ${err.message}`);
-      });
+    console.error('❌ Environment validation failed:')
+    
+    if (error.errors && Array.isArray(error.errors)) {
+      console.error(JSON.stringify(error.errors, null, 2))
+    } else if (error.message) {
+      console.error(' ', error.message)
     } else {
-      console.error('❌ Environment validation failed:', error.message);
+      console.error(' ', String(error))
     }
-    process.exit(1);
+    
+    console.error('\nPlease check your server/.env file.')
+    console.error('Copy server/.env.example and fill in values.\n')
+    process.exit(1)
   }
 };
 
@@ -108,9 +112,7 @@ function redactValue(key, value) {
     'STRIPE_SECRET_KEY',
     'STRIPE_WEBHOOK_SECRET',
     'LEGACY_ENCRYPTION_KEY',
-    'OPENAI_API_KEY',
-    'WHATSAPP_API_KEY',
-    'TELEGRAM_BOT_TOKEN'
+    'OPENAI_API_KEY'
   ]);
 
   // Pattern-based redaction as a safety net

@@ -110,7 +110,6 @@ export const identifyUser = (userId, properties = {}) => {
 export const resetUser = () => {
   if (posthog) {
     posthog.reset();
-    if (import.meta.env.DEV) console.log('📊 User reset');
   }
 };
 

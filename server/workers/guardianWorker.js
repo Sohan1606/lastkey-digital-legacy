@@ -1,7 +1,10 @@
 const { Worker } = require('bullmq');
 const { guardianQueue, redisConnection } = require('../services/queue');
+const crypto = require('crypto');
 const User = require('../models/User');
 const Beneficiary = require('../models/Beneficiary');
+const Asset = require('../models/Asset');
+const BeneficiaryAccess = require('../models/BeneficiaryAccess');
 const { sendEmailWithRetry } = require('../services/emailService');
 
 // Only create worker if queue is available (Redis is running)
@@ -12,7 +15,6 @@ if (guardianQueue) {
 
   const user = await User.findById(userId);
   if (!user) {
-    console.log(`Guardian job: user ${userId} not found, skipping`);
     return;
   }
 
@@ -20,7 +22,6 @@ if (guardianQueue) {
   const inactiveMs = now - new Date(user.lastActive);
   const inactiveMinutes = inactiveMs / (1000 * 60);
 
-  console.log(`Guardian check: ${user.email}, inactive ${Math.floor(inactiveMinutes)}min`);
 
   if (type === 'warning') {
     // Send warning email
@@ -31,7 +32,6 @@ if (guardianQueue) {
     });
     
     await User.findByIdAndUpdate(userId, { triggerStatus: 'warning' });
-    console.log(`Warning sent to ${user.email}`);
 
     // Emit socket event
     if (global.io) {
@@ -46,19 +46,39 @@ if (guardianQueue) {
   } else if (type === 'trigger') {
     // Only trigger if still inactive (user may have checked in since job was queued)
     if (inactiveMinutes < user.inactivityDuration * 2) {
-      console.log(`User ${user.email} became active, cancelling trigger`);
       return;
     }
 
     await User.findByIdAndUpdate(userId, { triggerStatus: 'triggered' });
-    console.log(`TRIGGERED for ${user.email}`);
 
     const beneficiaries = await Beneficiary.find({ userId });
-    for (const b of beneficiaries) {
+
+    for (const beneficiary of beneficiaries) {
+      // Generate cryptographically secure token (SECURITY LAYER 6: 64 bytes = 128 char hex)
+      const token = crypto.randomBytes(64).toString('hex');
+
+      // Get assigned vault items for this beneficiary
+      const assignedItems = await Asset.find({
+        ownerId: user._id,
+        _id: { $in: beneficiary.assignedVaultItems || [] }
+      });
+
+      // Create access record
+      const access = await BeneficiaryAccess.create({
+        token,
+        beneficiaryId: beneficiary._id,
+        ownerId: user._id,
+        assignedItems: assignedItems.map(item => item._id),
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+      });
+
+      // Send email with portal link
+      const portalUrl = `${getPortalUrl()}/portal/${token}`;
+
       await sendEmailWithRetry({
-        to: b.email,
+        to: beneficiary.email,
         subject: 'LastKey: Guardian Protocol Activated',
-        html: buildTriggerEmail(user, b),
+        html: buildNewTriggerEmail(user, beneficiary, portalUrl, assignedItems.length),
       });
     }
 
@@ -77,7 +97,7 @@ if (guardianQueue) {
 });
 
 guardianWorker.on('completed', (job) => {
-  console.log(`Guardian job ${job.id} completed`);
+  // Job completed
 });
 
 guardianWorker.on('failed', (job, err) => {
@@ -109,12 +129,12 @@ const getPortalUrl = () => {
 const buildTriggerEmail = (user, beneficiary) => {
   const portalUrl = `${getPortalUrl()}/beneficiary-portal`;
   const enrollmentToken = beneficiary.enrollmentToken;
-  
+
   // If beneficiary hasn't enrolled yet, include enrollment token
-  const accessUrl = enrollmentToken 
+  const accessUrl = enrollmentToken
     ? `${portalUrl}?enroll=${enrollmentToken}`
     : portalUrl;
-  
+
   return `
   <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#0b1629;color:#f0f4ff;padding:32px;border-radius:16px">
     <h2 style="color:#ff4d6d;margin-bottom:16px">Guardian Protocol Activated</h2>
@@ -129,6 +149,26 @@ const buildTriggerEmail = (user, beneficiary) => {
     </p>
     <p style="color:#8899bb;font-size:13px">Your relationship: ${beneficiary.relationship} | Access level: ${beneficiary.accessLevel}</p>
     ${enrollmentToken ? `<p style="color:#ff6b6b;font-size:12px;margin-top:16px">This is a one-time enrollment link. Please save your credentials securely.</p>` : ''}
+  </div>
+`;
+};
+
+const buildNewTriggerEmail = (user, beneficiary, portalUrl, itemCount) => {
+  return `
+  <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#0b1629;color:#f0f4ff;padding:32px;border-radius:16px">
+    <h2 style="color:#ff4d6d;margin-bottom:16px">Guardian Protocol Activated</h2>
+    <p>Dear ${beneficiary.name},</p>
+    <p><strong>${user.name}</strong> has been inactive for an extended period.</p>
+    <p>Their LastKey Digital Legacy has been <strong>activated</strong>.</p>
+    <p><strong>${itemCount} items</strong> have been left for you.</p>
+    <p style="margin:24px 0">
+      <a href="${portalUrl}"
+         style="background:linear-gradient(135deg,#4f9eff,#7c5cfc);color:white;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:700;display:inline-block">
+        Access Your Items
+      </a>
+    </p>
+    <p style="color:#8899bb;font-size:12px">This link expires in 30 days.</p>
+    <p style="color:#8899bb;font-size:13px">Your relationship: ${beneficiary.relationship}</p>
   </div>
 `;
 };

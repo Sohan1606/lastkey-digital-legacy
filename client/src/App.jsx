@@ -34,22 +34,27 @@ const FinalMessage = lazy(() => import('./pages/FinalMessage'));
 const ActivityLogs = lazy(() => import('./pages/ActivityLogs'));
 const LegalDocuments = lazy(() => import('./pages/LegalDocuments'));
 const BeneficiaryPortal = lazy(() => import('./pages/BeneficiaryPortal'));
+const NotFound = lazy(() => import('./pages/NotFound'));
 
 function AppContent() {
   const location = useLocation();
   const { user } = useAuth();
 
-  // Determine navbar variant
-  const publicRoutes = [
-    '/', '/signin', '/signup', '/forgot-password', '/reset-password', 
-    '/verify-email', '/privacy', '/terms', '/trust', '/pricing', '/beneficiary-portal'
+  // Only show navbar on public pages (NOT on dashboard pages)
+  const PUBLIC_ROUTES = [
+    '/', '/login', '/signin', '/register', '/signup',
+    '/verify-email', '/forgot-password', '/reset-password',
+    '/privacy', '/terms', '/trust', '/pricing',
+    '/beneficiary-portal'
   ];
-  const isPublicRoute = publicRoutes.includes(location.pathname);
-  const variant = isPublicRoute ? 'public' : 'app';
+  const isPublicPage = PUBLIC_ROUTES.includes(location.pathname) ||
+    location.pathname.startsWith('/portal/') ||
+    location.pathname.startsWith('/reset-password');
 
   return (
     <>
-      <Navbar variant={variant} />
+      {/* Only show navbar on public pages */}
+      {isPublicPage && <Navbar />}
       <Suspense fallback={
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
           <div className="spinner" style={{ width: '40px', height: '40px' }} />
@@ -57,7 +62,9 @@ function AppContent() {
       }>
         <Routes>
           <Route path="/" element={<Landing />} />
+          <Route path="/login" element={<Login />} />
           <Route path="/signin" element={<Login />} />
+          <Route path="/register" element={<Register />} />
           <Route path="/signup" element={<Register />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -67,7 +74,8 @@ function AppContent() {
           <Route path="/trust" element={<Trust />} />
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/beneficiary-portal" element={<BeneficiaryPortal />} />
-          
+          <Route path="/portal/:token" element={<BeneficiaryPortal />} />
+
           {/* Protected routes */}
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/vault" element={<ProtectedRoute><Vault /></ProtectedRoute>} />
@@ -83,6 +91,7 @@ function AppContent() {
           <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
           <Route path="/activity-logs" element={<ProtectedRoute><ActivityLogs /></ProtectedRoute>} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
       <CookieBanner />

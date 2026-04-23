@@ -127,7 +127,7 @@ const migrateAsset = async (assetId) => {
     });
 
     // Log migration
-    await log('legacy_asset_migrated', {
+    await log('LEGACY_ASSET_MIGRATED', {
       userId: asset.userId,
       details: { assetId: asset._id, type: asset.type }
     });
@@ -176,7 +176,7 @@ const completeMigration = async (assetId, clientEncryptedData) => {
     });
 
     // Log completion
-    await log('legacy_asset_reencrypted', {
+    await log('LEGACY_ASSET_REENCRYPTED', {
       userId: asset.userId,
       details: { assetId: asset._id }
     });
@@ -264,7 +264,7 @@ const batchMigrateUserAssets = async (userId) => {
     }
 
     // Log batch migration
-    await log('legacy_batch_migration', {
+    await log('LEGACY_BATCH_MIGRATION', {
       userId,
       details: { success: results.success, failed: results.failed }
     });

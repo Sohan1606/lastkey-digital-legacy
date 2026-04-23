@@ -5,6 +5,7 @@ import { Calendar, Plus, Heart, Star, MapPin, Camera, Edit, Trash2, Clock, Award
 import { motion } from 'framer-motion';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import DashboardLayout from '../components/DashboardLayout';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
@@ -147,175 +148,501 @@ const LifeTimeline = () => {
   const sortedEvents = timelineEvents?.sort((a, b) => new Date(a.date) - new Date(b.date)) || [];
 
   return (
-    <div className="page spatial-bg">
-      <div className="stars" />
-      <div className="container">
-        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 8 }}>
-            <div style={{ width: 48, height: 48, borderRadius: 14, background: 'linear-gradient(135deg, #4f9eff30, #7c5cfc30)', border: '1px solid rgba(79,158,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Calendar style={{ width: 22, height: 22, color: 'var(--ion)' }} />
+    <DashboardLayout>
+      <div style={{
+        padding: '32px',
+        maxWidth: '1200px',
+        margin: '0 auto',
+        minHeight: '100vh',
+        background: 'var(--bg-base)'
+      }}>
+        {/* PAGE HEADER */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'flex-start',
+          justifyContent: 'space-between',
+          marginBottom: '32px',
+          flexWrap: 'wrap',
+          gap: '16px'
+        }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '14px'
+          }}>
+            <div style={{
+              width: '48px',
+              height: '48px',
+              borderRadius: '14px',
+              background: 'linear-gradient(135deg, rgba(79,158,255,0.15), rgba(167,139,250,0.15))',
+              border: '1px solid rgba(79,158,255,0.2)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '22px',
+              flexShrink: 0
+            }}>
+              📅
             </div>
             <div>
-              <h1 className="display" style={{ fontSize: 28 }}>Life Timeline</h1>
-              <p style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 2 }}>Document your journey, celebrate milestones</p>
+              <h1 style={{
+                fontSize: '24px',
+                fontWeight: '700',
+                color: 'var(--text-primary)',
+                margin: 0,
+                letterSpacing: '-0.01em'
+              }}>
+                Life Timeline
+              </h1>
+              <p style={{
+                fontSize: '14px',
+                color: 'var(--text-muted)',
+                margin: '4px 0 0 0'
+              }}>
+                Document your journey, celebrate milestones
+              </p>
             </div>
           </div>
-        </motion.div>
 
-        <motion.button
-          initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-          whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-          onClick={handleAddEvent}
-          style={{ marginTop: 24, width: '100%', padding: '16px 24px', borderRadius: 14, border: '1px dashed rgba(79,158,255,0.3)', background: 'rgba(79,158,255,0.04)', color: 'var(--ion)', cursor: 'pointer', fontWeight: 600, fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'all 0.22s' }}
-          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(79,158,255,0.08)'; e.currentTarget.style.borderColor = 'rgba(79,158,255,0.5)'; }}
-          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(79,158,255,0.04)'; e.currentTarget.style.borderColor = 'rgba(79,158,255,0.3)'; }}
-        >
-          <Plus style={{ width: 18, height: 18 }} />
-          Add Life Event
-        </motion.button>
-
-        {showAddEvent && (
-          <motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-            style={{ position: 'fixed', inset: 0, background: 'rgba(3,5,8,0.85)', backdropFilter: 'blur(8px)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
-            onClick={handleCancel}
+          <button
+            onClick={handleAddEvent}
+            style={{
+              padding: '10px 20px',
+              background: 'linear-gradient(135deg, #4f9eff, #7c5cfc)',
+              border: 'none',
+              borderRadius: '10px',
+              color: 'white',
+              fontSize: '14px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              whiteSpace: 'nowrap',
+              transition: 'all 0.15s ease'
+            }}
           >
-            <motion.div
-              initial={{ scale: 0.92, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              onClick={e => e.stopPropagation()}
-              style={{ background: 'var(--deep)', border: '1px solid var(--glass-border)', borderRadius: 24, padding: 32, width: '100%', maxWidth: 520, maxHeight: '90vh', overflowY: 'auto' }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-                <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-1)' }}>
-                  {editingEvent ? 'Edit Life Event' : 'Add Life Event'}
-                </h2>
-                <button onClick={handleCancel} style={{ background: 'none', border: 'none', color: 'var(--text-2)', cursor: 'pointer', padding: 4 }}>
-                  <X style={{ width: 20, height: 20 }} />
-                </button>
-              </div>
+            📅 Add Event
+          </button>
+        </div>
 
-              <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+        {/* PAGE CONTENT - Two Column Layout */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' }}>
+          {/* Left Column - Add Event Form (40%) */}
+          <div style={{ minWidth: 0 }}>
+            <div style={{
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border)',
+              borderRadius: '20px',
+              padding: '24px',
+              marginBottom: '20px'
+            }}>
+              <h2 style={{
+                fontSize: '18px',
+                fontWeight: '700',
+                color: 'var(--text-primary)',
+                marginBottom: '20px'
+              }}>
+                {editingEvent ? 'Edit Event' : 'Add Event'}
+              </h2>
+
+              <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div>
-                  <label>Event Title</label>
-                  <input type="text" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} placeholder="Milestone or memory title..." required />
+                  <label style={{
+                    display: 'block',
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    color: 'var(--text-secondary)',
+                    marginBottom: '8px'
+                  }}>
+                    Event Title
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.title}
+                    onChange={e => setFormData({ ...formData, title: e.target.value })}
+                    placeholder="Milestone or memory title..."
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      background: 'var(--bg-base)',
+                      border: '1px solid var(--border-hover)',
+                      borderRadius: '10px',
+                      color: 'var(--text-primary)',
+                      fontSize: '14px',
+                      outline: 'none',
+                      fontFamily: 'inherit'
+                    }}
+                  />
                 </div>
+
                 <div>
-                  <label>Date</label>
-                  <input type="date" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} required />
+                  <label style={{
+                    display: 'block',
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    color: 'var(--text-secondary)',
+                    marginBottom: '8px'
+                  }}>
+                    Date
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.date}
+                    onChange={e => setFormData({ ...formData, date: e.target.value })}
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      background: 'var(--bg-base)',
+                      border: '1px solid var(--border-hover)',
+                      borderRadius: '10px',
+                      color: 'var(--text-primary)',
+                      fontSize: '14px',
+                      outline: 'none',
+                      fontFamily: 'inherit'
+                    }}
+                  />
                 </div>
+
                 <div>
-                  <label>Category</label>
-                  <select value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })}>
+                  <label style={{
+                    display: 'block',
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    color: 'var(--text-secondary)',
+                    marginBottom: '8px'
+                  }}>
+                    Category
+                  </label>
+                  <select
+                    value={formData.category}
+                    onChange={e => setFormData({ ...formData, category: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      background: 'var(--bg-base)',
+                      border: '1px solid var(--border-hover)',
+                      borderRadius: '10px',
+                      color: 'var(--text-primary)',
+                      fontSize: '14px',
+                      outline: 'none',
+                      fontFamily: 'inherit'
+                    }}
+                  >
                     {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
                   </select>
                 </div>
+
                 <div>
-                  <label>Location (Optional)</label>
-                  <input type="text" value={formData.location} onChange={e => setFormData({ ...formData, location: e.target.value })} placeholder="Where did this happen?" />
+                  <label style={{
+                    display: 'block',
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    color: 'var(--text-secondary)',
+                    marginBottom: '8px'
+                  }}>
+                    Location (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.location}
+                    onChange={e => setFormData({ ...formData, location: e.target.value })}
+                    placeholder="Where did this happen?"
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      background: 'var(--bg-base)',
+                      border: '1px solid var(--border-hover)',
+                      borderRadius: '10px',
+                      color: 'var(--text-primary)',
+                      fontSize: '14px',
+                      outline: 'none',
+                      fontFamily: 'inherit'
+                    }}
+                  />
                 </div>
+
                 <div>
-                  <label>Description</label>
-                  <textarea value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} placeholder="Share the story..." style={{ height: 100, resize: 'none' }} />
+                  <label style={{
+                    display: 'block',
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    color: 'var(--text-secondary)',
+                    marginBottom: '8px'
+                  }}>
+                    Description
+                  </label>
+                  <textarea
+                    value={formData.description}
+                    onChange={e => setFormData({ ...formData, description: e.target.value })}
+                    placeholder="Share the story..."
+                    style={{
+                      width: '100%',
+                      padding: '14px 16px',
+                      background: 'var(--bg-base)',
+                      border: '1px solid var(--border-hover)',
+                      borderRadius: '10px',
+                      color: 'var(--text-primary)',
+                      fontSize: '14px',
+                      outline: 'none',
+                      fontFamily: 'inherit',
+                      resize: 'vertical',
+                      lineHeight: '1.6',
+                      minHeight: '120px'
+                    }}
+                  />
                 </div>
-                <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
-                  <motion.button type="submit" whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
+
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <button
+                    type="submit"
                     disabled={addEventMutation.isPending || updateEventMutation.isPending}
-                    style={{ flex: 1, padding: '14px 24px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg, #4f9eff, #7c5cfc)', color: 'white', fontWeight: 700, fontSize: 14, cursor: addEventMutation.isPending || updateEventMutation.isPending ? 'not-allowed' : 'pointer', opacity: addEventMutation.isPending || updateEventMutation.isPending ? 0.6 : 1 }}>
+                    style={{
+                      flex: 1,
+                      padding: '12px 20px',
+                      background: 'linear-gradient(135deg, #4f9eff, #7c5cfc)',
+                      border: 'none',
+                      borderRadius: '10px',
+                      color: 'white',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      cursor: addEventMutation.isPending || updateEventMutation.isPending
+                        ? 'not-allowed'
+                        : 'pointer',
+                      opacity: addEventMutation.isPending || updateEventMutation.isPending ? 0.5 : 1,
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
                     {addEventMutation.isPending || updateEventMutation.isPending ? 'Saving...' : editingEvent ? 'Update Event' : 'Add Event'}
-                  </motion.button>
-                  <motion.button type="button" whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }} onClick={handleCancel}
-                    style={{ flex: 1, padding: '14px 24px', borderRadius: 12, border: '1px solid var(--glass-border)', background: 'var(--glass-1)', color: 'var(--text-2)', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>
-                    Cancel
-                  </motion.button>
+                  </button>
+                  {editingEvent && (
+                    <button
+                      type="button"
+                      onClick={handleCancel}
+                      style={{
+                        padding: '12px 20px',
+                        background: 'var(--bg-elevated)',
+                        border: '1px solid var(--border)',
+                        borderRadius: '10px',
+                        color: 'var(--text-secondary)',
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  )}
                 </div>
               </form>
-            </motion.div>
-          </motion.div>
-        )}
-
-        {!isLoading && sortedEvents.length > 0 && (
-          <div style={{ position: 'relative', marginTop: 40 }}>
-            <div style={{ position: 'absolute', left: 23, top: 0, bottom: 0, width: 2, background: 'linear-gradient(to bottom, rgba(79,158,255,0.4), rgba(124,92,252,0.2), transparent)', borderRadius: 1 }} />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-              {sortedEvents.map((event, index) => {
-                const cat = categories.find(c => c.id === event.category) || categories[0];
-                const CatIcon = cat.icon;
-                return (
-                  <motion.div key={event._id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.06 }}
-                    style={{ display: 'flex', gap: 20, alignItems: 'flex-start' }}>
-                    <div style={{ width: 48, height: 48, borderRadius: 14, background: `${cat.color}15`, border: `1px solid ${cat.color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative', zIndex: 1 }}>
-                      <CatIcon style={{ width: 20, height: 20, color: cat.color }} />
-                    </div>
-                    <div style={{ flex: 1, background: 'var(--glass-1)', backdropFilter: 'blur(20px)', border: '1px solid var(--glass-border)', borderRadius: 16, padding: '18px 20px', cursor: 'pointer', transition: 'all 0.22s' }}
-                      onClick={() => handleEditEvent(event)}
-                      onMouseEnter={e => { e.currentTarget.style.background = `${cat.color}08`; e.currentTarget.style.borderColor = `${cat.color}30`; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = 'var(--glass-1)'; e.currentTarget.style.borderColor = 'var(--glass-border)'; }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-                        <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-1)' }}>{event.title}</h3>
-                        <span style={{ fontSize: 11, fontWeight: 600, color: cat.color, background: `${cat.color}15`, border: `1px solid ${cat.color}25`, borderRadius: 8, padding: '2px 8px' }}>{cat.name}</span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-2)', marginBottom: event.location ? 6 : 0 }}>
-                        <Clock style={{ width: 13, height: 13 }} />
-                        {new Date(event.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
-                      </div>
-                      {event.location && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-2)', marginBottom: 8 }}>
-                          <MapPin style={{ width: 13, height: 13 }} />
-                          {event.location}
-                        </div>
-                      )}
-                      {event.description && (
-                        <p style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.6, marginBottom: 12 }}>{event.description}</p>
-                      )}
-                      <div style={{ display: 'flex', gap: 10 }}>
-                        <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={(e) => { e.stopPropagation(); handleEditEvent(event); }}
-                          style={{ padding: '7px 14px', borderRadius: 9, border: '1px solid rgba(79,158,255,0.2)', background: 'rgba(79,158,255,0.08)', color: 'var(--ion)', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
-                          <Edit style={{ width: 13, height: 13 }} /> Edit
-                        </motion.button>
-                        {deleteConfirm === event._id ? (
-                          <div style={{ display: 'flex', gap: 6 }}>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleDeleteEvent(event._id); }}
-                              style={{ padding: '7px 14px', borderRadius: 9, background: 'rgba(255,77,109,0.15)', border: '1px solid rgba(255,77,109,0.3)', color: '#ff4d6d', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}
-                            >
-                              <Trash2 style={{ width: 13, height: 13, color: 'var(--danger)' }} /> Delete
-                            </button>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); setDeleteConfirm(null); }}
-                              style={{ padding: '7px 14px', borderRadius: 9, background: 'var(--glass-1)', border: '1px solid var(--glass-border)', color: 'var(--text-2)', fontSize: 12, cursor: 'pointer' }}
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        ) : (
-                          <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={(e) => { e.stopPropagation(); setDeleteConfirm(event._id); }}
-                            style={{ padding: '7px 14px', borderRadius: 9, border: '1px solid rgba(255,77,109,0.2)', background: 'rgba(255,77,109,0.08)', color: 'var(--danger)', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
-                            <Trash2 style={{ width: 13, height: 13 }} /> Delete
-                          </motion.button>
-                        )}
-                      </div>
-                    </div>
-                  </motion.div>
-                );
-              })}
             </div>
           </div>
-        )}
 
-        {!isLoading && sortedEvents.length === 0 && (
-          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} style={{ textAlign: 'center', padding: '60px 20px', marginTop: 40, background: 'var(--glass-1)', backdropFilter: 'blur(20px)', border: '1px solid var(--glass-border)', borderRadius: 24 }}>
-            <Calendar style={{ width: 48, height: 48, color: 'var(--text-3)', margin: '0 auto 16px' }} />
-            <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-1)', marginBottom: 8 }}>Your Timeline Awaits</h3>
-            <p style={{ fontSize: 14, color: 'var(--text-2)', marginBottom: 24, maxWidth: 360, margin: '0 auto 24px' }}>Document milestones, achievements, and precious memories that tell your unique story.</p>
-            <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={handleAddEvent}
-              style={{ padding: '14px 28px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg, #4f9eff, #7c5cfc)', color: 'white', fontWeight: 700, fontSize: 14, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-              <Plus style={{ width: 16, height: 16 }} /> Start Your Journey
-            </motion.button>
-          </motion.div>
-        )}
+          {/* Right Column - Timeline (60%) */}
+          <div style={{ minWidth: 0 }}>
+            <div style={{
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border)',
+              borderRadius: '20px',
+              padding: '24px'
+            }}>
+              <h2 style={{
+                fontSize: '18px',
+                fontWeight: '700',
+                color: 'var(--text-primary)',
+                marginBottom: '20px'
+              }}>
+                Your Timeline ({sortedEvents.length})
+              </h2>
+
+              {!isLoading && sortedEvents.length === 0 ? (
+                <div style={{
+                  textAlign: 'center',
+                  padding: '60px 20px',
+                  background: 'var(--bg-base)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '16px'
+                }}>
+                  <div style={{ fontSize: '48px', opacity: 0.3, marginBottom: '16px' }}>📅</div>
+                  <h3 style={{
+                    fontSize: '18px',
+                    fontWeight: '600',
+                    color: 'var(--text-primary)',
+                    marginBottom: '8px'
+                  }}>
+                    No events yet
+                  </h3>
+                  <p style={{
+                    fontSize: '14px',
+                    color: 'var(--text-muted)',
+                    marginBottom: '24px',
+                    maxWidth: '320px',
+                    margin: '0 auto 24px'
+                  }}>
+                    Document milestones, achievements, and precious memories that tell your unique story
+                  </p>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {sortedEvents.map((event, index) => {
+                    const cat = categories.find(c => c.id === event.category) || categories[0];
+                    return (
+                      <div
+                        key={event._id}
+                        style={{
+                          background: 'var(--bg-base)',
+                          border: '1px solid var(--border)',
+                          borderRadius: '16px',
+                          padding: '20px',
+                          marginBottom: '12px',
+                          transition: 'border-color 0.15s ease'
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--border-hover)'}
+                        onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                          <span style={{ fontSize: '24px' }}>
+                            {cat.id === 'milestone' ? '⭐' : 
+                             cat.id === 'achievement' ? '🏆' :
+                             cat.id === 'memory' ? '💙' :
+                             cat.id === 'travel' ? '🌍' : '📸'}
+                          </span>
+                          <div style={{ flex: 1 }}>
+                            <h3 style={{
+                              fontSize: '15px',
+                              fontWeight: '600',
+                              color: 'var(--text-primary)',
+                              marginBottom: '4px'
+                            }}>
+                              {event.title}
+                            </h3>
+                            <p style={{
+                              fontSize: '13px',
+                              color: 'var(--text-muted)'
+                            }}>
+                              {new Date(event.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                            </p>
+                          </div>
+                          <span style={{
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            color: cat.color,
+                            background: `${cat.color}15`,
+                            padding: '4px 10px',
+                            borderRadius: '8px'
+                          }}>
+                            {cat.name}
+                          </span>
+                        </div>
+
+                        {event.location && (
+                          <p style={{
+                            fontSize: '13px',
+                            color: 'var(--text-secondary)',
+                            marginBottom: '8px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                          }}>
+                            📍 {event.location}
+                          </p>
+                        )}
+
+                        {event.description && (
+                          <p style={{
+                            fontSize: '13px',
+                            color: 'var(--text-secondary)',
+                            lineHeight: '1.6',
+                            marginBottom: '12px'
+                          }}>
+                            {event.description}
+                          </p>
+                        )}
+
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                          <button
+                            onClick={() => handleEditEvent(event)}
+                            style={{
+                              padding: '8px 16px',
+                              background: 'var(--bg-elevated)',
+                              border: '1px solid var(--border)',
+                              borderRadius: '8px',
+                              color: 'var(--text-secondary)',
+                              fontSize: '13px',
+                              fontWeight: '500',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px'
+                            }}
+                          >
+                            ✏ Edit
+                          </button>
+                          {deleteConfirm === event._id ? (
+                            <>
+                              <button
+                                onClick={() => handleDeleteEvent(event._id)}
+                                style={{
+                                  padding: '8px 16px',
+                                  background: 'rgba(255,77,109,0.1)',
+                                  border: '1px solid rgba(255,77,109,0.3)',
+                                  borderRadius: '8px',
+                                  color: '#ff4d6d',
+                                  fontSize: '13px',
+                                  fontWeight: '600',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                Delete
+                              </button>
+                              <button
+                                onClick={() => setDeleteConfirm(null)}
+                                style={{
+                                  padding: '8px 16px',
+                                  background: 'var(--bg-elevated)',
+                                  border: '1px solid var(--border)',
+                                  borderRadius: '8px',
+                                  color: 'var(--text-secondary)',
+                                  fontSize: '13px',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                Cancel
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              onClick={() => setDeleteConfirm(event._id)}
+                              style={{
+                                padding: '8px 16px',
+                                background: 'rgba(255,77,109,0.08)',
+                                border: '1px solid rgba(255,77,109,0.2)',
+                                borderRadius: '8px',
+                                color: '#ff4d6d',
+                                fontSize: '13px',
+                                fontWeight: '500',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px'
+                              }}
+                            >
+                              🗑 Delete
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
+    </DashboardLayout>
   );
 };
 

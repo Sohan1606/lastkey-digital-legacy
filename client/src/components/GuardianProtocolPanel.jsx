@@ -356,20 +356,30 @@ const GuardianProtocolPanel = ({ onPing, dmsStatus, isPremium, lastActive }) => 
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
             <div style={{ position: 'relative', width: 128, height: 128 }}>
               <svg style={{ width: 128, height: 128, transform: 'rotate(-90deg)' }}>
-                <circle cx="64" cy="64" r="56" stroke="var(--glass-border)" strokeWidth="12" fill="none" />
-                <motion.circle cx="64" cy="64" r="56" stroke="url(#gradient)" strokeWidth="12" fill="none"
-                  strokeDasharray={`${2 * Math.PI * 56}`}
-                  strokeDashoffset={`${2 * Math.PI * 56 * (1 - scoreData.score / 100)}`}
-                  initial={{ strokeDashoffset: `${2 * Math.PI * 56}` }}
-                  animate={{ strokeDashoffset: `${2 * Math.PI * 56 * (1 - scoreData.score / 100)}` }}
-                  transition={{ duration: 1, ease: "easeInOut" }}
-                />
                 <defs>
-                  <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="0%">
                     <stop offset="0%" stopColor="#4f9eff" />
                     <stop offset="100%" stopColor="#7c5cfc" />
                   </linearGradient>
                 </defs>
+
+                {/* Background circle */}
+                <circle cx="64" cy="64" r="56" stroke="var(--glass-border)" strokeWidth="12" fill="none" />
+
+                {/* Progress circle */}
+                <circle 
+                  cx="64" cy="64" r="56"
+                  stroke="url(#scoreGradient)"
+                  strokeWidth="12"
+                  fill="none"
+                  strokeLinecap="round"
+                  strokeDasharray={`${2 * Math.PI * 56}`}
+                  strokeDashoffset={`${
+                    2 * Math.PI * 56 * 
+                    (1 - (scoreData?.score || 0) / 100)
+                  }`}
+                  style={{ transition: 'stroke-dashoffset 1s ease' }}
+                />
               </svg>
               <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <span style={{ fontSize: 24, fontWeight: 800, color: '#f0f4ff' }}>{scoreData.score}</span>

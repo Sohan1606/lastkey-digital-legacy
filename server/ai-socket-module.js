@@ -121,19 +121,16 @@ const getAISuggestions = async (req, res) => {
 // =====================================================
 const setupDeadManSocket = (io) => {
   io.on('connection', (socket) => {
-    console.log('⚡ Socket connected:', socket.id);
-    
     // Client joins user room on auth
     socket.on('join-user-room', (userId) => {
       socket.join(userId);
-      console.log(`👤 Socket ${socket.id} joined room ${userId}`);
       
       // Catch-up: emit current status
       emitCurrentDMSStatus(io, userId);
     });
     
     socket.on('disconnect', () => {
-      console.log('🔌 Socket disconnected:', socket.id);
+      // Socket disconnected
     });
   });
 };

@@ -269,19 +269,6 @@ const SkeletonCard = ({
     <div className={`skeleton-card ${className}`}>
       {renderVariant()}
       
-      {/* Shimmer animation styles */}
-      {animate && (
-        <style jsx>{`
-          @keyframes shimmer {
-            0% {
-              background-position: -200% 0;
-            }
-            100% {
-              background-position: 200% 0;
-            }
-          }
-        `}</style>
-      )}
     </div>
   );
 };

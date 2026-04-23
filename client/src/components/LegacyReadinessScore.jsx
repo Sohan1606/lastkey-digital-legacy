@@ -2,13 +2,12 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Shield, Users, Clock, FileText, CheckCircle, AlertCircle, Lock } from 'lucide-react';
 
-const LegacyReadinessScore = ({ 
-  assetCount = 0, 
-  beneficiaryCount = 0, 
-  enrolledBeneficiaryCount = 0,
+const LegacyReadinessScore = ({
+  assetCount = 0,
+  beneficiaryCount = 0,
   capsuleCount = 0,
   documentCount = 0,
-  vaultUnlocked = false 
+  vaultUnlocked = false
 }) => {
   const [score, setScore] = useState(0);
   const [breakdown, setBreakdown] = useState({
@@ -23,19 +22,19 @@ const LegacyReadinessScore = ({
     // Calculate score based on readiness criteria
     // Max score: 100 points
     // - Assets: 25 points (5 points per asset, max 5 assets)
-    // - Beneficiaries: 25 points (need at least 1 enrolled)
+    // - Beneficiaries: 25 points (need at least 1 beneficiary added)
     // - Capsules: 20 points (10 points per capsule, max 2)
     // - Documents: 15 points (5 points per document, max 3)
     // - Vault: 15 points (must be set up with client-side encryption)
-    
+
     const assetsScore = Math.min(assetCount * 5, 25);
-    const beneficiariesScore = enrolledBeneficiaryCount > 0 ? 25 : (beneficiaryCount > 0 ? 10 : 0);
+    const beneficiariesScore = beneficiaryCount > 0 ? 25 : 0;
     const capsulesScore = Math.min(capsuleCount * 10, 20);
     const documentsScore = Math.min(documentCount * 5, 15);
     const vaultScore = vaultUnlocked ? 15 : 0;
-    
+
     const totalScore = assetsScore + beneficiariesScore + capsulesScore + documentsScore + vaultScore;
-    
+
     setScore(totalScore);
     setBreakdown({
       assets: assetsScore,
@@ -44,7 +43,7 @@ const LegacyReadinessScore = ({
       documents: documentsScore,
       vault: vaultScore
     });
-  }, [assetCount, beneficiaryCount, enrolledBeneficiaryCount, capsuleCount, documentCount, vaultUnlocked]);
+  }, [assetCount, beneficiaryCount, capsuleCount, documentCount, vaultUnlocked]);
 
   const getScoreColor = (s) => {
     if (s >= 80) return '#00e5a0';
@@ -74,9 +73,9 @@ const LegacyReadinessScore = ({
       icon: Lock
     },
     { 
-      label: 'Beneficiaries Enrolled', 
-      complete: enrolledBeneficiaryCount > 0,
-      count: `${enrolledBeneficiaryCount}/${beneficiaryCount} enrolled`,
+      label: 'Beneficiaries Added', 
+      complete: beneficiaryCount > 0,
+      count: `${beneficiaryCount} beneficiaries`,
       score: breakdown.beneficiaries,
       maxScore: 25,
       icon: Users
@@ -249,30 +248,6 @@ const LegacyReadinessScore = ({
           );
         })}
       </div>
-
-      {/* Enrollment Warning */}
-      {beneficiaryCount > 0 && enrolledBeneficiaryCount < beneficiaryCount && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          style={{
-            marginTop: 16,
-            padding: '12px 16px',
-            background: 'rgba(255,184,48,0.1)',
-            border: '1px solid rgba(255,184,48,0.3)',
-            borderRadius: 12,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10
-          }}
-        >
-          <AlertCircle size={18} style={{ color: '#ffb830', flexShrink: 0 }} />
-          <p style={{ fontSize: 13, color: 'var(--text-2)' }}>
-            <strong style={{ color: '#ffb830' }}>Action needed:</strong> {beneficiaryCount - enrolledBeneficiaryCount} beneficiary(ies) haven't completed enrollment. 
-            They won't be able to access your legacy until they enroll.
-          </p>
-        </motion.div>
-      )}
     </motion.div>
   );
 };

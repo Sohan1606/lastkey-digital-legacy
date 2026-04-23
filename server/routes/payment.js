@@ -7,8 +7,6 @@ const isPaymentsEnabled = () => process.env.FEATURE_PAYMENTS !== 'false' && proc
 let stripe = null;
 if (isPaymentsEnabled()) {
   stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-} else {
-  console.log('⚠️ Payments disabled (FREE_MODE or Stripe not configured)');
 }
 
 // Middleware to check if payments are enabled
@@ -37,7 +35,7 @@ const SUBSCRIPTION_TIERS = {
     name: 'Guardian',
     priceId: process.env.STRIPE_GUARDIAN_PRICE_ID,
     amount: 499, // $4.99
-    features: ['5 Loved Ones', '20 Time Letters', '50 Memory Items', 'WhatsApp Alerts']
+    features: ['5 Loved Ones', '20 Time Letters', '50 Memory Items']
   },
   legacy_pro: {
     name: 'Legacy Pro',
@@ -110,7 +108,6 @@ router.post('/create-checkout-session', protect, checkPaymentsEnabled, async (re
 router.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
   try {
     if (!stripe) {
-      console.log('⚠️ Stripe webhook received but Stripe not configured');
       return res.status(400).json({ error: 'Stripe not configured' });
     }
 
@@ -118,7 +115,6 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
     
     if (!webhookSecret) {
-      console.log('⚠️ STRIPE_WEBHOOK_SECRET not configured');
       return res.status(400).json({ error: 'Webhook secret not configured' });
     }
 
@@ -127,11 +123,10 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
     try {
       event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
     } catch (err) {
-      console.log(`⚠️ Webhook signature verification failed:`, err.message);
+      console.error(`Webhook signature verification failed:`, err.message);
       return res.status(400).json({ error: `Webhook Error: ${err.message}` });
     }
 
-    console.log(`🔔 Stripe webhook received: ${event.type}`);
 
     // Handle the event
     switch (event.type) {
@@ -147,7 +142,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
             stripeSubscriptionId: subscription.id,
             subscriptionStatus: subscription.status
           });
-          console.log(`✅ User ${userId} subscribed to ${tier} plan`);
+          console.error(`User ${userId} subscribed to ${tier} plan`);
         }
         break;
       }
@@ -162,20 +157,20 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
             subscriptionTier: 'free',
             subscriptionStatus: 'canceled'
           });
-          console.log(`✅ User ${userId} subscription canceled`);
+          console.error(`User ${userId} subscription canceled`);
         }
         break;
       }
       
       case 'invoice.payment_succeeded': {
         const invoice = event.data.object;
-        console.log(`💰 Payment succeeded for customer: ${invoice.customer}`);
+        console.error(`Payment succeeded for customer: ${invoice.customer}`);
         break;
       }
       
       case 'invoice.payment_failed': {
         const invoice = event.data.object;
-        console.log(`❌ Payment failed for customer: ${invoice.customer}`);
+        console.error(`Payment failed for customer: ${invoice.customer}`);
         // Update user subscription status
         if (invoice.subscription) {
           await User.updateOne(
@@ -187,7 +182,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
       }
       
       default:
-        console.log(`🤷 Unhandled event type: ${event.type}`);
+        // Unhandled event type
     }
 
     res.json({ received: true });

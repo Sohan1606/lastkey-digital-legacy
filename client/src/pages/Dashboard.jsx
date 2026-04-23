@@ -10,7 +10,7 @@ import GuardianProtocolPanel from '../components/GuardianProtocolPanel';
 import ActivityFeed from '../components/ActivityFeed';
 import LegacyTimeline from '../components/LegacyTimeline';
 import LegacyReadinessScore from '../components/LegacyReadinessScore';
-import Sidebar from '../components/Sidebar';
+import DashboardLayout from '../components/DashboardLayout';
 import { 
   Users, Lock, Clock, Sparkles, Zap, Award, BarChart3,
   Loader2, Mic, Calendar, BookOpen, Trophy, Heart, Package, FileText
@@ -39,6 +39,7 @@ const Dashboard = () => {
   const [dmsStatus, setDmsStatus] = useState({ status: 'active', remainingMinutes: 30 });
   const [isPremium, setIsPremium] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [checkingIn, setCheckingIn] = useState(false);
 
   // Check for mobile screen size
   useEffect(() => {
@@ -51,6 +52,24 @@ const Dashboard = () => {
     
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  const handleCheckIn = async () => {
+    setCheckingIn(true);
+    try {
+      await axios.post(
+        `${API_BASE}/auth/check-in`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success('Check-in recorded successfully!');
+      setLastActive(new Date());
+      queryClient.invalidateQueries(['user-stats']);
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Check-in failed');
+    } finally {
+      setCheckingIn(false);
+    }
+  };
 
   // Fetch user stats and premium status
   const { data: stats, isLoading: statsLoading } = useQuery({
@@ -117,6 +136,29 @@ const Dashboard = () => {
     enabled: !!token,
   });
 
+  // Fetch portal status for each beneficiary
+  const { data: portalStatuses } = useQuery({
+    queryKey: ['portal-statuses', beneficiariesData?.data?.beneficiaries],
+    queryFn: async () => {
+      if (!beneficiariesData?.data?.beneficiaries || beneficiariesData.data.beneficiaries.length === 0) return {};
+      const statuses = {};
+      await Promise.all(
+        beneficiariesData.data.beneficiaries.map(async (b) => {
+          try {
+            const res = await axios.get(`${API_BASE}/beneficiaries/${b._id}/portal-status`, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            statuses[b._id] = res.data.data;
+          } catch {
+            statuses[b._id] = null;
+          }
+        })
+      );
+      return statuses;
+    },
+    enabled: !!beneficiariesData?.data?.beneficiaries && beneficiariesData.data.beneficiaries.length > 0
+  });
+
   // Fetch capsules count
   const { data: capsulesData } = useQuery({
     queryKey: ['capsules-count'],
@@ -173,8 +215,8 @@ const Dashboard = () => {
       toast.success('â I\'m Here â Timer Reset', {
         icon: 'ð',
         style: {
-          background: 'linear-gradient(135deg, #00e5a0, #4f9eff)',
-          color: 'white',
+          background: 'linear-gradient(135deg, #4f9eff, #7c5cfc)',
+          color: 'var(--text-primary)',
           border: 'none',
         }
       });
@@ -218,17 +260,12 @@ const Dashboard = () => {
   const firstName = user?.name?.split(' ')[0] || 'there';
 
   return (
-    <div style={{ display: 'flex' }}>
-      {/* Sidebar */}
-      <Sidebar />
-      
-      {/* Main Content Area */}
+    <DashboardLayout>
       <div style={{
-        marginLeft: isMobile ? '0' : '240px',
         minHeight: '100vh',
-        background: '#030508',
+        background: 'var(--bg-base)',
         flex: 1,
-        transition: 'margin-left 0.3s ease-in-out'
+        padding: '32px'
       }}>
         {/* TOP - Header bar */}
         <div style={{
@@ -236,51 +273,55 @@ const Dashboard = () => {
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: isMobile ? '80px 16px 20px 16px' : '32px 32px 24px 32px',
-          borderBottom: '1px solid rgba(255,255,255,0.04)'
+          borderBottom: '1px solid var(--border)'
         }}>
           <div>
             <h1 style={{
               fontSize: '24px',
               fontWeight: 600,
-              color: '#ffffff',
+              color: 'var(--text-primary)',
               marginBottom: '4px'
             }}>
               {getTimeOfDay()}, {firstName} ð
             </h1>
             <p style={{
               fontSize: '14px',
-              color: '#64748b',
+              color: 'var(--text-muted)',
               margin: 0
             }}>
               {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' })} · Your vault is secure
             </p>
           </div>
           <button 
-            onClick={handlePing}
+            onClick={handleCheckIn}
+            disabled={checkingIn}
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
               padding: '10px 16px',
-              background: 'rgba(34, 197, 94, 0.1)',
-              border: '1px solid rgba(34, 197, 94, 0.2)',
-              borderRadius: '8px',
-              color: '#22c55e',
+              background: 'var(--green-dim)',
+              border: '1px solid rgba(52, 211, 153, 0.2)',
+              borderRadius: 'var(--radius-md)',
+              color: 'var(--green)',
               fontSize: '14px',
               fontWeight: 500,
-              cursor: 'pointer',
-              transition: 'all 150ms'
+              cursor: checkingIn ? 'not-allowed' : 'pointer',
+              transition: 'all 150ms',
+              opacity: checkingIn ? 0.6 : 1
             }}
             onMouseEnter={(e) => {
-              e.target.style.background = 'rgba(34, 197, 94, 0.15)';
-              e.target.style.borderColor = 'rgba(34, 197, 94, 0.3)';
+              if (!checkingIn) {
+                e.target.style.background = 'rgba(34, 197, 94, 0.15)';
+                e.target.style.borderColor = 'rgba(34, 197, 94, 0.3)';
+              }
             }}
             onMouseLeave={(e) => {
               e.target.style.background = 'rgba(34, 197, 94, 0.1)';
               e.target.style.borderColor = 'rgba(34, 197, 94, 0.2)';
             }}
           >
-            Check In
+            {checkingIn ? 'Checking in...' : 'Check In'}
           </button>
         </div>
 
@@ -293,9 +334,9 @@ const Dashboard = () => {
         }}>
           {/* Vault Items */}
           <div style={{
-            background: '#050d1a',
-            border: '1px solid rgba(255,255,255,0.04)',
-            borderRadius: '12px',
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--radius-lg)',
             padding: '20px'
           }}>
             <div style={{
@@ -307,7 +348,7 @@ const Dashboard = () => {
               <span style={{
                 fontSize: '10px',
                 fontWeight: 600,
-                color: '#64748b',
+                color: 'var(--text-muted)',
                 textTransform: 'uppercase',
                 letterSpacing: '0.1em'
               }}>
@@ -316,9 +357,9 @@ const Dashboard = () => {
               <div style={{
                 width: '32px',
                 height: '32px',
-                borderRadius: '8px',
-                background: 'rgba(59, 130, 246, 0.1)',
-                border: '1px solid rgba(59, 130, 246, 0.15)',
+                borderRadius: 'var(--radius-md)',
+                background: 'var(--blue-dim)',
+                border: '1px solid var(--blue-border)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
@@ -329,14 +370,14 @@ const Dashboard = () => {
             <p style={{
               fontSize: '32px',
               fontWeight: 700,
-              color: '#ffffff',
+              color: 'var(--text-primary)',
               margin: '0 0 4px 0'
             }}>
               {assetsData?.data?.length || 0}
             </p>
             <p style={{
               fontSize: '12px',
-              color: '#64748b',
+              color: 'var(--text-muted)',
               margin: 0
             }}>
               encrypted & secured
@@ -345,9 +386,9 @@ const Dashboard = () => {
 
           {/* Beneficiaries */}
           <div style={{
-            background: '#050d1a',
-            border: '1px solid rgba(255,255,255,0.04)',
-            borderRadius: '12px',
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--radius-lg)',
             padding: '20px'
           }}>
             <div style={{
@@ -359,7 +400,7 @@ const Dashboard = () => {
               <span style={{
                 fontSize: '10px',
                 fontWeight: 600,
-                color: '#64748b',
+                color: 'var(--text-muted)',
                 textTransform: 'uppercase',
                 letterSpacing: '0.1em'
               }}>
@@ -368,9 +409,9 @@ const Dashboard = () => {
               <div style={{
                 width: '32px',
                 height: '32px',
-                borderRadius: '8px',
-                background: 'rgba(139, 92, 246, 0.1)',
-                border: '1px solid rgba(139, 92, 246, 0.15)',
+                borderRadius: 'var(--radius-md)',
+                background: 'var(--purple-dim)',
+                border: '1px solid rgba(167, 139, 250, 0.2)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
@@ -381,14 +422,14 @@ const Dashboard = () => {
             <p style={{
               fontSize: '32px',
               fontWeight: 700,
-              color: '#ffffff',
+              color: 'var(--text-primary)',
               margin: '0 0 4px 0'
             }}>
               {beneficiariesData?.data?.beneficiaries?.length || 0}
             </p>
             <p style={{
               fontSize: '12px',
-              color: '#64748b',
+              color: 'var(--text-muted)',
               margin: 0
             }}>
               designated contacts
@@ -397,9 +438,9 @@ const Dashboard = () => {
 
           {/* Active Triggers */}
           <div style={{
-            background: '#050d1a',
-            border: '1px solid rgba(255,255,255,0.04)',
-            borderRadius: '12px',
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--radius-lg)',
             padding: '20px'
           }}>
             <div style={{
@@ -411,7 +452,7 @@ const Dashboard = () => {
               <span style={{
                 fontSize: '10px',
                 fontWeight: 600,
-                color: '#64748b',
+                color: 'var(--text-muted)',
                 textTransform: 'uppercase',
                 letterSpacing: '0.1em'
               }}>
@@ -420,7 +461,7 @@ const Dashboard = () => {
               <div style={{
                 width: '32px',
                 height: '32px',
-                borderRadius: '8px',
+                borderRadius: 'var(--radius-md)',
                 background: 'rgba(34, 197, 94, 0.1)',
                 border: '1px solid rgba(34, 197, 94, 0.15)',
                 display: 'flex',
@@ -433,14 +474,14 @@ const Dashboard = () => {
             <p style={{
               fontSize: '32px',
               fontWeight: 700,
-              color: '#ffffff',
+              color: 'var(--text-primary)',
               margin: '0 0 4px 0'
             }}>
               {dmsStatus.status === 'active' ? '1' : '0'}
             </p>
             <p style={{
               fontSize: '12px',
-              color: '#64748b',
+              color: 'var(--text-muted)',
               margin: 0
             }}>
               monitoring your account
@@ -449,9 +490,9 @@ const Dashboard = () => {
 
           {/* Documents */}
           <div style={{
-            background: '#050d1a',
-            border: '1px solid rgba(255,255,255,0.04)',
-            borderRadius: '12px',
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--radius-lg)',
             padding: '20px'
           }}>
             <div style={{
@@ -463,7 +504,7 @@ const Dashboard = () => {
               <span style={{
                 fontSize: '10px',
                 fontWeight: 600,
-                color: '#64748b',
+                color: 'var(--text-muted)',
                 textTransform: 'uppercase',
                 letterSpacing: '0.1em'
               }}>
@@ -472,7 +513,7 @@ const Dashboard = () => {
               <div style={{
                 width: '32px',
                 height: '32px',
-                borderRadius: '8px',
+                borderRadius: 'var(--radius-md)',
                 background: 'rgba(251, 146, 60, 0.1)',
                 border: '1px solid rgba(251, 146, 60, 0.15)',
                 display: 'flex',
@@ -485,14 +526,14 @@ const Dashboard = () => {
             <p style={{
               fontSize: '32px',
               fontWeight: 700,
-              color: '#ffffff',
+              color: 'var(--text-primary)',
               margin: '0 0 4px 0'
             }}>
               {documentsData?.data?.length || 0}
             </p>
             <p style={{
               fontSize: '12px',
-              color: '#64748b',
+              color: 'var(--text-muted)',
               margin: 0
             }}>
               verified documents
@@ -510,15 +551,15 @@ const Dashboard = () => {
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '24px' }}>
             {/* Recent Activity */}
             <div style={{
-              background: '#050d1a',
-              border: '1px solid rgba(255,255,255,0.04)',
-              borderRadius: '12px',
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius-lg)',
               padding: '24px'
             }}>
               <h3 style={{
                 fontSize: '14px',
                 fontWeight: 600,
-                color: '#ffffff',
+                color: 'var(--text-primary)',
                 marginBottom: '16px'
               }}>
                 Recent Activity
@@ -528,15 +569,15 @@ const Dashboard = () => {
 
             {/* Guardian Protocol Panel */}
             <div style={{
-              background: '#050d1a',
-              border: '1px solid rgba(255,255,255,0.04)',
-              borderRadius: '12px',
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius-lg)',
               padding: '24px'
             }}>
               <h3 style={{
                 fontSize: '14px',
                 fontWeight: 600,
-                color: '#ffffff',
+                color: 'var(--text-primary)',
                 marginBottom: '16px'
               }}>
                 Guardian Protocol
@@ -546,15 +587,15 @@ const Dashboard = () => {
 
             {/* Legacy Readiness Score */}
             <div style={{
-              background: '#050d1a',
-              border: '1px solid rgba(255,255,255,0.04)',
-              borderRadius: '12px',
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius-lg)',
               padding: '24px'
             }}>
               <h3 style={{
                 fontSize: '14px',
                 fontWeight: 600,
-                color: '#ffffff',
+                color: 'var(--text-primary)',
                 marginBottom: '16px'
               }}>
                 Legacy Readiness
@@ -562,7 +603,6 @@ const Dashboard = () => {
               <LegacyReadinessScore 
                 assetCount={assetsData?.data?.length || 0}
                 beneficiaryCount={beneficiariesData?.data?.beneficiaries?.length || 0}
-                enrolledBeneficiaryCount={beneficiariesData?.data?.beneficiaries?.filter(b => b.enrollmentStatus === 'enrolled').length || 0}
                 capsuleCount={capsulesData?.data?.capsules?.length || 0}
                 documentCount={documentsData?.data?.length || 0}
                 vaultUnlocked={false}
@@ -574,15 +614,15 @@ const Dashboard = () => {
           <div style={{ width: '320px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
             {/* Security Status */}
             <div style={{
-              background: '#050d1a',
-              border: '1px solid rgba(255,255,255,0.04)',
-              borderRadius: '12px',
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius-lg)',
               padding: '24px'
             }}>
               <h3 style={{
                 fontSize: '14px',
                 fontWeight: 600,
-                color: '#ffffff',
+                color: 'var(--text-primary)',
                 marginBottom: '16px'
               }}>
                 Security Status
@@ -603,23 +643,99 @@ const Dashboard = () => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22c55e' }}></div>
                   <span style={{ fontSize: '14px', color: '#e2e8f0' }}>
-                    Last Check-in: {lastActive ? new Date(lastActive).toLocaleDateString() : 'Never'}
+                    Last Check-in: {lastActive 
+                      ? (Date.now() - new Date(lastActive).getTime() < 60000 
+                          ? 'just now' 
+                          : new Date(lastActive).toLocaleDateString())
+                      : 'Never'}
                   </span>
                 </div>
               </div>
             </div>
 
+            {/* Legacy Delivery Status */}
+            {beneficiariesData?.data?.beneficiaries && beneficiariesData.data.beneficiaries.length > 0 && (
+              <div style={{
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border)',
+                borderRadius: 'var(--radius-lg)',
+                padding: '24px'
+              }}>
+                <h3 style={{
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  color: 'var(--text-primary)',
+                  marginBottom: '16px'
+                }}>
+                  Legacy Delivery Status
+                </h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {beneficiariesData.data.beneficiaries.map(beneficiary => {
+                    const status = portalStatuses?.[beneficiary._id];
+                    let statusColor = '#64748b';
+                    let statusText = 'Pending';
+                    
+                    if (status?.isClaimed) {
+                      statusColor = '#22c55e';
+                      statusText = 'Claimed';
+                    } else if (status?.hasAccess) {
+                      statusColor = '#f59e0b';
+                      statusText = 'Accessed';
+                    } else if (status?.hasAccess === false && status?.message) {
+                      statusColor = '#3b82f6';
+                      statusText = 'Email Sent';
+                    }
+                    
+                    return (
+                      <div key={beneficiary._id} style={{
+                        background: 'rgba(255,255,255,0.02)',
+                        border: '1px solid var(--border)',
+                        borderRadius: 'var(--radius-md)',
+                        padding: '12px'
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                          <span style={{ fontSize: '14px', fontWeight: 500, color: '#e2e8f0' }}>
+                            {beneficiary.name}
+                          </span>
+                          <span style={{
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            color: statusColor,
+                            background: `${statusColor}15`,
+                            padding: '4px 8px',
+                            borderRadius: '4px'
+                          }}>
+                            {statusText}
+                          </span>
+                        </div>
+                        {status?.lastAccessed && (
+                          <p style={{ fontSize: '11px', color: '#64748b', margin: 0 }}>
+                            Last accessed: {new Date(status.lastAccessed).toLocaleDateString()}
+                          </p>
+                        )}
+                        {status?.isClaimed && (
+                          <p style={{ fontSize: '11px', color: '#22c55e', margin: '4px 0 0 0' }}>
+                            ✓ Legacy transferred to their account
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* Quick Actions */}
             <div style={{
-              background: '#050d1a',
-              border: '1px solid rgba(255,255,255,0.04)',
-              borderRadius: '12px',
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius-lg)',
               padding: '24px'
             }}>
               <h3 style={{
                 fontSize: '14px',
                 fontWeight: 600,
-                color: '#ffffff',
+                color: 'var(--text-primary)',
                 marginBottom: '16px'
               }}>
                 Quick Actions
@@ -632,8 +748,8 @@ const Dashboard = () => {
                     padding: '10px 16px',
                     background: 'rgba(59, 130, 246, 0.1)',
                     border: '1px solid rgba(59, 130, 246, 0.2)',
-                    borderRadius: '8px',
-                    color: '#3b82f6',
+                    borderRadius: 'var(--radius-md)',
+                    color: 'var(--blue)',
                     fontSize: '14px',
                     fontWeight: 500,
                     cursor: 'pointer',
@@ -657,8 +773,8 @@ const Dashboard = () => {
                     padding: '10px 16px',
                     background: 'rgba(139, 92, 246, 0.1)',
                     border: '1px solid rgba(139, 92, 246, 0.2)',
-                    borderRadius: '8px',
-                    color: '#8b5cf6',
+                    borderRadius: 'var(--radius-md)',
+                    color: 'var(--purple)',
                     fontSize: '14px',
                     fontWeight: 500,
                     cursor: 'pointer',
@@ -682,8 +798,8 @@ const Dashboard = () => {
                     padding: '10px 16px',
                     background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
                     border: 'none',
-                    borderRadius: '8px',
-                    color: '#ffffff',
+                    borderRadius: 'var(--radius-md)',
+                    color: 'var(--text-primary)',
                     fontSize: '14px',
                     fontWeight: 500,
                     cursor: 'pointer',
@@ -703,15 +819,15 @@ const Dashboard = () => {
 
             {/* AI Suggestions */}
             <div style={{
-              background: '#050d1a',
-              border: '1px solid rgba(255,255,255,0.04)',
-              borderRadius: '12px',
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius-lg)',
               padding: '24px'
             }}>
               <h3 style={{
                 fontSize: '14px',
                 fontWeight: 600,
-                color: '#ffffff',
+                color: 'var(--text-primary)',
                 marginBottom: '16px'
               }}>
                 AI Smart Suggestions
@@ -722,7 +838,7 @@ const Dashboard = () => {
                     <div key={i} style={{
                       height: '64px',
                       background: '#1e293b',
-                      borderRadius: '8px',
+                      borderRadius: 'var(--radius-md)',
                       animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
                     }} />
                   ))}
@@ -736,14 +852,14 @@ const Dashboard = () => {
                   <p style={{
                     fontSize: '14px',
                     fontWeight: 500,
-                    color: '#22c55e',
+                    color: 'var(--green)',
                     marginBottom: '4px'
                   }}>
                     Perfect Setup!
                   </p>
                   <p style={{
                     fontSize: '12px',
-                    color: '#64748b',
+                    color: 'var(--text-muted)',
                     margin: 0
                   }}>
                     Your digital legacy is fully optimized.
@@ -766,7 +882,7 @@ const Dashboard = () => {
                         onClick={() => navigate('/' + s.action)}
                         style={{
                           padding: '12px',
-                          borderRadius: '8px',
+                          borderRadius: 'var(--radius-md)',
                           border: `1px solid ${color.border}`,
                           background: color.bg,
                           color: color.text,
@@ -819,7 +935,7 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
-    </div>
+    </DashboardLayout>
   );
 };
 

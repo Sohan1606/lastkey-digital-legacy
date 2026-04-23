@@ -17,6 +17,5 @@ exports.scheduleCapsuleRelease = async (capsule) => {
       { capsuleId: capsule._id.toString() },
       { delay, jobId: `release-${capsule._id}`, removeOnComplete: 100 }
     );
-    console.log(`Capsule ${capsule.title} scheduled to release in ${Math.floor(delay/1000/60)}min`);
   }
 };

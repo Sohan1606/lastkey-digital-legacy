@@ -5,6 +5,7 @@ import { Mic, Play, Pause, Download, Sparkles, User, Clock, Volume2, Save, Trash
 import { motion } from 'framer-motion';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import DashboardLayout from '../components/DashboardLayout';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
@@ -25,6 +26,10 @@ const VoiceMessages = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [mediaRecorder, setMediaRecorder] = useState(null);
+  const [audioChunks, setAudioChunks] = useState([]);
+  const [audioBlob, setAudioBlob] = useState(null);
+  const timerRef = React.useRef(null);
 
   useEffect(() => {
     let interval;
@@ -37,6 +42,53 @@ const VoiceMessages = () => {
   }, [isRecording]);
 
   const formatRecordingTime = (s) => `${Math.floor(s/60).toString().padStart(2,'0')}:${(s%60).toString().padStart(2,'0')}`;
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      
+      const recorder = new MediaRecorder(stream);
+      const chunks = [];
+      
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          chunks.push(e.data);
+        }
+      };
+      
+      recorder.onstop = () => {
+        const blob = new Blob(chunks, { type: 'audio/webm' });
+        const url = URL.createObjectURL(blob);
+        setAudioBlob(blob);
+        setAudioUrl(url);
+        setAudioChunks([]);
+        stream.getTracks().forEach(t => t.stop());
+      };
+      
+      recorder.start();
+      setMediaRecorder(recorder);
+      setIsRecording(true);
+      setRecordingTime(0);
+      
+      timerRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
+      
+      toast.success('Recording started');
+    } catch (error) {
+      toast.error('Microphone access denied. Please allow microphone in browser settings.');
+      console.error('Recording error:', error);
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorder && isRecording) {
+      mediaRecorder.stop();
+      setIsRecording(false);
+      clearInterval(timerRef.current);
+      toast.success('Recording stopped');
+    }
+  };
 
   const getAudioSrc = (url) => {
     if (!url) return '';
@@ -176,200 +228,452 @@ const VoiceMessages = () => {
   const selectedEmotion = emotions.find(e => e.id === formData.emotion) || emotions[0];
 
   return (
-    <div className="page spatial-bg">
-      <div className="stars" />
-      <div className="container">
-        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 8 }}>
-            <div style={{ width: 48, height: 48, borderRadius: 14, background: 'linear-gradient(135deg, rgba(124,92,252,0.3), rgba(255,77,109,0.3))', border: '1px solid rgba(124,92,252,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Mic style={{ width: 22, height: 22, color: 'var(--plasma)' }} />
+    <DashboardLayout>
+      <div style={{
+        padding: '32px',
+        maxWidth: '1200px',
+        margin: '0 auto',
+        minHeight: '100vh',
+        background: 'var(--bg-base)'
+      }}>
+        {/* PAGE HEADER */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'flex-start',
+          justifyContent: 'space-between',
+          marginBottom: '32px',
+          flexWrap: 'wrap',
+          gap: '16px'
+        }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '14px'
+          }}>
+            <div style={{
+              width: '48px',
+              height: '48px',
+              borderRadius: '14px',
+              background: 'linear-gradient(135deg, rgba(79,158,255,0.15), rgba(167,139,250,0.15))',
+              border: '1px solid rgba(79,158,255,0.2)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '22px',
+              flexShrink: 0
+            }}>
+              🎙️
             </div>
             <div>
-              <h1 className="display" style={{ fontSize: 28 }}>Voice Messages</h1>
-              <p style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 2 }}>AI-narrated farewell messages for your loved ones</p>
+              <h1 style={{
+                fontSize: '24px',
+                fontWeight: '700',
+                color: 'var(--text-primary)',
+                margin: 0,
+                letterSpacing: '-0.01em'
+              }}>
+                Voice Messages
+              </h1>
+              <p style={{
+                fontSize: '14px',
+                color: 'var(--text-muted)',
+                margin: '4px 0 0 0'
+              }}>
+                Record personal messages for your loved ones
+              </p>
             </div>
           </div>
-        </motion.div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 24, marginTop: 28 }}>
-          <motion.div initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.05 }}
-            style={{ background: 'var(--glass-1)', backdropFilter: 'blur(20px)', border: '1px solid var(--glass-border)', borderRadius: 20, padding: 24 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
-              <Sparkles style={{ width: 18, height: 18, color: 'var(--plasma)' }} />
-              <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-1)' }}>Create Message</h2>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <div>
-                <label>Your Message</label>
-                <textarea value={formData.text} onChange={e => setFormData({ ...formData, text: e.target.value })} placeholder="Write something heartfelt..." style={{ height: 100, resize: 'none' }} maxLength={500} />
-                <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 6, textAlign: 'right' }}>{formData.text.length}/500</div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <div>
-                  <label>Voice Style</label>
-                  <select value={formData.voice} onChange={e => setFormData({ ...formData, voice: e.target.value })}>
-                    {voices.map(v => <option key={v.id} value={v.id}>{v.name} - {v.description}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label>Emotion</label>
-                  <select value={formData.emotion} onChange={e => setFormData({ ...formData, emotion: e.target.value })}>
-                    {emotions.map(e => <option key={e.id} value={e.id}>{e.name} - {e.description}</option>)}
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label>Recipient (Optional)</label>
-                <input type="text" value={formData.recipient} onChange={e => setFormData({ ...formData, recipient: e.target.value })} placeholder="Who is this for?" />
-              </div>
-
-              <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.97 }} onClick={handleGenerateVoice}
-                disabled={generateVoiceMutation.isPending || !formData.text.trim()}
-                style={{ padding: '14px 20px', borderRadius: 12, border: 'none', background: `linear-gradient(135deg, ${selectedEmotion.color}, var(--plasma))`, color: 'white', fontWeight: 700, fontSize: 14, cursor: generateVoiceMutation.isPending || !formData.text.trim() ? 'not-allowed' : 'pointer', opacity: generateVoiceMutation.isPending || !formData.text.trim() ? 0.6 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                {generateVoiceMutation.isPending ? (
-                  <><div className="spinner spinner-sm" style={{ borderTopColor: 'white' }} /> Generating...</>
-                ) : (
-                  <><Sparkles style={{ width: 16, height: 16 }} /> Generate Voice</>
-                )}
-              </motion.button>
-
-              {audioUrl && (
-                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} style={{ marginTop: 8, padding: 16, background: 'rgba(0,229,160,0.04)', border: '1px solid rgba(0,229,160,0.15)', borderRadius: 14 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                    <Volume2 style={{ width: 16, height: 16, color: 'var(--pulse)' }} />
-                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--pulse)' }}>Voice Preview</span>
-                  </div>
-                  <audio id="voiceAudio" style={{ width: '100%', height: 36 }} controls onEnded={() => setIsPlaying(false)}>
-                    <source src={getAudioSrc(audioUrl)} type="audio/mpeg" />
-                  </audio>
-                  <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-                    <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={handlePlayPause}
-                      style={{ flex: 1, padding: '10px 16px', borderRadius: 10, border: '1px solid rgba(0,229,160,0.2)', background: 'rgba(0,229,160,0.08)', color: 'var(--pulse)', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                      {isPlaying ? <Pause style={{ width: 14, height: 14 }} /> : <Play style={{ width: 14, height: 14 }} />}
-                      {isPlaying ? 'Pause' : 'Play'}
-                    </motion.button>
-                    <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => handleDownload({ audioUrl, title: formData.text.substring(0, 30) })}
-                      style={{ flex: 1, padding: '10px 16px', borderRadius: 10, border: '1px solid var(--glass-border)', background: 'var(--glass-1)', color: 'var(--text-2)', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                      <Download style={{ width: 14, height: 14 }} /> Download
-                    </motion.button>
-                  </div>
-                </motion.div>
-              )}
-            </div>
-          </motion.div>
-
-          <motion.div initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}
-            style={{ background: 'var(--glass-1)', backdropFilter: 'blur(20px)', border: '1px solid var(--glass-border)', borderRadius: 20, padding: 24 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
-              <User style={{ width: 18, height: 18, color: 'var(--ion)' }} />
-              <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-1)' }}>Save Message</h2>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <div>
-                <label>Message Title</label>
-                <input type="text" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} placeholder="Give your message a title..." />
-              </div>
-
-              {!audioUrl && (
-                <div style={{ padding: 24, textAlign: 'center', background: 'var(--glass-2)', borderRadius: 14, border: '1px dashed var(--glass-border)' }}>
-                  <Sparkles style={{ width: 32, height: 32, color: 'var(--text-3)', margin: '0 auto 10px' }} />
-                  <p style={{ fontSize: 13, color: 'var(--text-2)' }}>Generate a voice message first</p>
-                </div>
-              )}
-
-              {audioUrl && (
-                <div style={{ padding: 16, background: 'rgba(79,158,255,0.04)', border: '1px solid rgba(79,158,255,0.15)', borderRadius: 14 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--pulse)', boxShadow: '0 0 8px var(--pulse)' }} />
-                    <span style={{ fontSize: 12, color: 'var(--pulse)', fontWeight: 600 }}>Ready to save</span>
-                  </div>
-                  <p style={{ fontSize: 12, color: 'var(--text-2)' }}>{formData.recipient ? `For: ${formData.recipient}` : 'No recipient specified'}</p>
-                </div>
-              )}
-
-              <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.97 }} onClick={handleSaveMessage}
-                disabled={saveMessageMutation.isPending || !formData.title.trim() || !audioUrl}
-                style={{ padding: '14px 20px', borderRadius: 12, border: 'none', background: saveMessageMutation.isPending || !formData.title.trim() || !audioUrl ? 'var(--glass-2)' : 'linear-gradient(135deg, #4f9eff, #00e5a0)', color: saveMessageMutation.isPending || !formData.title.trim() || !audioUrl ? 'var(--text-3)' : '#001a12', fontWeight: 700, fontSize: 14, cursor: saveMessageMutation.isPending || !formData.title.trim() || !audioUrl ? 'not-allowed' : 'pointer', opacity: saveMessageMutation.isPending || !formData.title.trim() || !audioUrl ? 0.5 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                {saveMessageMutation.isPending ? (
-                  <><div className="spinner spinner-sm" style={{ borderTopColor: 'currentColor' }} /> Saving...</>
-                ) : (
-                  <><Save style={{ width: 16, height: 16 }} /> Save Voice Message</>
-                )}
-              </motion.button>
-            </div>
-          </motion.div>
         </div>
 
-        {voiceMessages && voiceMessages.length > 0 && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} style={{ marginTop: 32 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-              <Clock style={{ width: 18, height: 18, color: 'var(--text-2)' }} />
-              <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-1)' }}>Your Messages ({voiceMessages.length})</h2>
-            </div>
+        {/* PAGE CONTENT - Recording Interface */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' }}>
+          {/* Left Column - Recording Section (40%) */}
+          <div style={{ minWidth: 0 }}>
+            <div style={{
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border)',
+              borderRadius: '20px',
+              padding: '24px',
+              marginBottom: '20px'
+            }}>
+              <h2 style={{
+                fontSize: '18px',
+                fontWeight: '700',
+                color: 'var(--text-primary)',
+                marginBottom: '20px'
+              }}>
+                Record New Message
+              </h2>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {voiceMessages.map((message, index) => {
-                const emotion = emotions.find(e => e.id === message.emotion) || emotions[0];
-                return (
-                  <motion.div key={message._id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.05 }}
-                    style={{ background: 'var(--glass-1)', backdropFilter: 'blur(20px)', border: '1px solid var(--glass-border)', borderRadius: 16, padding: 18 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-                      <div>
-                        <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-1)', marginBottom: 4 }}>{message.title}</h3>
-                        <div style={{ display: 'flex', gap: 8 }}>
-                          <span style={{ fontSize: 11, color: 'var(--text-2)', background: 'var(--glass-2)', padding: '2px 8px', borderRadius: 6 }}>{message.voice}</span>
-                          <span style={{ fontSize: 11, color: emotion.color, background: `${emotion.color}15`, border: `1px solid ${emotion.color}25`, padding: '2px 8px', borderRadius: 6 }}>{emotion.name}</span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div>
+                  <label style={{
+                    display: 'block',
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    color: 'var(--text-secondary)',
+                    marginBottom: '8px'
+                  }}>
+                    Recipient
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.recipient}
+                    onChange={e => setFormData({ ...formData, recipient: e.target.value })}
+                    placeholder="Who is this for?"
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      background: 'var(--bg-base)',
+                      border: '1px solid var(--border-hover)',
+                      borderRadius: '10px',
+                      color: 'var(--text-primary)',
+                      fontSize: '14px',
+                      outline: 'none',
+                      fontFamily: 'inherit'
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{
+                    display: 'block',
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    color: 'var(--text-secondary)',
+                    marginBottom: '8px'
+                  }}>
+                    Title
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.title}
+                    onChange={e => setFormData({ ...formData, title: e.target.value })}
+                    placeholder="Message subject"
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      background: 'var(--bg-base)',
+                      border: '1px solid var(--border-hover)',
+                      borderRadius: '10px',
+                      color: 'var(--text-primary)',
+                      fontSize: '14px',
+                      outline: 'none',
+                      fontFamily: 'inherit'
+                    }}
+                  />
+                </div>
+
+                {/* Recording Area */}
+                <div style={{
+                  padding: '40px 20px',
+                  background: 'var(--bg-base)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '16px',
+                  textAlign: 'center'
+                }}>
+                  <div
+                    onClick={isRecording ? stopRecording : startRecording}
+                    style={{
+                      width: '80px',
+                      height: '80px',
+                      borderRadius: '50%',
+                      background: isRecording 
+                        ? 'rgba(255,77,109,0.15)' 
+                        : 'linear-gradient(135deg, #ff4d6d, #ff6b8a)',
+                      border: isRecording 
+                        ? '3px solid #ff4d6d'
+                        : '3px solid transparent',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      margin: '0 auto 16px',
+                      fontSize: '32px',
+                      transition: 'all 0.2s ease',
+                      boxShadow: isRecording
+                        ? '0 0 0 12px rgba(255,77,109,0.1), 0 0 32px rgba(255,77,109,0.3)'
+                        : '0 8px 24px rgba(255,77,109,0.4)',
+                      animation: isRecording 
+                        ? 'pulse 1.5s ease-in-out infinite' 
+                        : 'none'
+                    }}
+                  >
+                    {isRecording ? '⏹' : '🎙️'}
+                  </div>
+                  {isRecording && (
+                    <p style={{
+                      textAlign: 'center',
+                      color: '#ff4d6d',
+                      fontSize: '16px',
+                      fontWeight: '600',
+                      marginBottom: '8px'
+                    }}>
+                      ● Recording {formatRecordingTime(recordingTime)}
+                    </p>
+                  )}
+                  {!isRecording && (
+                    <p style={{
+                      fontSize: '14px',
+                      color: 'var(--text-muted)',
+                      marginTop: '16px'
+                    }}>
+                      Click to start recording
+                    </p>
+                  )}
+                </div>
+
+                {/* Preview Player */}
+                {audioUrl && (
+                  <div style={{
+                    padding: '16px',
+                    background: 'var(--bg-base)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '12px'
+                  }}>
+                    <p style={{
+                      fontSize: '13px',
+                      fontWeight: '600',
+                      color: 'var(--text-secondary)',
+                      marginBottom: '12px'
+                    }}>
+                  Preview
+                  </p>
+                    <audio
+                      id="voiceAudio"
+                      controls
+                      onEnded={() => setIsPlaying(false)}
+                      style={{
+                        width: '100%',
+                        height: '36px',
+                        borderRadius: '8px',
+                        background: 'var(--bg-base)'
+                      }}
+                    >
+                      <source src={getAudioSrc(audioUrl)} type="audio/mpeg" />
+                    </audio>
+                  </div>
+                )}
+
+                <button
+                  onClick={handleSaveMessage}
+                  disabled={saveMessageMutation.isPending || !formData.title.trim() || !audioUrl}
+                  style={{
+                    width: '100%',
+                    padding: '12px 20px',
+                    background: 'linear-gradient(135deg, #4f9eff, #7c5cfc)',
+                    border: 'none',
+                    borderRadius: '10px',
+                    color: 'white',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: saveMessageMutation.isPending || !formData.title.trim() || !audioUrl
+                      ? 'not-allowed'
+                      : 'pointer',
+                    opacity: saveMessageMutation.isPending || !formData.title.trim() || !audioUrl ? 0.5 : 1,
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  {saveMessageMutation.isPending ? 'Saving...' : 'Save Message'}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column - Recordings List (60%) */}
+          <div style={{ minWidth: 0 }}>
+            <div style={{
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border)',
+              borderRadius: '20px',
+              padding: '24px'
+            }}>
+              <h2 style={{
+                fontSize: '18px',
+                fontWeight: '700',
+                color: 'var(--text-primary)',
+                marginBottom: '20px'
+              }}>
+                Your Recordings ({voiceMessages?.length || 0})
+              </h2>
+
+              {!voiceMessages || voiceMessages.length === 0 ? (
+                <div style={{
+                  textAlign: 'center',
+                  padding: '60px 20px',
+                  background: 'var(--bg-base)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '16px'
+                }}>
+                  <div style={{ fontSize: '48px', opacity: 0.3, marginBottom: '16px' }}>🎙️</div>
+                  <h3 style={{
+                    fontSize: '18px',
+                    fontWeight: '600',
+                    color: 'var(--text-primary)',
+                    marginBottom: '8px'
+                  }}>
+                    No recordings yet
+                  </h3>
+                  <p style={{
+                    fontSize: '14px',
+                    color: 'var(--text-muted)',
+                    marginBottom: '24px',
+                    maxWidth: '320px',
+                    margin: '0 auto 24px'
+                  }}>
+                    Record your first voice message to leave a personal touch for your loved ones
+                  </p>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {voiceMessages.map((message, index) => {
+                    const emotion = emotions.find(e => e.id === message.emotion) || emotions[0];
+                    return (
+                      <div
+                        key={message._id}
+                        style={{
+                          background: 'var(--bg-base)',
+                          border: '1px solid var(--border)',
+                          borderRadius: '16px',
+                          padding: '20px',
+                          marginBottom: '12px',
+                          transition: 'border-color 0.15s ease'
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--border-hover)'}
+                        onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                          <span style={{ fontSize: '24px' }}>🎙️</span>
+                          <div style={{ flex: 1 }}>
+                            <h3 style={{
+                              fontSize: '15px',
+                              fontWeight: '600',
+                              color: 'var(--text-primary)',
+                              marginBottom: '4px'
+                            }}>
+                              {message.title}
+                            </h3>
+                            <p style={{
+                              fontSize: '13px',
+                              color: 'var(--text-muted)'
+                            }}>
+                              {message.recipient || 'No recipient'}
+                            </p>
+                          </div>
+                          <span style={{
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            color: emotion.color,
+                            background: `${emotion.color}15`,
+                            padding: '4px 10px',
+                            borderRadius: '8px'
+                          }}>
+                            {emotion.name}
+                          </span>
+                        </div>
+                        
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                          <Clock style={{ width: '14px', height: '14px', color: 'var(--text-muted)' }} />
+                          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                            {new Date(message.createdAt).toLocaleDateString()}
+                          </span>
+                        </div>
+
+                        <audio
+                          controls
+                          style={{
+                            width: '100%',
+                            height: '36px',
+                            borderRadius: '8px',
+                            background: 'var(--bg-base)',
+                            marginBottom: '12px'
+                          }}
+                        >
+                          <source src={getAudioSrc(message.audioUrl)} type="audio/mpeg" />
+                        </audio>
+
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                          <button
+                            onClick={() => handleDownload(message)}
+                            style={{
+                              padding: '8px 16px',
+                              background: 'var(--bg-elevated)',
+                              border: '1px solid var(--border)',
+                              borderRadius: '8px',
+                              color: 'var(--text-secondary)',
+                              fontSize: '13px',
+                              fontWeight: '500',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px'
+                            }}
+                          >
+                            <Download style={{ width: '14px', height: '14px' }} /> Download
+                          </button>
+                          {deleteConfirm === message._id ? (
+                            <>
+                              <button
+                                onClick={() => handleDeleteMessage(message._id)}
+                                style={{
+                                  padding: '8px 16px',
+                                  background: 'rgba(255,77,109,0.1)',
+                                  border: '1px solid rgba(255,77,109,0.3)',
+                                  borderRadius: '8px',
+                                  color: '#ff4d6d',
+                                  fontSize: '13px',
+                                  fontWeight: '600',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                Delete
+                              </button>
+                              <button
+                                onClick={() => setDeleteConfirm(null)}
+                                style={{
+                                  padding: '8px 16px',
+                                  background: 'var(--bg-elevated)',
+                                  border: '1px solid var(--border)',
+                                  borderRadius: '8px',
+                                  color: 'var(--text-secondary)',
+                                  fontSize: '13px',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                Cancel
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              onClick={() => setDeleteConfirm(message._id)}
+                              style={{
+                                padding: '8px 16px',
+                                background: 'rgba(255,77,109,0.08)',
+                                border: '1px solid rgba(255,77,109,0.2)',
+                                borderRadius: '8px',
+                                color: '#ff4d6d',
+                                fontSize: '13px',
+                                fontWeight: '500',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px'
+                              }}
+                            >
+                              <Trash2 style={{ width: '14px', height: '14px' }} /> Delete
+                            </button>
+                          )}
                         </div>
                       </div>
-                      <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
-                        {new Date(message.createdAt).toLocaleDateString()}
-                      </div>
-                    </div>
-                    <audio style={{ width: '100%', height: 36, marginBottom: 12 }} controls>
-                      <source src={getAudioSrc(message.audioUrl)} type="audio/mpeg" />
-                    </audio>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: 12, color: 'var(--text-2)' }}>To: {message.recipient || 'Unspecified'}</span>
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => handleDownload(message)}
-                          style={{ padding: '8px 14px', borderRadius: 9, border: '1px solid rgba(79,158,255,0.2)', background: 'rgba(79,158,255,0.08)', color: 'var(--ion)', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
-                          <Download style={{ width: 13, height: 13 }} /> Download
-                        </motion.button>
-                        {deleteConfirm === message._id ? (
-                          <div style={{ display: 'flex', gap: 6 }}>
-                            <button
-                              onClick={() => handleDeleteMessage(message._id)}
-                              style={{ padding: '8px 14px', borderRadius: 9, background: 'rgba(255,77,109,0.15)', border: '1px solid rgba(255,77,109,0.3)', color: '#ff4d6d', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}
-                            >
-                              <Trash2 style={{ width: 13, height: 13, color: 'var(--danger)' }} /> Delete
-                            </button>
-                            <button
-                              onClick={() => setDeleteConfirm(null)}
-                              style={{ padding: '8px 14px', borderRadius: 9, background: 'var(--glass-1)', border: '1px solid var(--glass-border)', color: 'var(--text-2)', fontSize: 12, cursor: 'pointer' }}
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        ) : (
-                          <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setDeleteConfirm(message._id)}
-                            style={{ padding: '8px 14px', borderRadius: 9, border: '1px solid rgba(255,77,109,0.2)', background: 'rgba(255,77,109,0.08)', color: 'var(--danger)', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
-                            <Trash2 style={{ width: 13, height: 13 }} /> Delete
-                          </motion.button>
-                        )}
-                      </div>
-                    </div>
-                  </motion.div>
-                );
-              })}
+                    );
+                  })}
+                </div>
+              )}
             </div>
-          </motion.div>
-        )}
+          </div>
+        </div>
       </div>
-    </div>
+    </DashboardLayout>
   );
 };
 

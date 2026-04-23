@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { ClipboardList, Shield, Lock, Activity, AlertTriangle, Mail, Info } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import DashboardLayout from '../components/DashboardLayout';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
@@ -101,9 +102,10 @@ const ActivityLogs = () => {
   }
 
   return (
-    <div className="page spatial-bg">
-      <div className="stars" />
-      <div className="container" style={{ maxWidth: 900, padding: '40px 24px' }}>
+    <DashboardLayout>
+      <div className="page spatial-bg">
+        <div className="stars" />
+        <div className="container" style={{ maxWidth: 900, padding: '40px 24px' }}>
         {/* Header */}
         <motion.div 
           initial={{ opacity: 0, y: -20 }} 
@@ -112,8 +114,8 @@ const ActivityLogs = () => {
         >
           <div style={{ 
             width: 64, height: 64, borderRadius: 20, 
-            background: 'linear-gradient(135deg, rgba(79,158,255,0.2), rgba(124,92,252,0.2))', 
-            border: '1px solid rgba(79,158,255,0.3)', 
+            background: 'var(--bg-base)', 
+            border: '1px solid var(--border)', 
             display: 'flex', alignItems: 'center', justifyContent: 'center', 
             margin: '0 auto 20px' 
           }}>
@@ -143,8 +145,8 @@ const ActivityLogs = () => {
                 padding: '8px 16px',
                 borderRadius: 20,
                 border: '1px solid',
-                borderColor: activeFilter === filter.key ? '#4f9eff' : 'var(--glass-border)',
-                background: activeFilter === filter.key ? 'rgba(79,158,255,0.15)' : 'var(--glass-1)',
+                borderColor: activeFilter === filter.key ? '#4f9eff' : 'var(--border)',
+                background: activeFilter === filter.key ? 'rgba(79,158,255,0.15)' : 'var(--bg-base)',
                 color: activeFilter === filter.key ? '#4f9eff' : 'var(--text-2)',
                 fontSize: 13,
                 fontWeight: 600,
@@ -162,7 +164,7 @@ const ActivityLogs = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           style={{
-            background: 'var(--glass-1)',
+            background: 'var(--bg-base)',
             backdropFilter: 'blur(20px)',
             border: '1px solid var(--glass-border)',
             borderRadius: 24,
@@ -171,11 +173,29 @@ const ActivityLogs = () => {
           }}
         >
           {filteredLogs.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: 48 }}>
-              <div style={{ fontSize: 40, marginBottom: 12 }}>📋</div>
-              <p style={{ fontSize: 15, fontWeight: 700, color: '#f0f4ff', marginBottom: 6 }}>No activity yet</p>
-              <p style={{ fontSize: 13, color: 'var(--text-3)' }}>
-                Your security events, vault access, and guardian check-ins will appear here.
+            <div style={{
+              textAlign: 'center',
+              padding: '60px 20px',
+              background: 'var(--bg-base)',
+              border: '1px solid var(--glass-border)',
+              borderRadius: 24,
+              marginTop: 24
+            }}>
+              <div style={{ fontSize: 64, marginBottom: 16, opacity: 0.3 }}>
+                📋
+              </div>
+              <h3 style={{ 
+                fontSize: 20, fontWeight: 700, 
+                color: 'var(--text-primary)', marginBottom: 8 
+              }}>
+                No activity recorded yet
+              </h3>
+              <p style={{ 
+                fontSize: 14, color: 'var(--text-2)', 
+                maxWidth: 340, margin: '0 auto'
+              }}>
+                Your security activity will 
+                appear here as you use LastKey.
               </p>
             </div>
           ) : (
@@ -196,8 +216,8 @@ const ActivityLogs = () => {
                       gap: 16,
                       padding: 16,
                       borderRadius: 16,
-                      background: 'var(--glass-2)',
-                      border: `1px solid ${sev.border}`,
+                      background: 'var(--bg-base)',
+                      border: 'none',
                       borderLeft: `3px solid ${sev.color}`
                     }}
                   >
@@ -205,7 +225,7 @@ const ActivityLogs = () => {
                     <div style={{
                       width: 44, height: 44, borderRadius: 12,
                       background: `${evt.color}20`,
-                      border: `1px solid ${evt.color}40`,
+                      border: 'none',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       fontSize: 20,
                       flexShrink: 0
@@ -224,8 +244,8 @@ const ActivityLogs = () => {
                           fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
                           padding: '2px 8px', borderRadius: 6,
                           background: sev.background, 
-                          color: sev.color, 
-                          border: `1px solid ${sev.border}`
+                          color: 'var(--text-primary)', 
+                          border: 'none'
                         }}>
                           {log.severity}
                         </span>
@@ -275,6 +295,7 @@ const ActivityLogs = () => {
         </motion.p>
       </div>
     </div>
+    </DashboardLayout>
   );
 };
 

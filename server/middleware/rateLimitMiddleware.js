@@ -214,7 +214,6 @@ const rateLimit = (options) => {
 const applyRateLimit = (endpointType) => {
   const limiter = rateLimiters[endpointType];
   if (!limiter) {
-    console.warn(`Unknown rate limiter type: ${endpointType}. Using general rate limiter.`);
     return rateLimiters.general;
   }
   return limiter;
@@ -288,7 +287,7 @@ const cleanupInterval = setInterval(() => {
   }
   
   if (cleanedCount > 0) {
-    console.log(`Rate limit cleanup: removed ${cleanedCount} expired records`);
+    // Cleanup completed
   }
 }, 5 * 60 * 1000); // Run cleanup every 5 minutes
 
