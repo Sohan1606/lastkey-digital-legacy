@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
@@ -40,6 +40,8 @@ const Dashboard = () => {
   const [isPremium, setIsPremium] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [checkingIn, setCheckingIn] = useState(false);
+  const [emailSending, setEmailSending] = useState(false);
+  const [lastEmailSent, setLastEmailSent] = useState('');
 
   // Check for mobile screen size
   useEffect(() => {
@@ -68,6 +70,28 @@ const Dashboard = () => {
       toast.error(error.response?.data?.message || 'Check-in failed');
     } finally {
       setCheckingIn(false);
+    }
+  };
+
+  const sendDemoEmail = async (emailType) => {
+    if (emailSending) return;
+    setEmailSending(true);
+    setLastEmailSent('');
+    try {
+      const { data } = await axios.post(
+        `${API_BASE}/auth/send-demo-email`,
+        { emailType },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setLastEmailSent(data.message || 'Email sent!');
+      toast.success(data.message || 'Email sent!');
+    } catch (error) {
+      toast.error(
+        error.response?.data?.message
+        || 'Failed to send email'
+      );
+    } finally {
+      setEmailSending(false);
     }
   };
 
@@ -373,7 +397,7 @@ const Dashboard = () => {
               color: 'var(--text-primary)',
               margin: '0 0 4px 0'
             }}>
-              {assetsData?.data?.length || 0}
+              {assetsData?.data?.length || assetsData?.data?.assets?.length || assetsData?.length || 0}
             </p>
             <p style={{
               fontSize: '12px',
@@ -425,7 +449,7 @@ const Dashboard = () => {
               color: 'var(--text-primary)',
               margin: '0 0 4px 0'
             }}>
-              {beneficiariesData?.data?.beneficiaries?.length || 0}
+              {beneficiariesData?.data?.beneficiaries?.length || beneficiariesData?.data?.length || beneficiariesData?.length || 0}
             </p>
             <p style={{
               fontSize: '12px',
@@ -477,7 +501,7 @@ const Dashboard = () => {
               color: 'var(--text-primary)',
               margin: '0 0 4px 0'
             }}>
-              {dmsStatus.status === 'active' ? '1' : '0'}
+              {capsulesData?.data?.capsules?.length || capsulesData?.data?.length || capsulesData?.length || 0}
             </p>
             <p style={{
               fontSize: '12px',
@@ -529,7 +553,7 @@ const Dashboard = () => {
               color: 'var(--text-primary)',
               margin: '0 0 4px 0'
             }}>
-              {documentsData?.data?.length || 0}
+              {documentsData?.data?.length || documentsData?.data?.documents?.length || documentsData?.length || 0}
             </p>
             <p style={{
               fontSize: '12px',
@@ -932,6 +956,235 @@ const Dashboard = () => {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+
+        {/* Email Demo Section */}
+        <div style={{
+          padding: '0 32px 32px 32px'
+        }}>
+          <div style={{
+            background: 'var(--bg-card)',
+            border: '1px solid rgba(255,184,48,0.2)',
+            borderRadius: '20px',
+            padding: '24px'
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              marginBottom: '16px'
+            }}>
+              <span style={{ fontSize: '28px' }}>📧</span>
+              <div>
+                <h3 style={{
+                  fontSize: '16px',
+                  fontWeight: '700',
+                  color: 'var(--text-primary)',
+                  margin: 0
+                }}>
+                  Email System Demo
+                </h3>
+                <p style={{
+                  fontSize: '13px',
+                  color: 'var(--text-muted)',
+                  margin: '3px 0 0 0'
+                }}>
+                  Send real emails to demonstrate the Guardian Protocol in action
+                </p>
+              </div>
+            </div>
+
+            <div style={{
+              padding: '10px 14px',
+              background: 'rgba(79,158,255,0.06)',
+              border: '1px solid rgba(79,158,255,0.15)',
+              borderRadius: '10px',
+              marginBottom: '16px',
+              fontSize: '12px',
+              color: 'var(--text-secondary)',
+              lineHeight: '1.6'
+            }}>
+              ℹ️ Emails are sent to: <strong style={{
+                color: '#4f9eff'
+              }}>
+                {user?.email || 'your registered email'}
+              </strong>
+            </div>
+
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+              gap: '12px',
+              marginBottom: '16px'
+            }}>
+
+              <button
+                onClick={() => sendDemoEmail('welcome')}
+                disabled={emailSending}
+                style={{
+                  padding: '16px',
+                  background: 'rgba(0,229,160,0.06)',
+                  border: '1px solid rgba(0,229,160,0.2)',
+                  borderRadius: '12px',
+                  color: '#00e5a0',
+                  cursor: emailSending ? 'not-allowed' : 'pointer',
+                  textAlign: 'left',
+                  opacity: emailSending ? 0.6 : 1,
+                  transition: 'all 0.15s ease'
+                }}
+                onMouseEnter={e => {
+                  if (!emailSending) {
+                    e.currentTarget.style.background = 'rgba(0,229,160,0.12)';
+                  }
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = 'rgba(0,229,160,0.06)';
+                }}
+              >
+                <p style={{
+                  fontSize: '15px',
+                  fontWeight: '700',
+                  margin: '0 0 6px 0'
+                }}>
+                  ✉️ Welcome Email
+                </p>
+                <p style={{
+                  fontSize: '12px',
+                  color: 'var(--text-muted)',
+                  margin: 0,
+                  lineHeight: '1.5'
+                }}>
+                  Sent when a new user creates their account
+                </p>
+              </button>
+
+              <button
+                onClick={() => sendDemoEmail('checkin-warning')}
+                disabled={emailSending}
+                style={{
+                  padding: '16px',
+                  background: 'rgba(255,184,48,0.06)',
+                  border: '1px solid rgba(255,184,48,0.2)',
+                  borderRadius: '12px',
+                  color: '#ffb830',
+                  cursor: emailSending ? 'not-allowed' : 'pointer',
+                  textAlign: 'left',
+                  opacity: emailSending ? 0.6 : 1,
+                  transition: 'all 0.15s ease'
+                }}
+                onMouseEnter={e => {
+                  if (!emailSending) {
+                    e.currentTarget.style.background = 'rgba(255,184,48,0.12)';
+                  }
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = 'rgba(255,184,48,0.06)';
+                }}
+              >
+                <p style={{
+                  fontSize: '15px',
+                  fontWeight: '700',
+                  margin: '0 0 6px 0'
+                }}>
+                  ⚠️ Inactivity Warning
+                </p>
+                <p style={{
+                  fontSize: '12px',
+                  color: 'var(--text-muted)',
+                  margin: 0,
+                  lineHeight: '1.5'
+                }}>
+                  Sent 7 days before the inactivity trigger activates
+                </p>
+              </button>
+
+              <button
+                onClick={() => sendDemoEmail('trigger-activation')}
+                disabled={emailSending}
+                style={{
+                  padding: '16px',
+                  background: 'rgba(255,77,109,0.06)',
+                  border: '1px solid rgba(255,77,109,0.2)',
+                  borderRadius: '12px',
+                  color: '#ff4d6d',
+                  cursor: emailSending ? 'not-allowed' : 'pointer',
+                  textAlign: 'left',
+                  opacity: emailSending ? 0.6 : 1,
+                  transition: 'all 0.15s ease'
+                }}
+                onMouseEnter={e => {
+                  if (!emailSending) {
+                    e.currentTarget.style.background = 'rgba(255,77,109,0.12)';
+                  }
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = 'rgba(255,77,109,0.06)';
+                }}
+              >
+                <p style={{
+                  fontSize: '15px',
+                  fontWeight: '700',
+                  margin: '0 0 6px 0'
+                }}>
+                  🚨 Legacy Activation
+                </p>
+                <p style={{
+                  fontSize: '12px',
+                  color: 'var(--text-muted)',
+                  margin: 0,
+                  lineHeight: '1.5'
+                }}>
+                  Sent to beneficiaries when Guardian Protocol triggers
+                </p>
+              </button>
+
+            </div>
+
+            {emailSending && (
+              <div style={{
+                padding: '14px 18px',
+                background: 'rgba(79,158,255,0.06)',
+                border: '1px solid rgba(79,158,255,0.2)',
+                borderRadius: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px'
+              }}>
+                <div style={{
+                  width: '18px',
+                  height: '18px',
+                  border: '2px solid rgba(79,158,255,0.3)',
+                  borderTop: '2px solid #4f9eff',
+                  borderRadius: '50%',
+                  animation: 'spin 0.7s linear infinite',
+                  flexShrink: 0
+                }} />
+                <span style={{
+                  fontSize: '14px',
+                  color: '#4f9eff'
+                }}>
+                  Sending email via Resend...
+                </span>
+              </div>
+            )}
+
+            {lastEmailSent && !emailSending && (
+              <div style={{
+                padding: '14px 18px',
+                background: 'rgba(0,229,160,0.06)',
+                border: '1px solid rgba(0,229,160,0.2)',
+                borderRadius: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                fontSize: '14px',
+                color: '#00e5a0'
+              }}>
+                <span style={{ fontSize: '18px' }}>✅</span>
+                <span>{lastEmailSent}</span>
+              </div>
+            )}
           </div>
         </div>
       </div>

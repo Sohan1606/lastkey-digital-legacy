@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -20,13 +20,33 @@ const Beneficiaries = () => {
     name: '',
     email: '',
     relationship: 'other',
-    accessLevel: 'view',
+    accessLevel: 'view_only',
     verificationQuestion: '',
     verificationAnswer: '',
     verificationHint: ''
   });
 
+  const [accessOptions, setAccessOptions] = useState({
+    vaultItems: true,
+    finalMessage: true,
+    voiceMessages: true,
+    documents: true,
+    memoir: true
+  });
+
+  const [selectedItems, setSelectedItems] = useState([]);
   const [showChecklist, setShowChecklist] = useState(false);
+
+  const { data: vaultItems } = useQuery({
+    queryKey: ['vault-items'],
+    queryFn: async () => {
+      const { data } = await axios.get(`${API_BASE}/assets`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      return data.data || [];
+    },
+    enabled: !!token
+  });
 
   const { data: beneficiaries, isPending: isLoading } = useQuery({
     queryKey: ['beneficiaries'],
@@ -45,7 +65,9 @@ const Beneficiaries = () => {
     }),
     onSuccess: () => {
       queryClient.invalidateQueries(['beneficiaries']);
-      setFormData({ name: '', email: '', relationship: 'other', accessLevel: 'view', verificationQuestion: '', verificationAnswer: '', verificationHint: '' });
+      setFormData({ name: '', email: '', relationship: 'other', accessLevel: 'view_only', verificationQuestion: '', verificationAnswer: '', verificationHint: '' });
+      setAccessOptions({ vaultItems: true, finalMessage: true, voiceMessages: true, documents: true, memoir: true });
+      setSelectedItems([]);
       setShowChecklist(false);
       toast.success('Beneficiary added!');
     },
@@ -119,7 +141,14 @@ const Beneficiaries = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    createMutation.mutate(formData);
+    
+    const submissionData = {
+      ...formData,
+      accessOptions: formData.accessLevel === 'view_only' ? accessOptions : undefined,
+      assignedVaultItems: formData.accessLevel === 'custom' ? selectedItems : undefined
+    };
+    
+    createMutation.mutate(submissionData);
   };
 
   const getRelationshipIcon = (rel) => {
@@ -500,11 +529,161 @@ const Beneficiaries = () => {
                         e.target.style.boxShadow = 'none';
                       }}
                     >
-                      <option value="view">View Only</option>
+                      <option value="view_only">View Only</option>
                       <option value="full">Full Access</option>
+                      <option value="custom">Custom / Specific Items</option>
                     </select>
                   </div>
                 </div>
+
+                {/* Access Level Details */}
+                {formData.accessLevel === 'full' && (
+                  <div style={{
+                    padding: '16px',
+                    background: 'rgba(34, 197, 94, 0.06)',
+                    border: '1px solid rgba(34, 197, 94, 0.15)',
+                    borderRadius: '8px',
+                    marginTop: '16px'
+                  }}>
+                    <p style={{
+                      fontSize: '13px',
+                      color: '#22c55e',
+                      margin: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}>
+                      <Crown size={16} />
+                      This beneficiary will receive access to ALL your vault items when trigger activates.
+                    </p>
+                  </div>
+                )}
+
+                {formData.accessLevel === 'view_only' && (
+                  <div style={{
+                    padding: '16px',
+                    background: 'rgba(79,158,255,0.06)',
+                    border: '1px solid rgba(79,158,255,0.15)',
+                    borderRadius: '12px',
+                    marginTop: '12px'
+                  }}>
+                    <p style={{
+                      fontSize: '13px',
+                      fontWeight: '600',
+                      color: '#4f9eff',
+                      margin: '0 0 12px 0'
+                    }}>
+                      View Only Access Includes:
+                    </p>
+                    {[
+                      { key: 'vault', label: '🔒 Vault Items' },
+                      { key: 'message', label: '✉️ Final Message' },
+                      { key: 'voice', label: '🎙️ Voice Messages' },
+                      { key: 'documents', label: '📄 Legal Documents' },
+                      { key: 'memoir', label: '✍️ Memoir' }
+                    ].map(item => (
+                      <div key={item.key} style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                        marginBottom: '8px'
+                      }}>
+                        <input
+                          type="checkbox"
+                          id={item.key}
+                          defaultChecked={true}
+                          style={{ cursor: 'pointer' }}
+                        />
+                        <label htmlFor={item.key} style={{
+                          fontSize: '14px',
+                          color: 'var(--text-secondary)',
+                          cursor: 'pointer'
+                        }}>
+                          {item.label}
+                        </label>
+                      </div>
+                    ))}
+                    <p style={{
+                      fontSize: '12px',
+                      color: 'var(--text-muted)',
+                      margin: '12px 0 0 0'
+                    }}>
+                      Beneficiary can VIEW but not download files.
+                    </p>
+                  </div>
+                )}
+
+                {formData.accessLevel === 'custom' && (
+                  <div style={{
+                    padding: '16px',
+                    background: 'rgba(124,92,252,0.06)',
+                    border: '1px solid rgba(124,92,252,0.15)',
+                    borderRadius: '12px',
+                    marginTop: '12px'
+                  }}>
+                    <p style={{
+                      fontSize: '13px',
+                      fontWeight: '600',
+                      color: '#7c5cfc',
+                      margin: '0 0 12px 0'
+                    }}>
+                      Select specific items to share:
+                    </p>
+                    
+                    {vaultItems?.length === 0 && (
+                      <p style={{
+                        fontSize: '13px',
+                        color: 'var(--text-muted)'
+                      }}>
+                        No vault items yet. 
+                        Add items in Vault section first.
+                      </p>
+                    )}
+                    
+                    {vaultItems?.map(item => (
+                      <div key={item._id} style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                        marginBottom: '8px',
+                        padding: '8px 12px',
+                        background: selectedItems.includes(item._id)
+                          ? 'rgba(124,92,252,0.1)'
+                          : 'transparent',
+                        borderRadius: '8px',
+                        cursor: 'pointer'
+                      }}
+                      onClick={() => {
+                        setSelectedItems(prev => 
+                          prev.includes(item._id)
+                            ? prev.filter(id => id !== item._id)
+                            : [...prev, item._id]
+                        )
+                      }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedItems.includes(item._id)}
+                          onChange={() => {}}
+                          style={{ cursor: 'pointer' }}
+                        />
+                        <span style={{
+                          fontSize: '14px',
+                          color: 'var(--text-secondary)'
+                        }}>
+                          {item.title}
+                        </span>
+                        <span style={{
+                          fontSize: '11px',
+                          color: 'var(--text-muted)',
+                          marginLeft: 'auto'
+                        }}>
+                          {item.type}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 {/* Security Question Section */}
                 <div style={{ 

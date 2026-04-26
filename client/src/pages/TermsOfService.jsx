@@ -1,3 +1,4 @@
+import React from 'react';
 import { motion } from 'framer-motion';
 import { FileText, Shield, Heart, AlertTriangle, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';

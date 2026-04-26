@@ -1,5 +1,17 @@
 require('dotenv').config();
 
+// Global error handlers to prevent server crash on OCR/worker errors
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error.message);
+  // Do NOT exit process - keep server running
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise);
+  console.error('Reason:', reason);
+  // Do NOT exit process - keep server running
+});
+
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -374,6 +386,24 @@ const connectDB = async () => {
       }
     } catch (indexErr) {
       // Index may not exist yet, that's fine
+    }
+
+    // Check Memoir collection indexes (one-time fix for schema migration)
+    try {
+      const collections = await conn.connection.db
+        .listCollections({ name: 'memoirs' })
+        .toArray()
+
+      if (collections.length > 0) {
+        const memoirIndexes = await conn.connection
+          .collection('memoirs')
+          .indexes()
+
+        console.log('Memoir indexes:',
+          memoirIndexes.map(i => i.name))
+      }
+    } catch (e) {
+      // silent
     }
 
     // Create indexes

@@ -1,55 +1,45 @@
 const mongoose = require('mongoose');
 
 const voiceMessageSchema = new mongoose.Schema({
-  userId: {
+  owner: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    required: true,
+    index: true
   },
   title: {
     type: String,
     required: true,
+    trim: true,
+    default: 'Voice Message'
+  },
+  recipientName: {
+    type: String,
+    default: '',
     trim: true
   },
-  recipient: {
+  audioData: {
     type: String,
-    trim: true
-  },
-  text: {
-    type: String,
-    required: true,
-    trim: true
-  },
-  voice: {
-    type: String,
-    enum: ['alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer'],
-    default: 'alloy'
-  },
-  emotion: {
-    type: String,
-    enum: ['warm', 'professional', 'playful', 'nostalgic', 'inspirational'],
-    default: 'warm'
+    default: ''
   },
   audioUrl: {
     type: String,
-    required: true
+    default: ''
   },
   duration: {
     type: Number,
     default: 0
   },
-  createdAt: {
-    type: Date,
-    default: Date.now
+  mimeType: {
+    type: String,
+    default: 'audio/webm'
   },
-  updatedAt: {
-    type: Date,
-    default: Date.now
+  transcript: {
+    type: String,
+    default: ''
   }
+}, { 
+  timestamps: true 
 });
-
-// Index for performance
-voiceMessageSchema.index({ userId: 1, createdAt: -1 });
-voiceMessageSchema.index({ userId: 1, emotion: 1 });
 
 module.exports = mongoose.model('VoiceMessage', voiceMessageSchema);

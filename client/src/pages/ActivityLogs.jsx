@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ClipboardList, Shield, Lock, Activity, AlertTriangle, Mail, Info } from 'lucide-react';
 import axios from 'axios';
@@ -73,6 +73,9 @@ const ActivityLogs = () => {
   }, []);
 
   const getEventConfig = (event) => {
+    if (!event) {
+      return { label: 'Unknown Action', icon: '📋', color: '#8899bb' };
+    }
     return EVENT_LABELS[event] || { label: event, icon: '📋', color: '#8899bb' };
   };
 

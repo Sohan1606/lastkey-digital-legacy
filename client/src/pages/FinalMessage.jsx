@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -58,7 +58,6 @@ const FinalMessage = () => {
         setCapsules(capData);
       } catch (error) {
         toast.error('Failed to load data');
-        console.error('Fetch error:', error);
       } finally {
         setIsLoading(false);
       }
@@ -78,6 +77,7 @@ const FinalMessage = () => {
     try {
       await axios.post(`${API_BASE}/final-message`, {
         beneficiaryId: selectedBeneficiary,
+        subject: subject,
         message: message,
         attachedAssetIds: attachVaultItems ? selectedAssets : [],
         attachedCapsuleIds: attachCapsules ? selectedCapsules : [],
@@ -85,10 +85,10 @@ const FinalMessage = () => {
         triggerDate: triggerType === 'date' ? triggerDate : null
       });
       
-      toast.success('Final message created successfully');
+      toast.success('Final message saved successfully');
       navigate('/dashboard');
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to create final message');
+      toast.error(error.response?.data?.message || 'Failed to save final message');
     } finally {
       setIsSubmitting(false);
     }

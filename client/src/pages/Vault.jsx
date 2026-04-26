@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../contexts/AuthContext';
 import { Pencil, Trash2, Eye, EyeOff, Plus, Shield, Lock, Unlock, ExternalLink, X, Copy, ShieldCheck, Search, Filter, Key, Wallet, FileText, Database, CreditCard } from 'lucide-react';
@@ -38,6 +38,8 @@ const Vault = () => {
   const [pendingDecryptId, setPendingDecryptId] = useState(null);
   const [dekInitialized, setDekInitialized] = useState(false);
   const [isInitializingDEK, setIsInitializingDEK] = useState(false);
+  const [copiedField, setCopiedField] = useState(null);
+  const [search, setSearch] = useState('');
   const formRef = useRef(null);
   
   // CRITICAL: Master DEK stored in-memory only (never in localStorage/sessionStorage)
@@ -75,6 +77,14 @@ const Vault = () => {
     enabled: !!user,
     retry: 1
   });
+
+  const filteredItems = assets?.filter(item =>
+    item.title?.toLowerCase().includes(search.toLowerCase()) ||
+    item.type?.toLowerCase().includes(search.toLowerCase()) ||
+    item.category?.toLowerCase().includes(search.toLowerCase()) ||
+    item.platform?.toLowerCase().includes(search.toLowerCase()) ||
+    item.username?.toLowerCase().includes(search.toLowerCase())
+  ) || [];
 
   // Initialize DEK for new users
   const initializeDEK = async (password) => {
@@ -287,6 +297,17 @@ const Vault = () => {
 
   const scrollToForm = () => {
     setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
+  };
+
+  const handleCopy = async (content, fieldName) => {
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopiedField(fieldName);
+      setTimeout(() => setCopiedField(null), 2000);
+      toast.success('Copied to clipboard');
+    } catch (err) {
+      toast.error('Copy failed');
+    }
   };
 
   const handleEdit = (asset) => {
@@ -627,6 +648,8 @@ const Vault = () => {
                 color: '#64748b'
               }} />
               <input 
+                value={search}
+                onChange={e => setSearch(e.target.value)}
                 style={{
                   width: '100%',
                   padding: '12px 12px 12px 40px',
@@ -1257,7 +1280,7 @@ const Vault = () => {
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' }}>
-            {assets && assets.map((asset, idx) => {
+            {filteredItems && filteredItems.map((asset, idx) => {
               const insStyle = getInstructionStyle(asset.instruction);
               const decryptedPassword = showPasswords[asset._id];
               
@@ -1464,15 +1487,39 @@ const Vault = () => {
 
                   {/* Username */}
                   <div style={{ marginBottom: '16px' }}>
-                    <span style={{
-                      fontSize: '10px',
-                      color: 'var(--text-muted)',
-                      fontWeight: 500,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.1em'
-                    }}>
-                      Username
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                      <span style={{
+                        fontSize: '10px',
+                        color: 'var(--text-muted)',
+                        fontWeight: 500,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.1em'
+                      }}>
+                        Username
+                      </span>
+                      <button
+                        onClick={() => handleCopy(asset.username, `username-${asset._id}`)}
+                        style={{
+                          padding: '4px',
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          color: 'var(--text-muted)',
+                          transition: 'all 150ms',
+                          borderRadius: '4px'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.target.style.color = '#ffffff';
+                          e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.04)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.color = 'var(--text-muted)';
+                          e.target.style.backgroundColor = 'transparent';
+                        }}
+                      >
+                        {copiedField === `username-${asset._id}` ? '✓ Copied' : <Copy size={12} />}
+                      </button>
+                    </div>
                     <p style={{ fontSize: '14px', color: '#ffffff', marginTop: '4px', margin: 0 }}>
                       {asset.username}
                     </p>
@@ -1543,18 +1590,7 @@ const Vault = () => {
                       </button>
                       {decryptedPassword && (
                         <button
-                          onClick={async () => {
-                            try {
-                              await navigator.clipboard.writeText(decryptedPassword);
-                              toast.success('Copied! Auto-clears in 30s', { duration: 2500 });
-                              setTimeout(async () => {
-                                try {
-                                  const c = await navigator.clipboard.readText();
-                                  if (c === decryptedPassword) await navigator.clipboard.writeText('');
-                                } catch { return; }
-                              }, 30000);
-                            } catch { toast.error('Copy failed'); }
-                          }}
+                          onClick={() => handleCopy(decryptedPassword, `password-${asset._id}`)}
                           style={{
                             padding: '6px',
                             background: 'none',
@@ -1569,11 +1605,11 @@ const Vault = () => {
                             e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.04)';
                           }}
                           onMouseLeave={(e) => {
-                            e.target.style.color = '#64748b';
+                            e.target.style.color = 'var(--text-muted)';
                             e.target.style.backgroundColor = 'transparent';
                           }}
                         >
-                          <Copy size={14} />
+                          {copiedField === `password-${asset._id}` ? '✓ Copied' : <Copy size={14} />}
                         </button>
                       )}
                     </div>

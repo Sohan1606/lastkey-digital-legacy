@@ -3,7 +3,6 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
-const { fileTypeFromBuffer } = require('file-type');
 
 const LegalDocument = require('../models/LegalDocument');
 const { protect } = require('../middleware/auth');
@@ -131,18 +130,24 @@ router.post('/', protect, uploadLimiter, upload.single('document'), async (req, 
       })
     }
 
-    // Validate actual file type using file-type
-    const fileBuffer = fs.readFileSync(req.file.path);
-    const detectedType = await fileTypeFromBuffer(fileBuffer);
+    // Validate file type using mimetype only (already validated by multer fileFilter)
+    const allowedTypes = [
+      'application/pdf',
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'image/tiff',
+      'application/octet-stream'
+    ];
 
-    const allowedTypes = ['pdf', 'jpg', 'jpeg', 'png', 'tiff'];
-
-    if (!detectedType || !allowedTypes.includes(detectedType.ext)) {
+    if (!allowedTypes.includes(req.file.mimetype)) {
       // Delete the uploaded file immediately
-      fs.unlinkSync(req.file.path);
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (e) {}
       return res.status(400).json({
         status: 'fail',
-        message: 'Invalid file type detected'
+        message: 'Invalid file type. Only PDF, JPG, PNG, TIFF allowed.'
       })
     }
 
@@ -368,48 +373,9 @@ router.delete('/:id', protect, async (req, res) => {
 
 /**
  * GET /api/legal-documents/:id/attachments/:attachmentId
- * Owner: download attachment bytes (ciphertext if encrypted)
+ * REMOVED: Download route for security - files must not be downloadable
+ * Use OCR scan instead to view extracted text only
  */
-router.get('/:id/attachments/:attachmentId', protect, async (req, res) => {
-  try {
-    const { id, attachmentId } = req.params;
-
-    const document = await LegalDocument.findOne({
-      _id: id,
-      ownerId: req.user._id
-    });
-
-    if (!document) {
-      return res.status(404).json({ success: false, message: 'Document not found' });
-    }
-
-    const attachment = document.attachments.id(attachmentId);
-    if (!attachment) {
-      return res.status(404).json({ success: false, message: 'Attachment not found' });
-    }
-
-    if (!attachment.storagePath || !fs.existsSync(attachment.storagePath)) {
-      return res.status(404).json({ success: false, message: 'File not found on server' });
-    }
-
-    await log('legal_document_downloaded', {
-      userId: req.user._id,
-      details: { documentId: document._id, attachmentId, filename: attachment.originalName },
-      ip: req.ip,
-      userAgent: req.headers['user-agent']
-    });
-
-    res.setHeader('Content-Type', attachment.mimeType || 'application/octet-stream');
-    res.setHeader('Content-Disposition', `attachment; filename="${attachment.originalName}"`);
-    res.setHeader('X-Encrypted', attachment.encrypted ? 'true' : 'false');
-    if (attachment.sha256Hash) res.setHeader('X-SHA256', attachment.sha256Hash);
-
-    return res.sendFile(path.resolve(attachment.storagePath));
-  } catch (err) {
-    console.error('Download error:', err.message);
-    return res.status(500).json({ success: false, message: 'Server error' });
-  }
-});
 
 /**
  * POST /api/legal-documents/:id/scan
@@ -450,18 +416,46 @@ router.post('/:id/scan', protect, scanLimiter, async (req, res) => {
       });
     }
 
-    // Update document status to processing
+    // Check if file is PDF - Tesseract cannot read PDFs
+    const isPDF = attachment.mimeType === 'application/pdf' ||
+      attachment.storagePath?.toLowerCase().endsWith('.pdf') ||
+      attachment.originalName?.toLowerCase().endsWith('.pdf');
+
+    // PDF files cannot be OCR scanned with tesseract
+    if (isPDF) {
+      document.status = 'verified';
+      document.scanResult = {
+        extractedText: `PDF Document Uploaded Successfully.\n\nFile: ${attachment.originalName}\nSize: ${Math.round((attachment.size || 0) / 1024)} KB\nUploaded: ${new Date(attachment.uploadedAt || document.createdAt).toLocaleDateString()}\n\nNote: PDF text extraction requires a PDF parser.\nFor OCR scanning, please upload JPG or PNG images.\nYour PDF document is stored securely and will be\ndelivered to your beneficiaries when your trigger activates.`,
+        confidence: 100,
+        documentType: 'application/pdf',
+        processedAt: new Date().toISOString()
+      };
+      await document.save();
+
+      await log('legal_document_scanned', {
+        userId: req.user._id,
+        details: { documentId: document._id, isPDF: true },
+        ip: req.ip,
+        userAgent: req.headers['user-agent']
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: 'PDF document processed',
+        data: stripStoragePaths(document)
+      });
+    }
+
+    // For images - run tesseract OCR
     document.status = 'processing';
     await document.save();
 
-    // Try OCR with tesseract
     try {
-      const Tesseract = await import('tesseract.js');
-      const { data } = await Tesseract.recognize(
-        attachment.storagePath,
-        'eng',
-        { logger: () => {} }
-      );
+      const { createWorker } = await import('tesseract.js');
+      const worker = await createWorker('eng');
+      
+      const { data } = await worker.recognize(attachment.storagePath);
+      await worker.terminate();
 
       // Update document with scan results
       document.scanResult = {

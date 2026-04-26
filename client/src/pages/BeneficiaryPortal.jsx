@@ -76,21 +76,46 @@ export default function BeneficiaryPortal() {
       const { data } = await axios.get(`${API_BASE}/portal/${token}`);
       setPortalInfo(data.data);
 
+      // If already verified - show portal
       if (data.data.isVerified) {
+        // Need to get items too
+        const verifyRes = await axios.post(
+          `${API_BASE}/portal/${token}/verify`,
+          { answer: 'already-verified' }
+        );
+        setPortalData(verifyRes.data.data);
         setScreen('portal');
-      } else {
-        setScreen('verify');
+        return;
       }
 
+      // If no security question - auto verify
+      if (!data.data.hasVerificationQuestion) {
+        try {
+          const verifyRes = await axios.post(
+            `${API_BASE}/portal/${token}/verify`,
+            { answer: '' }
+          );
+          setPortalData(verifyRes.data.data);
+          setScreen('portal');
+        } catch (e) {
+          setScreen('verify');
+        }
+        return;
+      }
+
+      // Has verification question - show verify screen
+      setScreen('verify');
+
       if (data.data.isClaimed) {
-        setClaimForm(prev => ({ 
-          ...prev, 
-          name: data.data.beneficiaryName 
+        setClaimForm(prev => ({
+          ...prev,
+          name: data.data.beneficiaryName
         }));
       }
 
     } catch (err) {
-      setError(err.response?.data?.message || 'This link is invalid.');
+      const msg = err.response?.data?.message || 'This link is invalid or has expired.';
+      setError(msg);
       setErrorCode(err.response?.data?.code || '');
       setScreen('error');
     }

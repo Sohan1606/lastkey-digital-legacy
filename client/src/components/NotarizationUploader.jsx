@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { Upload, FileText, CheckCircle, AlertCircle, Loader2, Camera, Scan } from 'lucide-react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';

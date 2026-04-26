@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { motion } from 'framer-motion';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -10,7 +10,7 @@ import DashboardLayout from '../components/DashboardLayout';
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
 const Settings = () => {
-  const { user, token, logout } = useAuth();
+  const { user, token, logout, updateUser } = useAuth();
   const queryClient = useQueryClient();
 
   const [settings, setSettings] = useState({
@@ -18,6 +18,7 @@ const Settings = () => {
     phone: user?.phone || '',
     alertChannels: user?.alertChannels || ['email'],
   });
+  const [profileName, setProfileName] = useState(user?.name || '');
   const [recoveryPassphrase, setRecoveryPassphrase] = useState('');
   const [recoverySet, setRecoverySet] = useState(user?.recoveryPassphraseSet || false);
 
@@ -28,9 +29,20 @@ const Settings = () => {
         phone: user.phone || '',
         alertChannels: user.alertChannels || ['email'],
       });
+      setProfileName(user.name || '');
       setRecoverySet(user.recoveryPassphraseSet || false);
     }
   }, [user]);
+
+  const profileMutation = useMutation({
+    mutationFn: (data) => axios.put(`${API_BASE}/user/profile`, data, { headers: { Authorization: `Bearer ${token}` } }),
+    onSuccess: (response) => {
+      toast.success('Profile updated successfully!');
+      updateUser({ name: profileName });
+      queryClient.invalidateQueries({ queryKey: ['user'] });
+    },
+    onError: () => toast.error('Failed to update profile'),
+  });
 
   const settingsMutation = useMutation({
     mutationFn: (data) => axios.put(`${API_BASE}/user/settings`, data, { headers: { Authorization: `Bearer ${token}` } }),
@@ -130,22 +142,50 @@ const Settings = () => {
                   color: '#e2e8f0',
                   marginBottom: '8px'
                 }}>Full Name</label>
-                <input 
-                  type="text" 
-                  value={user?.name || ''} 
-                  disabled 
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    background: 'var(--bg-base)',
-                    border: '1px solid rgba(255,255,255,0.05)',
-                    borderRadius: '8px',
-                    color: 'var(--text-muted)',
-                    fontSize: '14px',
-                    opacity: 0.6,
-                    cursor: 'not-allowed'
-                  }}
-                />
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <input 
+                    type="text" 
+                    value={profileName}
+                    onChange={e => setProfileName(e.target.value)}
+                    style={{
+                      flex: 1,
+                      padding: '12px 16px',
+                      background: 'var(--bg-base)',
+                      border: '1px solid var(--border-hover)',
+                      borderRadius: '8px',
+                      color: 'var(--text-primary)',
+                      fontSize: '14px',
+                      outline: 'none',
+                      transition: 'all 150ms'
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = '#3b82f6';
+                      e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = 'rgba(255,255,255,0.1)';
+                      e.target.style.boxShadow = 'none';
+                    }}
+                  />
+                  <button
+                    onClick={() => profileMutation.mutate({ name: profileName })}
+                    disabled={profileMutation.isPending || profileName === user?.name}
+                    style={{
+                      padding: '12px 20px',
+                      background: 'linear-gradient(135deg, #4f9eff, #7c5cfc)',
+                      border: 'none',
+                      borderRadius: '8px',
+                      color: 'white',
+                      fontWeight: 600,
+                      fontSize: '14px',
+                      cursor: (profileMutation.isPending || profileName === user?.name) ? 'not-allowed' : 'pointer',
+                      opacity: (profileMutation.isPending || profileName === user?.name) ? 0.6 : 1,
+                      transition: 'all 150ms'
+                    }}
+                  >
+                    {profileMutation.isPending ? 'Saving...' : 'Save'}
+                  </button>
+                </div>
               </div>
               <div>
                 <label style={{
@@ -296,8 +336,8 @@ const Settings = () => {
                 whileHover={{ scale: 1.02 }} 
                 whileTap={{ scale: 0.98 }}
                 onClick={() => {
-                  if (recoveryPassphrase.length < 8) {
-                    toast.error('Passphrase must be at least 8 characters');
+                  if (recoveryPassphrase.length < 12) {
+                    toast.error('Passphrase must be at least 12 characters');
                     return;
                   }
                   recoveryMutation.mutate(recoveryPassphrase);

@@ -1,9 +1,9 @@
-import { useState, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
-  FileText, ArrowLeft, Upload, Cloud, Download, Trash2, 
+  FileText, ArrowLeft, Upload, Cloud, Trash2, 
   CheckCircle, AlertCircle, Loader2, Eye, EyeOff, Search, Filter, 
   FileCheck, FileWarning, FileX, Shield, Zap, Clock, Settings
 } from 'lucide-react';
@@ -56,7 +56,6 @@ const LegalDocuments = () => {
       toast.success('Document uploaded successfully!');
     },
     onError: (error) => {
-      console.error('Upload error:', error);
       toast.error(error.response?.data?.message || 'Failed to upload document');
     }
   });
@@ -75,7 +74,6 @@ const LegalDocuments = () => {
       toast.success('OCR scan completed!');
     },
     onError: (error) => {
-      console.error('Scan error:', error);
       toast.error(error.response?.data?.message || 'Failed to scan document');
     }
   });
@@ -165,59 +163,6 @@ const LegalDocuments = () => {
       newExpanded.add(documentId);
     }
     setExpandedScanResults(newExpanded);
-  };
-
-  // View document (authenticated)
-  const handleView = async (documentId) => {
-    try {
-      const response = await axios.get(
-        `${API_BASE}/legal-documents/${documentId}/view`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-          responseType: 'blob'
-        }
-      );
-      
-      const blob = new Blob([response.data], {
-        type: response.headers['content-type']
-      });
-      const url = URL.createObjectURL(blob);
-      
-      // Open in new tab for viewing
-      window.open(url, '_blank');
-      
-      // Clean up after 60 seconds
-      setTimeout(() => URL.revokeObjectURL(url), 60000);
-      
-    } catch (error) {
-      toast.error('Could not open document');
-    }
-  };
-
-  // Download document (authenticated)
-  const handleDownload = async (documentId) => {
-    try {
-      const response = await axios.get(
-        `${API_BASE}/legal-documents/${documentId}/download`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-          responseType: 'blob'
-        }
-      );
-      
-      const blob = new Blob([response.data]);
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = 'document';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      
-    } catch (error) {
-      toast.error('Download failed');
-    }
   };
 
   // Get file icon
@@ -724,40 +669,9 @@ const LegalDocuments = () => {
                               ) : (
                                 <Eye size={14} />
                               )}
-                              Scan with OCR
+                              {doc.attachments?.[0]?.mimeType === 'application/pdf' ? 'Process PDF' : 'Scan with OCR'}
                             </motion.button>
-                            
-                            <motion.button
-                              whileHover={{ scale: 1.02 }}
-                              whileTap={{ scale: 0.98 }}
-                              onClick={() => handleDownload(doc._id)}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                padding: '8px 12px',
-                                background: 'rgba(255, 255, 255, 0.04)',
-                                border: '1px solid rgba(255, 255, 255, 0.1)',
-                                color: '#e2e8f0',
-                                fontSize: '14px',
-                                fontWeight: 500,
-                                borderRadius: '8px',
-                                cursor: 'pointer',
-                                transition: 'all 150ms'
-                              }}
-                              onMouseEnter={(e) => {
-                                e.target.style.color = '#ffffff';
-                                e.target.style.background = 'rgba(255, 255, 255, 0.08)';
-                              }}
-                              onMouseLeave={(e) => {
-                                e.target.style.color = '#e2e8f0';
-                                e.target.style.background = 'rgba(255, 255, 255, 0.04)';
-                              }}
-                            >
-                              <Download size={14} />
-                              Download
-                            </motion.button>
-                            
+
                             {deleteConfirm === doc._id ? (
                               <div style={{ display: 'flex', gap: '8px' }}>
                                 <motion.button
@@ -896,7 +810,7 @@ const LegalDocuments = () => {
                                 <div style={{ marginBottom: '12px' }}>
                                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
                                     <p style={{ fontSize: '14px', fontWeight: 600, color: '#ffffff' }}>
-                                      Extracted Text
+                                      {doc.scanResult.documentType === 'application/pdf' ? 'Document Information' : 'Extracted Text'}
                                     </p>
                                     <span style={{
                                       fontSize: '12px',

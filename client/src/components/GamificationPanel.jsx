@@ -1,3 +1,4 @@
+import React from 'react';
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { Trophy, Flame, Star, Target, Zap, Award, Calendar, Lock, Shield, Clock, BookOpen, Mic, Heart } from 'lucide-react';

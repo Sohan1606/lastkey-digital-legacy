@@ -60,7 +60,6 @@ router.get('/:id/public-key', async (req, res) => {
       }
     });
   } catch (err) {
-    console.error('Get public key error:', err);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });
@@ -117,7 +116,6 @@ router.post('/:id/dek-share', async (req, res) => {
       message: 'DEK share stored successfully'
     });
   } catch (err) {
-    console.error('Store DEK share error:', err);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });
@@ -178,7 +176,6 @@ router.post('/:id/revoke-portal', async (req, res) => {
       message: 'Portal access revoked successfully'
     });
   } catch (err) {
-    console.error('Revoke portal error:', err);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });
@@ -260,7 +257,6 @@ router.post('/:id/resend-portal', async (req, res) => {
       message: 'New portal access link sent successfully'
     });
   } catch (err) {
-    console.error('Resend portal error:', err);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });
@@ -310,7 +306,6 @@ router.get('/:id/portal-status', async (req, res) => {
       }
     });
   } catch (err) {
-    console.error('Portal status error:', err);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });
@@ -356,7 +351,6 @@ router.post('/dek-share/sync', async (req, res) => {
       }
     });
   } catch (err) {
-    console.error('DEK share sync error:', err);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });

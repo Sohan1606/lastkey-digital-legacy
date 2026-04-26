@@ -48,7 +48,7 @@ router.get('/:token', async (req, res) => {
       return res.status(404).json({
         status: 'fail',
         code: 'INVALID_LINK',
-        message: 'This link is invalid or has expired.'
+        message: 'This link is invalid or has expired. Please request a new link.'
       });
     }
 
@@ -72,8 +72,12 @@ router.get('/:token', async (req, res) => {
     if (!access.hasBeenAccessed) {
       access.hasBeenAccessed = true;
       access.firstAccessedAt = new Date();
-      access.firstAccessIp = clientIp;
-      access.firstAccessDevice = userAgent;
+      access.firstAccessIp = clientIp || 'unknown';
+      access.firstAccessDevice = {
+        userAgent: userAgent || 'unknown',
+        ip: clientIp || 'unknown',
+        timestamp: new Date()
+      };
       await access.save();
 
       // Alert owner that someone opened the link
@@ -124,12 +128,13 @@ router.get('/:token', async (req, res) => {
       data: {
         ownerName: access.ownerId.name,
         beneficiaryName: access.beneficiaryId.name,
-        verificationQuestion: access.verificationQuestion,
+        verificationQuestion: access.verificationQuestion || null,
         verificationHint: access.beneficiaryId.verificationHint || '',
-        isVerified: access.isVerified,
-        isClaimed: access.isClaimed,
+        hasVerificationQuestion: !!(access.verificationQuestion && access.verificationAnswerHash && access.verificationAnswerHash.length > 0),
+        isVerified: access.isVerified || false,
+        isClaimed: access.isClaimed || false,
         expiresAt: access.expiresAt,
-        itemCount: access.assignedItems.length
+        itemCount: access.assignedItems?.length || 0
       }
     });
 
@@ -195,13 +200,57 @@ router.post('/:token/verify', async (req, res) => {
           `
         });
       } catch (emailError) {
-        console.error('Failed to send revocation alert:', emailError);
+        // Failed to send revocation alert
       }
 
       return res.status(403).json({
         status: 'fail',
         code: 'LINK_REVOKED',
         message: 'Too many failed attempts. This link has been revoked for security. Contact the estate administrator.'
+      });
+    }
+
+    // Check if no verification question was set - allow access
+    if (!access.verificationAnswerHash || access.verificationAnswerHash.length === 0) {
+      access.isVerified = true;
+      access.verifiedAt = new Date();
+      access.lastAccessedAt = new Date();
+      access.accessCount += 1;
+      await access.save();
+
+      const items = await Promise.all(
+        (access.assignedItems || []).map(async (itemId) => {
+          try {
+            const item = await Asset.findById(itemId);
+            if (!item) return null;
+            return {
+              _id: item._id,
+              title: item.title || 'Untitled',
+              type: item.type || 'note',
+              category: item.category || '',
+              content: item.encryptedContent || item.content || '',
+              notes: item.notes || ''
+            };
+          } catch (e) {
+            return null;
+          }
+        })
+      );
+
+      const validItems = items.filter(i => i !== null);
+
+      return res.status(200).json({
+        status: 'success',
+        data: {
+          ownerName: access.ownerId.name,
+          beneficiaryName: access.beneficiaryId.name,
+          beneficiaryEmail: access.beneficiaryId.email,
+          items: validItems,
+          expiresAt: access.expiresAt,
+          isClaimed: access.isClaimed || false,
+          token: req.params.token,
+          noVerificationRequired: true
+        }
       });
     }
 

@@ -1,127 +1,267 @@
-const nodemailer = require('nodemailer');
-const { env } = require('../config/env');
+const { Resend } = require('resend');
 
-let transporter = null;
-let transporterVerified = false;
+const resend = new Resend(process.env.RESEND_API_KEY);
 
-const isConsoleMode = () => env.FREE_MODE === 'true' || env.EMAIL_MODE === 'console';
+const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
 
-const stripHtmlToText = (html) => {
-  if (!html) return '';
-  return String(html)
-    .replace(/<style[\s\S]*?<\/style>/gi, '')
-    .replace(/<script[\s\S]*?<\/script>/gi, '')
-    .replace(/<\/?[^>]+>/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+exports.sendEmail = async ({ to, subject, html }) => {
+  try {
+    const result = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: Array.isArray(to) ? to : [to],
+      subject,
+      html: html || subject
+    });
+
+    if (result.error) {
+      return { success: false, error: result.error };
+    }
+
+    return { success: true, id: result.data?.id };
+
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
 };
 
-/**
- * Console email output for FREE_MODE / console mode
- */
-const logEmailToConsole = ({ to, subject, html, text, otp }) => {
-  const border = '='.repeat(72);
-  console.log('\n' + border);
-  console.log('📧 EMAIL (CONSOLE MODE)');
-  console.log(border);
-  console.log(`TO:      ${to}`);
-  console.log(`SUBJECT: ${subject}`);
-  if (otp) {
-    console.log('');
-    console.log('🔐 OTP CODE:', otp);
-    console.log('');
-  }
-  const preview = stripHtmlToText(text || html).slice(0, 500);
-  if (preview) console.log('CONTENT:', preview + (preview.length >= 500 ? '…' : ''));
-  console.log(border + '\n');
-};
-
-const initTransporter = async () => {
-  if (isConsoleMode()) return null;
-  if (transporter) return transporter;
-
-  // SMTP mode requires config
-  if (!env.EMAIL_HOST || !env.EMAIL_USER || !env.EMAIL_PASS) {
-    throw new Error(
-      'EMAIL_MODE=smtp but EMAIL_HOST/EMAIL_USER/EMAIL_PASS are missing. ' +
-        'Set them or use EMAIL_MODE=console (FREE_MODE).'
-    );
-  }
-
-  const port = Number(env.EMAIL_PORT || 587);
-
-  transporter = nodemailer.createTransport({
-    host: env.EMAIL_HOST,
-    port,
-    secure: port === 465,
-    auth: { user: env.EMAIL_USER, pass: env.EMAIL_PASS }
+exports.sendWelcomeEmail = async (to, name) => {
+  return exports.sendEmail({
+    to,
+    subject: 'Welcome to LastKey Digital Legacy',
+    html: `
+      <div style="font-family:Arial; max-width:600px; margin:0 auto; background:#070e1b; color:#f0f4ff; padding:40px; border-radius:16px;">
+        <div style="text-align:center; margin-bottom:32px;">
+          <span style="font-size:28px; font-weight:800; color:#ffffff;">
+            Last<span style="color:#f59e0b;">Key</span>
+          </span>
+        </div>
+        <h1 style="color:#4f9eff; text-align:center;">
+          Welcome, ${name}! 🔐
+        </h1>
+        <p style="color:#8899bb; line-height:1.7; text-align:center;">
+          Your digital legacy vault is now active.
+          Your most important information is encrypted
+          and protected.
+        </p>
+        <div style="text-align:center; margin:32px 0;">
+          <a href="${process.env.CLIENT_URL}/dashboard"
+             style="background:linear-gradient(135deg,#4f9eff,#7c5cfc); color:white; padding:16px 32px; border-radius:10px; text-decoration:none; font-weight:bold;">
+            Go to Dashboard →
+          </a>
+        </div>
+        <p style="color:#3d5070; font-size:12px; text-align:center;">
+          AES-256 Encrypted · Zero Knowledge · Your keys, your data
+        </p>
+      </div>
+    `
   });
-
-  // Verify once (non-fatal warning if fails)
-  if (!transporterVerified) {
-    try {
-      await transporter.verify();
-      transporterVerified = true;
-    } catch (e) {
-      console.warn('⚠️ SMTP transporter verify failed:', e.message);
-    }
-  }
-
-  return transporter;
 };
 
-/**
- * sendEmailWithRetry({ to, subject, html, text, otp }, maxAttempts)
- * - Console mode: prints to terminal
- * - SMTP mode: sends real email
- */
-exports.sendEmailWithRetry = async ({ to, subject, html, text, otp }, maxAttempts = 3) => {
-  if (!to) throw new Error('sendEmail: "to" is required');
-  if (!subject) throw new Error('sendEmail: "subject" is required');
-
-  // FREE_MODE / console mode
-  if (isConsoleMode()) {
-    logEmailToConsole({ to, subject, html, text, otp });
-    return { success: true, mode: 'console' };
-  }
-
-  const t = await initTransporter();
-
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    try {
-      await t.sendMail({
-        from: env.EMAIL_FROM || `"LastKey" <${env.EMAIL_USER}>`,
-        to,
-        subject,
-        html,
-        text
-      });
-
-      return { success: true, mode: 'smtp' };
-    } catch (err) {
-      console.error(`❌ Email attempt ${attempt}/${maxAttempts} failed for ${to}:`, err.message);
-      if (attempt < maxAttempts) {
-        await new Promise((r) => setTimeout(r, attempt * 2000));
-      }
-    }
-  }
-
-  return { success: false, reason: 'max_retries_exceeded' };
+exports.sendInactivityWarningEmail = async (to, name, daysRemaining, checkInUrl) => {
+  return exports.sendEmail({
+    to,
+    subject: `Action Required: Check in to LastKey (${daysRemaining} days remaining)`,
+    html: `
+      <div style="font-family:Arial; max-width:600px; margin:0 auto; background:#070e1b; color:#f0f4ff; padding:40px; border-radius:16px;">
+        <div style="text-align:center; margin-bottom:32px;">
+          <span style="font-size:28px; font-weight:800; color:#ffffff;">
+            Last<span style="color:#f59e0b;">Key</span>
+          </span>
+        </div>
+        <h1 style="color:#ffb830; text-align:center;">
+          ⚠️ Inactivity Warning
+        </h1>
+        <p style="color:#8899bb; line-height:1.7; text-align:center;">
+          Hello ${name}, we have not seen you in a while.
+        </p>
+        <div style="background:rgba(255,184,48,0.1); border:1px solid rgba(255,184,48,0.3); border-radius:12px; padding:20px; margin:24px 0; text-align:center;">
+          <p style="color:#ffb830; font-size:18px; font-weight:bold; margin:0;">
+            Your trigger activates in ${daysRemaining} days
+          </p>
+        </div>
+        <p style="color:#8899bb; text-align:center;">
+          Click below to confirm you are okay and reset your timer.
+        </p>
+        <div style="text-align:center; margin:32px 0;">
+          <a href="${checkInUrl}"
+             style="background:linear-gradient(135deg,#4f9eff,#7c5cfc); color:white; padding:16px 32px; border-radius:10px; text-decoration:none; font-weight:bold;">
+            ✓ I am Here — Reset Timer
+          </a>
+        </div>
+        <p style="color:#3d5070; font-size:12px; text-align:center;">
+          If you do not check in, your beneficiaries will be notified.
+        </p>
+      </div>
+    `
+  });
 };
 
-// Backwards compatible
-exports.sendEmail = exports.sendEmailWithRetry;
+exports.sendTriggerActivationEmail = async (to, beneficiaryName, ownerName, portalUrl) => {
+  const subject = `${ownerName} has left something important for you`;
 
-/**
- * sendPortalAccessAlert(ownerEmail, ownerName, beneficiaryName, ip, time, isFailed)
- * Sends email to owner when beneficiary accesses portal
- */
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${subject}</title>
+</head>
+<body style="margin:0; padding:0; background-color:#030508; font-family:Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#030508;">
+  <tr>
+    <td align="center" style="padding:40px 20px;">
+      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px; width:100%; background-color:#070e1b; border-radius:16px; border:1px solid rgba(255,255,255,0.06);">
+        
+        <!-- Header -->
+        <tr>
+          <td align="center" style="padding:32px 40px 0;">
+            <span style="font-size:28px; font-weight:800; color:#ffffff; font-family:Arial,sans-serif;">
+              Last<span style="color:#f59e0b;">Key</span>
+            </span>
+            <br>
+            <span style="font-size:11px; color:#3d5070; letter-spacing:0.1em;">
+              DIGITAL LEGACY
+            </span>
+          </td>
+        </tr>
+
+        <!-- Icon -->
+        <tr>
+          <td align="center" style="padding:24px 40px 0;">
+            <div style="font-size:48px;">&#128153;</div>
+          </td>
+        </tr>
+
+        <!-- Title -->
+        <tr>
+          <td align="center" style="padding:16px 40px 0;">
+            <h1 style="margin:0; font-size:24px; font-weight:700; color:#4f9eff; font-family:Arial,sans-serif;">
+              A Message From ${ownerName}
+            </h1>
+          </td>
+        </tr>
+
+        <!-- Body -->
+        <tr>
+          <td style="padding:24px 40px;">
+            <p style="margin:0 0 16px; font-size:15px; line-height:1.7; color:#8899bb; text-align:center;">
+              Hello ${beneficiaryName},
+            </p>
+            <p style="margin:0 0 16px; font-size:15px; line-height:1.7; color:#8899bb; text-align:center;">
+              ${ownerName} has designated you as a trusted 
+              beneficiary of their digital legacy.
+            </p>
+            <p style="margin:0; font-size:15px; line-height:1.7; color:#8899bb; text-align:center;">
+              They have left important information and 
+              messages for you in a secure encrypted vault.
+            </p>
+          </td>
+        </tr>
+
+        <!-- Info Box -->
+        <tr>
+          <td style="padding:0 40px;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="background-color:rgba(79,158,255,0.1); border:1px solid rgba(79,158,255,0.2); border-radius:12px;">
+              <tr>
+                <td style="padding:20px; text-align:center;">
+                  <p style="margin:0; font-size:14px; color:#93c5fd; line-height:1.6;">
+                    Click the button below to access what 
+                    ${ownerName} left for you.<br>
+                    You will need to verify your identity 
+                    before viewing.
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Button -->
+        <tr>
+          <td align="center" style="padding:32px 40px;">
+            <a href="${portalUrl}" 
+               target="_blank"
+               style="display:inline-block; background:linear-gradient(135deg,#4f9eff,#7c5cfc); color:#ffffff; text-decoration:none; padding:16px 40px; border-radius:10px; font-size:16px; font-weight:700; font-family:Arial,sans-serif;">
+              Access Your Inheritance &#8594;
+            </a>
+          </td>
+        </tr>
+
+        <!-- Expiry Notice -->
+        <tr>
+          <td align="center" style="padding:0 40px 16px;">
+            <p style="margin:0; font-size:13px; color:#ffb830;">
+              &#9200; This link expires in 30 days
+            </p>
+          </td>
+        </tr>
+
+        <!-- Divider -->
+        <tr>
+          <td style="padding:0 40px;">
+            <hr style="border:none; border-top:1px solid rgba(255,255,255,0.06); margin:0;">
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td align="center" style="padding:24px 40px 32px;">
+            <p style="margin:0 0 8px; font-size:12px; color:#3d5070;">
+              LastKey Digital Legacy
+            </p>
+            <p style="margin:0; font-size:12px; color:#3d5070;">
+              All access is encrypted, logged and secured.
+            </p>
+          </td>
+        </tr>
+
+      </table>
+    </td>
+  </tr>
+</table>
+</body>
+</html>`;
+
+  return exports.sendEmail({ to, subject, html });
+};
+
+exports.sendCheckInConfirmation = async (to, name, nextCheckInDate) => {
+  return exports.sendEmail({
+    to,
+    subject: 'Check-in confirmed — Your legacy timer reset',
+    html: `
+      <div style="font-family:Arial; max-width:600px; margin:0 auto; background:#070e1b; color:#f0f4ff; padding:40px; border-radius:16px;">
+        <div style="text-align:center; margin-bottom:32px;">
+          <span style="font-size:28px; font-weight:800; color:#ffffff;">
+            Last<span style="color:#f59e0b;">Key</span>
+          </span>
+        </div>
+        <h1 style="color:#00e5a0; text-align:center;">
+          ✅ Check-in Confirmed
+        </h1>
+        <p style="color:#8899bb; text-align:center;">
+          Hello ${name}, your inactivity timer has been reset.
+        </p>
+        <div style="background:rgba(0,229,160,0.1); border:1px solid rgba(0,229,160,0.2); border-radius:12px; padding:20px; margin:24px 0; text-align:center;">
+          <p style="color:#00e5a0; margin:0;">
+            Next check-in reminder: ${nextCheckInDate}
+          </p>
+        </div>
+        <p style="color:#3d5070; font-size:12px; text-align:center;">
+          Your beneficiaries will only be notified if 
+          you become inactive again.
+        </p>
+      </div>
+    `
+  });
+};
+
 exports.sendPortalAccessAlert = async (ownerEmail, ownerName, beneficiaryName, ip, time, isFailed = false) => {
-  const subject = isFailed 
+  const subject = isFailed
     ? `[${beneficiaryName}] failed verification - Link revoked`
     : `[${beneficiaryName}] accessed your legacy portal`;
 
-  const html = isFailed 
+  const html = isFailed
     ? `
       <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#0b1629;color:#f0f4ff;padding:32px;border-radius:16px">
         <h2 style="color:#ff4d6d;margin-bottom:16px">Verification Failed - Link Revoked</h2>
@@ -147,10 +287,6 @@ exports.sendPortalAccessAlert = async (ownerEmail, ownerName, beneficiaryName, i
   return exports.sendEmail({ to: ownerEmail, subject, html });
 };
 
-/**
- * sendLegacyDeliveredConfirmation(ownerEmail, ownerName, beneficiaryName, itemCount)
- * Sends email to owner when beneficiary claims their legacy
- */
 exports.sendLegacyDeliveredConfirmation = async (ownerEmail, ownerName, beneficiaryName, itemCount) => {
   const subject = `Your legacy was claimed by ${beneficiaryName}`;
 
@@ -164,156 +300,4 @@ exports.sendLegacyDeliveredConfirmation = async (ownerEmail, ownerName, benefici
   `;
 
   return exports.sendEmail({ to: ownerEmail, subject, html });
-};
-
-/**
- * sendWelcomeEmail(beneficiaryEmail, beneficiaryName, isBeneficiaryAccount)
- * Sends welcome email to new user
- */
-exports.sendWelcomeEmail = async (beneficiaryEmail, beneficiaryName, isBeneficiaryAccount = false) => {
-  const subject = isBeneficiaryAccount 
-    ? 'Welcome to LastKey - Your inherited items are ready'
-    : 'Welcome to LastKey';
-
-  const html = isBeneficiaryAccount
-    ? `
-      <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#0b1629;color:#f0f4ff;padding:32px;border-radius:16px">
-        <h2 style="color:#4f9eff;margin-bottom:16px">Welcome to LastKey</h2>
-        <p>Your LastKey account has been created successfully.</p>
-        <p>Your inherited items are now in your personal vault.</p>
-        <p>You have permanent independent access to these items.</p>
-      </div>
-    `
-    : `
-      <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#0b1629;color:#f0f4ff;padding:32px;border-radius:16px">
-        <h2 style="color:#4f9eff;margin-bottom:16px">Welcome to LastKey</h2>
-        <p>Your LastKey account has been created successfully.</p>
-        <p>Start securing your digital legacy today.</p>
-      </div>
-    `;
-
-  return exports.sendEmail({ to, beneficiaryEmail, subject, html });
-};
-
-/**
- * sendManualVerificationRequest(supportEmail, beneficiaryName, beneficiaryEmail, ownerName, reason, token)
- * Sends manual verification request to support team
- */
-exports.sendManualVerificationRequest = async (supportEmail, beneficiaryName, beneficiaryEmail, ownerName, reason, token) => {
-  const subject = 'MANUAL VERIFICATION REQUEST — LastKey Portal';
-
-  const html = `
-    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#0b1629;color:#f0f4ff;padding:32px;border-radius:16px">
-      <h2 style="color:#ffb830;margin-bottom:16px">Manual Verification Request</h2>
-      <p><strong>Beneficiary:</strong> ${beneficiaryName} (${beneficiaryEmail})</p>
-      <p><strong>Owner:</strong> ${ownerName}</p>
-      <p><strong>Reason:</strong> ${reason || 'Not provided'}</p>
-      <p><strong>Portal Token:</strong> ${token}</p>
-      <p><strong>Requested At:</strong> ${new Date().toLocaleString()}</p>
-      <p style="color:#8899bb">Please review and verify this beneficiary's identity within 3-5 business days.</p>
-    </div>
-  `;
-
-  return exports.sendEmail({ to: supportEmail, subject, html });
-};
-
-/**
- * sendManualVerificationConfirmation(to, beneficiaryName)
- * Sends confirmation to beneficiary that manual verification was requested
- */
-exports.sendManualVerificationConfirmation = async (to, beneficiaryName) => {
-  const subject = 'Your verification request was received';
-
-  const html = `
-    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#0b1629;color:#f0f4ff;padding:32px;border-radius:16px">
-      <h2 style="color:#4f9eff;margin-bottom:16px">Verification Request Received</h2>
-      <p>We received your manual verification request.</p>
-      <p>Our team will review and contact you within 3-5 business days.</p>
-      <p style="color:#8899bb">We will email you at this address: ${to}</p>
-      <p style="margin-top:24px">For support, contact support@lastkey.com</p>
-    </div>
-  `;
-
-  return exports.sendEmail({ to, subject, html });
-};
-
-/**
- * sendInactivityWarningEmail(to, name, daysRemaining, dashboardUrl)
- * Sends warning email when user is approaching inactivity threshold
- */
-exports.sendInactivityWarningEmail = async (to, name, daysRemaining, dashboardUrl) => {
-  const subject = `LastKey: Your account is inactive - ${daysRemaining} days until trigger`;
-
-  const html = `
-    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#0b1629;color:#f0f4ff;padding:32px;border-radius:16px">
-      <h2 style="color:#ffb830;margin-bottom:16px">⚠️ Inactivity Warning</h2>
-      <p>We noticed you haven't logged into your LastKey account in a while.</p>
-      <p style="margin:16px 0">
-        <strong>${daysRemaining} day${daysRemaining === 1 ? '' : 's'}</strong> remaining before your inactivity trigger activates.
-      </p>
-      <p>Once the trigger activates, your beneficiaries will receive access to your vault.</p>
-      <p style="margin:24px 0">
-        <a href="${dashboardUrl}"
-           style="background:linear-gradient(135deg,#ffb830,#ff6b6b);color:white;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:700;display:inline-block">
-          Log In to Reset Timer
-        </a>
-      </p>
-      <p style="color:#8899bb;font-size:12px">This is an automated warning. No action is required if you are still active.</p>
-    </div>
-  `;
-
-  return exports.sendEmail({ to, subject, html });
-};
-
-/**
- * sendTriggerActivationEmail(to, beneficiaryName, ownerName, portalUrl)
- * Sends email to beneficiary when inactivity trigger fires
- */
-exports.sendTriggerActivationEmail = async (to, beneficiaryName, ownerName, portalUrl) => {
-  const subject = `${ownerName}'s digital legacy is now available to you`;
-
-  const html = `
-    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#0b1629;color:#f0f4ff;padding:32px;border-radius:16px">
-      <h2 style="color:#00e5a0;margin-bottom:16px">🎁 Your Legacy is Ready</h2>
-      <p>Hello <strong>${beneficiaryName}</strong>,</p>
-      <p><strong>${ownerName}</strong> has been inactive, and their inactivity trigger has activated.</p>
-      <p style="margin:16px 0">You now have access to the digital legacy items assigned to you.</p>
-      <p style="margin:24px 0">
-        <a href="${portalUrl}"
-           style="background:linear-gradient(135deg,#00e5a0,#4f9eff);color:white;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:700;display:inline-block">
-          Access Your Legacy
-        </a>
-      </p>
-      <p style="color:#8899bb;font-size:12px">This access link expires in 30 days. Please complete verification to view your items.</p>
-    </div>
-  `;
-
-  return exports.sendEmail({ to, subject, html });
-};
-
-/**
- * sendCheckInConfirmation(to, name, checkInDate)
- * Sends confirmation email after successful check-in
- */
-exports.sendCheckInConfirmation = async (to, name, checkInDate) => {
-  const subject = 'LastKey: Check-in confirmed - Timer reset';
-
-  const html = `
-    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#0b1629;color:#f0f4ff;padding:32px;border-radius:16px">
-      <h2 style="color:#00e5a0;margin-bottom:16px">✅ Check-in Confirmed</h2>
-      <p>Your inactivity timer has been successfully reset.</p>
-      <p style="margin:16px 0">
-        <strong>Last check-in:</strong> ${new Date(checkInDate).toLocaleDateString()}
-      </p>
-      <p>Your beneficiaries will only be notified if you become inactive again.</p>
-      <p style="margin:24px 0">
-        <a href="${process.env.CLIENT_URL}/dashboard"
-           style="background:linear-gradient(135deg,#4f9eff,#7c5cfc);color:white;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:700;display:inline-block">
-          Go to Dashboard
-        </a>
-      </p>
-    </div>
-  `;
-
-  return exports.sendEmail({ to, subject, html });
 };

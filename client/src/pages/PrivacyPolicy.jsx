@@ -1,3 +1,4 @@
+import React from 'react';
 import { motion } from 'framer-motion';
 import { Shield, Eye, Lock, Trash2, Mail } from 'lucide-react';
 import { Link } from 'react-router-dom';

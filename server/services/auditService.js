@@ -2,9 +2,20 @@ const AuditLog = require('../models/AuditLog');
 
 exports.log = async (action, { userId, resourceId = null, resourceType = null, req, metadata = {}, riskLevel = 'low' } = {}) => {
   try {
+    // Safety checks
+    if (!action) {
+      console.warn('log called without action - skipping audit log');
+      return;
+    }
+    
+    if (!userId) {
+      console.warn('log called without userId - skipping audit log');
+      return;
+    }
+
     await AuditLog.create({
       userId,
-      action,
+      action: String(action).toUpperCase(),
       resourceId,
       resourceType,
       ipAddress: req?.ip || req?.connection?.remoteAddress,

@@ -208,10 +208,10 @@ router.get('/logs', async (req, res) => {
     // Transform to match client expectations
     const transformedLogs = logs.map(log => ({
       _id: log._id,
-      event: log.action.toLowerCase().replace(/_/g, '_'),
+      event: (log.action || 'unknown').toLowerCase().replace(/_/g, '_'),
       severity: log.riskLevel || 'info',
-      timestamp: log.timestamp,
-      ip: log.ipAddress,
+      timestamp: log.timestamp || log.createdAt,
+      ip: log.ipAddress || 'unknown',
       details: log.metadata || log.details
     }));
 
@@ -220,7 +220,6 @@ router.get('/logs', async (req, res) => {
       data: transformedLogs
     });
   } catch (error) {
-    console.error('Get logs error:', error.message);
     return res.status(500).json({
       status: 'error',
       message: error.message

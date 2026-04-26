@@ -23,23 +23,9 @@ export default function Navbar() {
   const dropdownRef = useRef(null)
   const { user, logout } = useAuth()
 
-  const isPublicRoute = 
-    PUBLIC_ROUTES.includes(location.pathname) ||
-    location.pathname.startsWith('/reset-password') ||
-    location.pathname.startsWith('/beneficiary')
-
-  const isDashboardRoute = 
-    DASHBOARD_ROUTES.some(route => location.pathname.startsWith(route)) ||
-    location.pathname.startsWith('/portal')
-
-  // Don't show navbar on dashboard routes
-  if (isDashboardRoute) {
-    return null
-  }
-
   useEffect(() => {
     function handleClickOutside(event) {
-      if (dropdownRef.current && 
+      if (dropdownRef.current &&
           !dropdownRef.current.contains(event.target)) {
         setUserMenuOpen(false)
       }
@@ -57,6 +43,20 @@ export default function Navbar() {
     document.addEventListener('keydown', handleEscapeKey)
     return () => document.removeEventListener('keydown', handleEscapeKey)
   }, [])
+
+  const isPublicRoute =
+    PUBLIC_ROUTES.includes(location.pathname) ||
+    location.pathname.startsWith('/reset-password') ||
+    location.pathname.startsWith('/beneficiary')
+
+  const isDashboardRoute =
+    DASHBOARD_ROUTES.some(route => location.pathname.startsWith(route)) ||
+    location.pathname.startsWith('/portal')
+
+  // Don't show navbar on dashboard routes
+  if (isDashboardRoute) {
+    return null
+  }
 
   const scrollToSection = (id) => {
     if (location.pathname !== '/') {

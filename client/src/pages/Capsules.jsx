@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -26,6 +26,8 @@ const Capsules = () => {
   const [formData, setFormData] = useState({
     title: '',
     message: '',
+    triggerType: 'inactivity',
+    inactivityDays: 90,
     unlockAt: ''
   });
 
@@ -46,10 +48,10 @@ const Capsules = () => {
     }),
     onSuccess: () => {
       queryClient.invalidateQueries(['capsules']);
-      setFormData({ title: '', message: '', unlockAt: '' });
+      setFormData({ title: '', message: '', triggerType: 'inactivity', inactivityDays: 90, unlockAt: '' });
       setShowForm(false);
       confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-      toast.success('Time capsule sealed!');
+      toast.success('Trigger created!');
     },
     onError: () => {
       toast.error('Failed to create capsule');
@@ -71,7 +73,19 @@ const Capsules = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    createMutation.mutate({ ...formData, unlockAt: new Date(formData.unlockAt).toISOString() });
+    const submissionData = {
+      title: formData.title,
+      message: formData.message,
+      triggerType: formData.triggerType
+    };
+    
+    if (formData.triggerType === 'inactivity') {
+      submissionData.inactivityDays = formData.inactivityDays;
+    } else if (formData.triggerType === 'date') {
+      submissionData.unlockAt = new Date(formData.unlockAt).toISOString();
+    }
+    
+    createMutation.mutate(submissionData);
   };
 
   if (isLoading) return (
@@ -180,10 +194,130 @@ const Capsules = () => {
                 color: 'var(--text-primary)',
                 marginBottom: '20px'
               }}>
-                Create Capsule
+                Create Trigger
               </h2>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div>
+                  <label style={{
+                    display: 'block',
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    color: 'var(--text-secondary)',
+                    marginBottom: '8px'
+                  }}>
+                    Trigger Type
+                  </label>
+                  <select
+                    value={formData.triggerType}
+                    onChange={e => setFormData({ ...formData, triggerType: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      background: 'var(--bg-base)',
+                      border: '1px solid var(--border-hover)',
+                      borderRadius: '10px',
+                      color: 'var(--text-primary)',
+                      fontSize: '14px',
+                      outline: 'none',
+                      fontFamily: 'inherit',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <option value="inactivity">Inactivity Timer (Recommended)</option>
+                    <option value="manual">Manual Activation</option>
+                    <option value="date">Specific Date</option>
+                  </select>
+                </div>
+
+                {formData.triggerType === 'inactivity' && (
+                  <div>
+                    <label style={{
+                      display: 'block',
+                      fontSize: '13px',
+                      fontWeight: '500',
+                      color: 'var(--text-secondary)',
+                      marginBottom: '8px'
+                    }}>
+                      Activate after (days of inactivity)
+                    </label>
+                    <input
+                      type="number"
+                      value={formData.inactivityDays}
+                      onChange={e => setFormData({ ...formData, inactivityDays: parseInt(e.target.value) || 90 })}
+                      min="1"
+                      max="365"
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        background: 'var(--bg-base)',
+                        border: '1px solid var(--border-hover)',
+                        borderRadius: '10px',
+                        color: 'var(--text-primary)',
+                        fontSize: '14px',
+                        outline: 'none',
+                        fontFamily: 'inherit'
+                      }}
+                    />
+                    <p style={{
+                      fontSize: '12px',
+                      color: 'var(--text-muted)',
+                      marginTop: '8px'
+                    }}>
+                      Beneficiaries will be notified after {formData.inactivityDays} days of inactivity.
+                    </p>
+                  </div>
+                )}
+
+                {formData.triggerType === 'manual' && (
+                  <div style={{
+                    padding: '16px',
+                    background: 'rgba(79,158,255,0.06)',
+                    border: '1px solid rgba(79,158,255,0.15)',
+                    borderRadius: '10px'
+                  }}>
+                    <p style={{
+                      fontSize: '13px',
+                      color: 'var(--text-secondary)',
+                      margin: 0
+                    }}>
+                      You will activate this trigger manually when you're ready. Your beneficiaries will receive access only when you choose to activate it.
+                    </p>
+                  </div>
+                )}
+
+                {formData.triggerType === 'date' && (
+                  <div>
+                    <label style={{
+                      display: 'block',
+                      fontSize: '13px',
+                      fontWeight: '500',
+                      color: 'var(--text-secondary)',
+                      marginBottom: '8px'
+                    }}>
+                      Activation Date
+                    </label>
+                    <input
+                      type="date"
+                      value={formData.unlockAt}
+                      onChange={e => setFormData({ ...formData, unlockAt: e.target.value })}
+                      min={minDate}
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        background: 'var(--bg-base)',
+                        border: '1px solid var(--border-hover)',
+                        borderRadius: '10px',
+                        color: 'var(--text-primary)',
+                        fontSize: '14px',
+                        outline: 'none',
+                        fontFamily: 'inherit',
+                        colorScheme: 'dark',
+                        cursor: 'pointer'
+                      }}
+                    />
+                  </div>
+                )}
                 <div>
                   <label style={{
                     display: 'block',
@@ -209,37 +343,6 @@ const Capsules = () => {
                       fontSize: '14px',
                       outline: 'none',
                       fontFamily: 'inherit'
-                    }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{
-                    display: 'block',
-                    fontSize: '13px',
-                    fontWeight: '500',
-                    color: 'var(--text-secondary)',
-                    marginBottom: '8px'
-                  }}>
-                    Unlock Date
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.unlockAt}
-                    onChange={e => setFormData({ ...formData, unlockAt: e.target.value })}
-                    min={minDate}
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      background: 'var(--bg-base)',
-                      border: '1px solid var(--border-hover)',
-                      borderRadius: '10px',
-                      color: 'var(--text-primary)',
-                      fontSize: '14px',
-                      outline: 'none',
-                      fontFamily: 'inherit',
-                      colorScheme: 'dark',
-                      cursor: 'pointer'
                     }}
                   />
                 </div>
@@ -286,7 +389,7 @@ const Capsules = () => {
 
                 <button
                   onClick={handleSubmit}
-                  disabled={createMutation.isPending || !formData.title.trim() || !formData.unlockAt || !formData.message.trim()}
+                  disabled={createMutation.isPending || !formData.title.trim() || !formData.message.trim() || (formData.triggerType === 'date' && !formData.unlockAt)}
                   style={{
                     width: '100%',
                     padding: '12px 20px',
@@ -296,14 +399,14 @@ const Capsules = () => {
                     color: 'white',
                     fontSize: '14px',
                     fontWeight: '600',
-                    cursor: createMutation.isPending || !formData.title.trim() || !formData.unlockAt || !formData.message.trim()
+                    cursor: createMutation.isPending || !formData.title.trim() || !formData.message.trim() || (formData.triggerType === 'date' && !formData.unlockAt)
                       ? 'not-allowed'
                       : 'pointer',
-                    opacity: createMutation.isPending || !formData.title.trim() || !formData.unlockAt || !formData.message.trim() ? 0.5 : 1,
+                    opacity: createMutation.isPending || !formData.title.trim() || !formData.message.trim() || (formData.triggerType === 'date' && !formData.unlockAt) ? 0.5 : 1,
                     transition: 'all 0.15s ease'
                   }}
                 >
-                  {createMutation.isPending ? 'Creating...' : 'Create Capsule'}
+                  {createMutation.isPending ? 'Creating...' : 'Create Trigger'}
                 </button>
               </div>
             </div>

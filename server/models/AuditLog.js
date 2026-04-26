@@ -57,6 +57,7 @@ const auditLogSchema = new mongoose.Schema({
       'PORTAL_ITEM_REVEALED',
       'PORTAL_NEW_DEVICE_ACCESS',
       'PORTAL_ACCESS_REVOKED',
+      'PORTAL_ACCESS_RESENT',
       'LEGACY_CLAIMED',
       'MANUAL_VERIFICATION_REQUESTED',
 
@@ -66,6 +67,11 @@ const auditLogSchema = new mongoose.Schema({
       'DOCUMENT_DOWNLOADED',
       'DOCUMENT_SCANNED',
       'DOCUMENT_DELETED',
+      'legal_document_created',
+      'legal_document_deleted',
+      'legal_document_scanned',
+      'legal_document_viewed',
+      'legal_document_uploaded',
 
       // Account actions
       'ACCOUNT_UPDATED',

@@ -6,5 +6,7 @@ const emailService = require('../services/emailService');
 
 module.exports = {
   sendEmail: emailService.sendEmail,
-  sendEmailWithRetry: emailService.sendEmailWithRetry
+  sendEmailWithRetry: emailService.sendEmailWithRetry,
+  sendPortalAccessAlert: emailService.sendPortalAccessAlert,
+  sendLegacyDeliveredConfirmation: emailService.sendLegacyDeliveredConfirmation
 };

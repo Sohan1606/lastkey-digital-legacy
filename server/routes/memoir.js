@@ -4,96 +4,112 @@ const Memoir = require('../models/Memoir');
 
 const router = express.Router();
 
-// Get all memoir chapters for user
+// GET all chapters for user
 router.get('/', protect, async (req, res) => {
   try {
-    const chapters = await Memoir.find({ userId: req.user._id }).sort({ createdAt: 1 });
-    res.json({
-      success: true,
+    const chapters = await Memoir
+      .find({ owner: req.user._id })
+      .sort({ order: 1, createdAt: 1 })
+      .lean()
+    
+    return res.status(200).json({
+      status: 'success',
       data: chapters
-    });
+    })
   } catch (error) {
-    console.error('Get memoir chapters error:', error);
-    res.status(500).json({ error: 'Failed to fetch memoir chapters' });
+    return res.status(500).json({
+      status: 'error',
+      message: error.message
+    })
   }
-});
+})
 
-// Save new memoir chapter
+// POST create new chapter
 router.post('/', protect, async (req, res) => {
   try {
-    const { title, stage, chapter, wordCount } = req.body;
+    const { title, content, wordCount } = req.body
     
-    const newChapter = new Memoir({
-      userId: req.user._id,
-      title,
-      stage,
-      chapter,
-      wordCount: wordCount || 0
-    });
+    const chapterCount = await Memoir.countDocuments({
+      owner: req.user._id
+    })
     
-    await newChapter.save();
+    const chapter = await Memoir.create({
+      owner: req.user._id,
+      title: title || `Chapter ${chapterCount + 1}`,
+      content: content || '',
+      wordCount: wordCount || 0,
+      order: chapterCount
+    })
     
-    res.status(201).json({
-      success: true,
-      data: newChapter
-    });
+    return res.status(201).json({
+      status: 'success',
+      data: chapter
+    })
   } catch (error) {
-    console.error('Save memoir chapter error:', error);
-    res.status(500).json({ error: 'Failed to save memoir chapter' });
+    console.error('Create chapter error:', error.message)
+    return res.status(500).json({
+      status: 'error',
+      message: error.message
+    })
   }
-});
+})
 
-// Update memoir chapter
+// PUT update chapter
 router.put('/:id', protect, async (req, res) => {
   try {
-    const { title, stage, chapter, wordCount } = req.body;
+    const { title, content, wordCount } = req.body
     
-    const updatedChapter = await Memoir.findOneAndUpdate(
-      { _id: req.params.id, userId: req.user._id },
+    const chapter = await Memoir.findOneAndUpdate(
       { 
-        title, 
-        stage, 
-        chapter, 
-        wordCount: wordCount || 0,
-        updatedAt: new Date()
+        _id: req.params.id, 
+        owner: req.user._id 
+      },
+      { 
+        title,
+        content,
+        wordCount: wordCount || 0
       },
       { returnDocument: 'after' }
-    );
+    )
     
-    if (!updatedChapter) {
-      return res.status(404).json({ error: 'Memoir chapter not found' });
+    if (!chapter) {
+      return res.status(404).json({
+        status: 'fail',
+        message: 'Chapter not found'
+      })
     }
     
-    res.json({
-      success: true,
-      data: updatedChapter
-    });
+    return res.status(200).json({
+      status: 'success',
+      data: chapter
+    })
   } catch (error) {
-    console.error('Update memoir chapter error:', error);
-    res.status(500).json({ error: 'Failed to update memoir chapter' });
+    console.error('Update chapter error:', error.message)
+    return res.status(500).json({
+      status: 'error',
+      message: error.message
+    })
   }
-});
+})
 
-// Delete memoir chapter
+// DELETE chapter
 router.delete('/:id', protect, async (req, res) => {
   try {
-    const deletedChapter = await Memoir.findOneAndDelete({ 
-      _id: req.params.id, 
-      userId: req.user._id 
-    });
+    await Memoir.findOneAndDelete({
+      _id: req.params.id,
+      owner: req.user._id
+    })
     
-    if (!deletedChapter) {
-      return res.status(404).json({ error: 'Memoir chapter not found' });
-    }
-    
-    res.json({
-      success: true,
-      message: 'Memoir chapter deleted successfully'
-    });
+    return res.status(200).json({
+      status: 'success',
+      message: 'Chapter deleted'
+    })
   } catch (error) {
-    console.error('Delete memoir chapter error:', error);
-    res.status(500).json({ error: 'Failed to delete memoir chapter' });
+    return res.status(500).json({
+      status: 'error',
+      message: error.message
+    })
   }
-});
+})
 
-module.exports = router;
+module.exports = router

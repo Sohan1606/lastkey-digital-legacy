@@ -40,8 +40,23 @@ const beneficiarySchema = new mongoose.Schema(
     // Match your owner-side validator options
     accessLevel: {
       type: String,
-      enum: ['view', 'download', 'full'],
+      enum: ['view', 'download', 'full', 'custom'],
       default: 'view'
+    },
+
+    // Vault items assigned to this beneficiary (for custom access)
+    assignedVaultItems: [{
+      type: mongoose.Schema.ObjectId,
+      ref: 'Asset'
+    }],
+
+    // Access options for view/download levels
+    accessOptions: {
+      vaultItems: { type: Boolean, default: true },
+      finalMessage: { type: Boolean, default: true },
+      voiceMessages: { type: Boolean, default: true },
+      documents: { type: Boolean, default: true },
+      memoir: { type: Boolean, default: true }
     },
 
     // Beneficiary Portal onboarding status
