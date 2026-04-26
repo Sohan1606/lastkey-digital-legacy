@@ -57,6 +57,7 @@ if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
 const { env, getSanitizedEnv } = require('./config/env');
 
 const app = express();
+app.set('trust proxy', 1);
 const server = http.createServer(app);
 
 const PORT = Number(env.PORT || 5000);
