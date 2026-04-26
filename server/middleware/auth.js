@@ -24,6 +24,11 @@ exports.isBlacklisted = (token) => {
 };
 
 exports.protect = async (req, res, next) => {
+  console.log('=== AUTH DEBUG ===');
+  console.log('Authorization header:', req.headers.authorization?.substring(0, 30));
+  console.log('JWT_SECRET exists:', !!process.env.JWT_SECRET);
+  console.log('JWT_SECRET length:', process.env.JWT_SECRET?.length);
+  
   try {
     let token;
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
