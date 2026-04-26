@@ -115,26 +115,32 @@ app.use(
   })
 );
 
-const allowedOrigins =
-  env.NODE_ENV === 'production'
-    ? [env.FRONTEND_URL].filter(Boolean)
-    : [
-        'http://localhost:5173',
-        'http://127.0.0.1:56563'
-      ];
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'https://lastkey-digital-legacy.vercel.app',
+  process.env.CLIENT_URL,
+  process.env.FRONTEND_URL
+].filter(Boolean);
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
-      return callback(new Error('Not allowed by CORS'));
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    // IMPORTANT: allow X-Session-Token for beneficiary portal
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Session-Token', 'x-session-token']
-  })
-);
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: [
+    'GET','POST','PUT',
+    'DELETE','PATCH','OPTIONS'
+  ],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization'
+  ]
+}));
 
 app.use(express.json({ limit: '2mb' }));
 

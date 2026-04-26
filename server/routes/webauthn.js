@@ -19,7 +19,7 @@ const router = express.Router();
 // RP configuration
 const rpName = 'LastKey Digital Legacy';
 const rpID = env.WEBAUTHN_RP_ID || 'localhost';
-const origin = env.FRONTEND_URL || 'http://localhost:5173';
+const origin = env.CLIENT_URL || 'http://localhost:5173';
 
 // ----------------------------
 // In-memory challenge store (dev/college friendly)

@@ -242,7 +242,7 @@ const sendGuardianNotification = async (beneficiaryEmail, ownerName, inactivityD
         Inactivity duration was set to ${inactivityDays} days.
       </p>
       <div style="background: #f5f5f5; border-radius: 12px; padding: 16px; margin: 24px 0; text-align: center;">
-        <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/beneficiary-portal" 
+        <a href="${process.env.CLIENT_URL || 'http://localhost:5173'}/beneficiary-portal" 
            style="display: inline-block; background: #00e5a0; color: #001a12; padding: 12px 24px; 
                   border-radius: 8px; text-decoration: none; font-weight: 600;">
           Access Beneficiary Portal

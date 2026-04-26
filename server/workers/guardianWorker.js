@@ -112,7 +112,7 @@ const buildWarningEmail = (user) => `
     <p>Hi ${user.name},</p>
     <p>We noticed you haven't checked in for a while. Your Guardian Protocol will activate if you don't respond.</p>
     <p style="margin:24px 0">
-      <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard"
+      <a href="${process.env.CLIENT_URL || 'http://localhost:5173'}/dashboard"
          style="background:linear-gradient(135deg,#4f9eff,#7c5cfc);color:white;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:700">
         I'm Here \u2014 Check In Now
       </a>
@@ -122,7 +122,7 @@ const buildWarningEmail = (user) => `
 `;
 
 const getPortalUrl = () => {
-  const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  const baseUrl = process.env.CLIENT_URL || 'http://localhost:5173';
   return baseUrl.replace(/\/$/, ''); // Remove trailing slash
 };
 

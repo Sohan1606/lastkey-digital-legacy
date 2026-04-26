@@ -35,7 +35,7 @@ if (capsuleQueue) {
           <div style="background:rgba(255,255,255,0.05);padding:20px;border-radius:12px;margin:16px 0">
             <p style="font-style:italic">"${capsule.message}"</p>
           </div>
-          <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/emergency"
+          <a href="${process.env.CLIENT_URL || 'http://localhost:5173'}/emergency"
              style="background:linear-gradient(135deg,#00e5a0,#4f9eff);color:#001a12;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:700">
             Open Legacy Portal
           </a>
