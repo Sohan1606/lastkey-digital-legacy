@@ -167,9 +167,6 @@ router.post('/send-demo-email', protect, async (req, res) => {
 
           const portalUrl = `${process.env.CLIENT_URL}/portal/${portalToken}`;
 
-          console.log('Sending trigger activation email to:', beneficiary.email);
-          console.log('Beneficiary name:', beneficiary.name);
-          
           await sendTriggerActivationEmail(
             beneficiary.email,
             beneficiary.name,

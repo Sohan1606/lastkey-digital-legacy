@@ -24,6 +24,7 @@ const auditLogSchema = new mongoose.Schema({
       'INACTIVITY_WARNING_SENT',
 
       // Vault/Asset actions
+      'VAULT_INITIALIZED',
       'VAULT_ITEM_CREATED',
       'VAULT_ITEM_VIEWED',
       'VAULT_ITEM_UPDATED',
@@ -67,6 +68,8 @@ const auditLogSchema = new mongoose.Schema({
       'DOCUMENT_DOWNLOADED',
       'DOCUMENT_SCANNED',
       'DOCUMENT_DELETED',
+      'LEGAL_DOCUMENT_CREATED',
+      'LEGAL_DOCUMENT_SCANNED',
       'legal_document_created',
       'legal_document_deleted',
       'legal_document_scanned',
